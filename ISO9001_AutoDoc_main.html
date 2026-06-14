@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoDocu Agent — 제조현장 지능형 ISO 문서 비서 시스템</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:      #ffffff;
+    --navy-mid:  #f1f5f9;
+    --navy-light:#e2e8f0;
+    --accent:    #0096c7;
+    --accent2:   #0077b6;
+    --text-hi:   #1e293b;
+    --text-mid:  #5a6b7d;
+    --text-lo:   #94a3b8;
+    --border:    rgba(0,150,200,0.18);
+    --border-hi: rgba(0,150,200,0.42);
+    --menu-h:    48px;
+    --hdr-h:     64px;
+    --font:      'Noto Sans KR', sans-serif;
+    --mono:      'IBM Plex Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--navy);
+    color: var(--text-hi);
+    font-family: var(--font);
+    font-size: 14px;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─────────────────────────────────────────── */
+  #header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--hdr-h);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 18px;
+    backdrop-filter: blur(8px);
+  }
+
+  .logo-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, #0077b6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -1px;
+    font-family: var(--mono);
+    box-shadow: 0 0 12px rgba(0,180,216,0.35);
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .logo-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  .logo-sub {
+    font-size: 10.5px;
+    color: var(--text-mid);
+    letter-spacing: 0.3px;
+    font-weight: 300;
+  }
+
+  .header-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ─── SEARCH BAR ─────────────────────────────────────── */
+  .search-wrap {
+    flex: 1;
+    max-width: 480px;
+    position: relative;
+  }
+
+  .search-wrap svg.search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-lo);
+    pointer-events: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  #searchInput {
+    width: 100%;
+    height: 36px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-hi);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 0 36px 0 34px;
+    outline: none;
+    transition: border-color .2s, background .2s;
+  }
+
+  #searchInput::placeholder { color: var(--text-lo); }
+  #searchInput:focus {
+    border-color: var(--accent);
+    background: rgba(0,150,200,0.06);
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-lo);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: none;
+    padding: 2px;
+  }
+
+  .char-count {
+    position: absolute;
+    right: -38px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-lo);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  /* ─── CLOCK ──────────────────────────────────────────── */
+  #clock-wrap {
+    margin-left: auto;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  #clock-time {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  #clock-date {
+    font-size: 10.5px;
+    color: var(--text-mid);
+    margin-top: 1px;
+  }
+
+  /* ─── MENU BAR ───────────────────────────────────────── */
+  #menubar {
+    height: var(--menu-h);
+    background: var(--navy-mid);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    padding: 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 1px;
+  }
+
+  #menubar::-webkit-scrollbar { display: none; }
+
+  .menu-icon { display: none; }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-mid);
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+    position: relative;
+    text-decoration: none;
+    background: none;
+    font-family: var(--font);
+  }
+
+  .menu-item:hover {
+    color: var(--accent2);
+    background: rgba(0,180,216,0.08);
+    border-color: var(--border);
+  }
+
+  .menu-item.active {
+    color: var(--accent);
+    background: rgba(0,180,216,0.14);
+    border-color: var(--border-hi);
+    font-weight: 500;
+  }
+
+  .menu-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .menu-icon {
+    font-size: 14px;
+    opacity: 0.7;
+  }
+
+  /* ─── SUBMENU BAR ────────────────────────────────────── */
+  #submenubar {
+    height: 38px;
+    background: #f8fafc;
+    border-bottom: 1px solid rgba(0,150,200,0.10);
+    display: none;
+    align-items: stretch;
+    padding: 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 1px;
+  }
+  #submenubar.visible { display: flex; }
+
+  /* ─── 문서등록 버튼 ─────────────────────────────────── */
+  #menubar { position: relative; }
+  .btn-register {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    height: 28px;
+    background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    box-shadow: 0 0 10px rgba(0,180,216,0.35);
+    transition: filter .2s, box-shadow .2s;
+    text-decoration: none;
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .btn-register:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 0 16px rgba(0,180,216,0.55);
+  }
+  .btn-register svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+  #submenubar::-webkit-scrollbar { display: none; }
+
+  .sub-item {
+    display: flex;
+    align-items: center;
+    padding: 0 11px;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--text-lo);
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+    position: relative;
+    background: none;
+    font-family: var(--font);
+  }
+  .sub-item:hover {
+    color: var(--accent2);
+    background: rgba(0,180,216,0.07);
+    border-color: rgba(0,180,216,0.18);
+  }
+  .sub-item.active {
+    color: var(--accent);
+    background: rgba(0,180,216,0.11);
+    border-color: rgba(0,180,216,0.3);
+    font-weight: 500;
+  }
+  .sub-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ─── CONTENT ────────────────────────────────────────── */
+  #main {
+    display: grid;
+    grid-template-rows: 1fr;
+    height: calc(100vh - var(--hdr-h) - var(--menu-h) - 38px);
+    padding: 18px 20px;
+    gap: 16px;
+  }
+
+  .panel {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    flex-shrink: 0;
+  }
+
+  .panel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  .panel-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .panel-tag {
+    margin-left: auto;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-lo);
+    background: rgba(0,180,216,0.08);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── GRAPH EMBED ────────────────────────────────────── */
+  #graph-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #fbfcfe;
+  }
+
+  /* ─── SEARCH RESULTS OVERLAY ─────────────────────────── */
+  #search-results {
+    display: none;
+    position: absolute;
+    top: calc(var(--hdr-h) + var(--menu-h));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(540px, 90vw);
+    background: #ffffff;
+    border: 1px solid var(--border-hi);
+    border-radius: 10px;
+    z-index: 200;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+    overflow: hidden;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  #search-results.open { display: block; }
+
+  .sr-header {
+    padding: 12px 16px 8px;
+    font-size: 11px;
+    color: var(--text-lo);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sr-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0,180,216,0.08);
+    cursor: pointer;
+    transition: background .12s;
+  }
+
+  .sr-item:hover { background: rgba(0,180,216,0.08); }
+  .sr-item:last-child { border-bottom: none; }
+
+  .sr-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,180,216,0.1);
+    border: 1px solid rgba(0,180,216,0.22);
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+
+  .sr-label {
+    font-size: 13px;
+    color: var(--text-hi);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+
+  .sr-desc {
+    font-size: 11.5px;
+    color: var(--text-mid);
+    line-height: 1.5;
+  }
+
+  mark {
+    background: rgba(0,150,200,0.22);
+    color: #0077b6;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+
+  /* ─── TOAST ──────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #ffffff;
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #0077b6;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ─── STATUS BAR ─────────────────────────────────────── */
+  #statusbar {
+    height: 22px;
+    background: #f1f5f9;
+    border-top: 1px solid rgba(0,150,200,0.12);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-lo);
+    flex-shrink: 0;
+  }
+
+  .sb-dot { color: var(--accent); }
+  .sb-sep { color: #cbd5e1; }
+
+  /* ─── SCROLLBAR ──────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,180,216,0.25); border-radius: 4px; }
+
+  /* ─── DOCUMENT VIEWER ───────────────────────────────── */
+  .doc-viewer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 4px;
+  }
+  .doc-header-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .doc-icon {
+    width: 52px; height: 52px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .doc-title-block { flex: 1; }
+  .doc-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; margin-bottom: 4px;
+  }
+  .doc-chapter-title {
+    font-size: 19px; font-weight: 700;
+    color: #1e293b; line-height: 1.3;
+  }
+  .doc-meta-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 20px;
+  }
+  .meta-cell {
+    display: flex; flex-direction: column; gap: 2px;
+    background: rgba(0,0,0,0.025);
+    border: 1px solid rgba(0,150,200,0.14);
+    border-radius: 6px; padding: 8px 12px;
+    min-width: 110px;
+  }
+  .meta-k {
+    font-size: 9.5px; color: #64748b;
+    letter-spacing: .5px; text-transform: uppercase;
+  }
+  .meta-v { font-size: 12px; font-weight: 500; color: #1e293b; }
+  .doc-body {
+    background: rgba(0,0,0,0.015);
+    border: 1px solid rgba(0,150,200,0.12);
+    border-radius: 8px;
+    padding: 24px 26px;
+    margin-bottom: 16px;
+  }
+  .doc-h3 {
+    font-size: 14px; font-weight: 600;
+    color: #0077b6; margin: 20px 0 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(0,150,200,0.18);
+  }
+  .doc-h3:first-child { margin-top: 0; }
+  .doc-h4 {
+    font-size: 13px; font-weight: 500;
+    color: #475569; margin: 12px 0 4px;
+  }
+  .doc-p {
+    font-size: 13px; line-height: 1.85;
+    color: #475569; margin: 4px 0;
+  }
+  .back-btn {
+    background: rgba(0,150,200,0.08);
+    border: 1px solid rgba(0,150,200,0.3);
+    border-radius: 6px; color: #0077b6;
+    font-size: 13px; padding: 8px 18px;
+    cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  }
+  .back-btn:hover { background: rgba(0,150,200,0.15); }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header id="header">
+  <div class="logo-badge">
+    <div class="logo-icon">AD</div>
+    <div class="logo-text">
+      <span class="logo-name">AutoDocu Agent</span>
+      <span class="logo-sub">제조현장 지능형 ISO 문서 비서 시스템</span>
+    </div>
+  </div>
+
+  <div class="header-divider"></div>
+
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="문서를 검색하세요..."
+      maxlength="50"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="search-clear" id="clearBtn" title="지우기">✕</button>
+    <span class="char-count"><span id="charUsed">0</span>/50</span>
+  </div>
+
+  <div id="clock-wrap">
+    <div id="clock-time">--:--:--</div>
+    <div id="clock-date">----년 --월 --일 ---요일</div>
+  </div>
+</header>
+
+<!-- ═══════════ MENU BAR ═══════════ -->
+<nav id="menubar" role="navigation" aria-label="주요 메뉴">
+  <button class="menu-item active" data-menu="qm">품질경영매뉴얼</button>
+  <button class="menu-item" data-menu="process">프로세스</button>
+  <button class="menu-item" data-menu="procedure">절차서</button>
+  <button class="menu-item" data-menu="guideline">지침서</button>
+  <button class="menu-item" data-menu="docs">각종문서</button>
+  <a class="btn-register" href="https://ios9001-system.vercel.app/" target="_blank" rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    문서 등록
+  </a>
+</nav>
+
+<!-- ═══════════ SUB MENU BAR ═══════════ -->
+<nav id="submenubar" class="visible" role="navigation" aria-label="품질경영매뉴얼 하위 메뉴">
+  <button class="sub-item active" data-section="graph">문서 그래프</button>
+  <button class="sub-item" data-section="qm01">QM-01 개요</button>
+  <button class="sub-item" data-section="qm02">QM-02 품질방침</button>
+  <button class="sub-item" data-section="qm03">QM-03 프로세스</button>
+  <button class="sub-item" data-section="qm04">QM-04 조직상황</button>
+  <button class="sub-item" data-section="qm05">QM-05 리더십</button>
+  <button class="sub-item" data-section="qm06">QM-06 기획</button>
+  <button class="sub-item" data-section="qm07">QM-07 지원</button>
+  <button class="sub-item" data-section="qm08">QM-08 운용</button>
+  <button class="sub-item" data-section="qm09">QM-09 성과평가</button>
+  <button class="sub-item" data-section="qm10">QM-10 개선</button>
+</nav>
+
+<!-- ═══════════ SEARCH RESULTS OVERLAY ═══════════ -->
+<div id="search-results" role="listbox" aria-label="검색 결과"></div>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<div id="main">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-dot"></div>
+      <span class="panel-title" id="panelTitle">QGIS 품질경영매뉴얼 — 문서 관계 그래프</span>
+      <span class="panel-tag" id="panelTag">11 nodes · 19 links</span>
+    </div>
+    <div class="panel-body">
+      <div id="graph-container">
+        <!-- ── Obsidian-style Graph (inline) ── -->
+        <h2 class="sr-only" style="position:absolute;left:-9999px">QGIS 품질경영매뉴얼 옵시디언 스타일 노드 그래프 — 11개 문서 노드와 ISO 9001 프로세스 연결 관계</h2>
+        <svg id="qg" style="width:100%;height:100%;display:block;"></svg>
+        <div id="qg-tip" style="position:absolute;pointer-events:none;display:none;background:rgba(255,255,255,0.97);border:0.5px solid rgba(167,139,250,0.55);border-radius:8px;padding:8px 12px;font-size:11px;color:rgba(30,41,59,0.88);max-width:230px;line-height:1.7;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.08);"></div>
+
+        <!-- Legend -->
+        <div style="position:absolute;bottom:14px;left:14px;display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:9px;color:rgba(30,41,59,0.35);letter-spacing:.8px;margin-bottom:3px">LEGEND</div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#a78bfa;box-shadow:0 0 5px #a78bfa88"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">매뉴얼 허브</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 5px #7dd3fc88"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">문서 기반</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#86efac;box-shadow:0 0 5px #86efac88"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">조직·리더십</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#fcd34d;box-shadow:0 0 5px #fcd34d88"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">기획·지원</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#f9a8d4;box-shadow:0 0 5px #f9a8d488"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">운용·성과평가</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#fb923c;box-shadow:0 0 5px #fb923c88"></div><span style="font-size:10px;color:rgba(30,41,59,0.5)">개선 (PDCA↩)</span></div>
+        </div>
+
+        <!-- Zoom controls -->
+        <div style="position:absolute;top:12px;right:14px;display:flex;flex-direction:column;gap:4px;">
+          <button id="qg-zi" title="확대" style="width:28px;height:28px;background:rgba(0,0,0,0.04);border:0.5px solid rgba(0,0,0,0.12);border-radius:6px;color:rgba(30,41,59,0.6);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:monospace">+</button>
+          <button id="qg-zo" title="축소" style="width:28px;height:28px;background:rgba(0,0,0,0.04);border:0.5px solid rgba(0,0,0,0.12);border-radius:6px;color:rgba(30,41,59,0.6);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:monospace">−</button>
+          <button id="qg-zr" title="초기화" style="width:28px;height:28px;background:rgba(0,0,0,0.04);border:0.5px solid rgba(0,0,0,0.12);border-radius:6px;color:rgba(30,41,59,0.5);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⊙</button>
+        </div>
+
+        <div style="position:absolute;top:12px;left:14px;font-size:9px;color:rgba(30,41,59,0.35)">드래그 이동 · 노드 클릭 시 상세 확인</div>
+
+        <!-- Link legend -->
+        <div style="position:absolute;bottom:14px;right:60px;font-size:9px;color:rgba(30,41,59,0.32);line-height:1.7">
+          <div>━ 허브 연결</div>
+          <div>┅ ISO 9001 프로세스 관계</div>
+        </div>
+      </div>
+
+      <!-- Section content panels (hidden by default) -->
+      <div id="section-content" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;padding:28px 32px;overflow-y:auto;background:#ffffff;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ STATUS BAR ═══════════ -->
+<div id="statusbar">
+  <span><span class="sb-dot">●</span> ISO 9001:2015 대응</span>
+  <span class="sb-sep">|</span>
+  <span>QGIS-QM 품질경영매뉴얼 v2.0</span>
+  <span class="sb-sep">|</span>
+  <span>문서 노드: 11 &nbsp;·&nbsp; 링크: 19</span>
+  <span class="sb-sep">|</span>
+  <span id="sb-search">검색 대기 중</span>
+</div>
+
+<!-- ═══════════ TOAST ═══════════ -->
+<div id="toast"></div>
+
+<!-- ═══════════ D3 + GRAPH SCRIPT ═══════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const HWP_DOCS = {"qm01": {"chapter_title": "제1장 개 요", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-01</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제1장 개 요</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-01                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-01                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 개요</h3>\n<p class=\"doc-p\">이 매뉴얼은 큐지스의 품질경영시스템을 규정한다.</p>\n<h3 class=\"doc-h3\">2. 적용범위</h3>\n<p class=\"doc-p\">본 매뉴얼은 ISO 9001:2015/KS Q ISO 9001:2015의 품질경영시스템 요구사항과 관련된 큐지스(이하 ‘당사’라 한다)의 품질경영시스템을 정한다.</p>\n<p class=\"doc-p\">본 매뉴얼에 규정된 시스템에 관한 법규 요구사항을 충족하는 서비스를 일관성 있게 제공하는 능력을 입증하고, 고객의 요구사항을 충족시키는 것은 물론 고객만족을 달성할 목적으로 기술되어 시스템의 지속적인 개선과 부적합을 방지하기 위한 시스템을 포함한다.</p>\n<p class=\"doc-p\">본 품질경영매뉴얼은 “관리본”과 “비관리본”으로 구분 발행하며, 관리본에 대해서는 항상 최신의 상태가 유지되도록 관리한다.</p>\n<h3 class=\"doc-h3\">3. 용어의 정의</h3>\n<p class=\"doc-p\">당사는 다음과 같이 용어를 정의하여 사용하며 정의되지 않았거나 용어의 의미상에 차이가 있을 경우에는 ISO 9001 규격에 따른다.</p>\n<h4 class=\"doc-h4\">1) 품질경영매뉴얼(Quality Management Manual)</h4>\n<p class=\"doc-p\">회사의 품질경영시스템을 규정하는 최상위 문서로서 품질방침을 명시하고</p>\n<p class=\"doc-p\">조직의 품질경영시스템에 대하여 내부 및 외부적으로 일관성 있는 정보를</p>\n<p class=\"doc-p\">제공하며, 품질경영시스템의 기본사항을 기술한 문서이다.</p>\n<h4 class=\"doc-h4\">2) 품질보증(Quality Assurance)</h4>\n<p class=\"doc-p\">어떤 실체가 품질요구사항에 충족시킨다는 적절한 신뢰감을 주기 위하여 품질시스템 내에서 실시하고 필요에 따라 실증되는 모든 계획적이고 체계적인   활동이다.</p>\n<h4 class=\"doc-h4\">3) 품질방침(Quality Policy)</h4>\n<p class=\"doc-p\">최고경영자에 의해 공식적으로 표명된 품질 관련 조직의 전반적인 의도 및  방향을 말하며, 조직의 전반적인 방침과 일관성이 유지되어야 하고 품질목표를 설정하기 위한 틀을 제공한다.</p>\n<h4 class=\"doc-h4\">4) 품질목표(Quality Objectives)</h4>\n<p class=\"doc-p\">품질방침에 근거하여 조직이 달성하고자 스스로 설정하여 추구하거나 지향하는 것이다.</p>\n<h4 class=\"doc-h4\">5) 이해관계자(Interested Party)</h4>\n<p class=\"doc-p\">고주파 열처리 및 작업과 관련하여 품질, 환경, 인허가등 업무상 관련이 있는 모든 조직 또는 개인을 의미한다.</p>\n<h4 class=\"doc-h4\">6) 경영시스템 감사(Audit)</h4>\n<p class=\"doc-p\">조직의 경영체제가 조직의 감사 기준과 부합되는지의 여부를 결정하기 위해  증거를 객관적으로 획득하고 평가하며, 경영자에게 이러한 과정의 결과를 전달하기 위한 체계적이고 문서화된 검증 과정이다.</p>\n<h4 class=\"doc-h4\">7) 지속적 개선(Continual Improvement)</h4>\n<p class=\"doc-p\">전반적인 품질보증 업무의 개선을 달성하기 위해서 조직의 품질 방침과 연계하여 통합시스템을 향상시키는 과정이다.</p>\n<h4 class=\"doc-h4\">8) 검사(Inspection)</h4>\n<p class=\"doc-p\">측정, 시험 또는 계측을 적절히 활용한 관찰 및 판정에 의한 적합 및 일치여부의 평가이다.</p>\n<h4 class=\"doc-h4\">9) 시험(Test)</h4>\n<p class=\"doc-p\">품목이 일련의 경도, 깊이, 조건 또는 환경에서 규격서의 요구사항에 적합한가를 판정하는 행위이다.</p>\n<h4 class=\"doc-h4\">10) 검증(Verification)</h4>\n<p class=\"doc-p\">규정된 요구사항이 충족되었음을 객관적인 증거의 제시를 통해 확인하는 것이다.</p>\n<h4 class=\"doc-h4\">11) 타당성 확인(Validation)</h4>\n<p class=\"doc-p\">특별한 용도 또는 적용에 대한 요구사항이 충족되었음을 객관적 증거의 제시를 통하여 확인하는 것이다.</p>\n<h4 class=\"doc-h4\">12) 검토(Review)</h4>\n<p class=\"doc-p\">수립된 목표를 달성하기 위해 적절성, 충족성 및 효과성을 결정 하고자 시행되는 활동이다.</p>\n<h4 class=\"doc-h4\">13) 부적합/불일치(Nonconformity)</h4>\n<p class=\"doc-p\">요구사항에 대한 불충족한 사항이다.</p>\n<h4 class=\"doc-h4\">14) 시정(Correction)</h4>\n<p class=\"doc-p\">발견된 부적합/불일치를 제거하기 위해 취하는 조치이다.</p>\n<h4 class=\"doc-h4\">15) 시정조치(Corrective Action)</h4>\n<p class=\"doc-p\">발견된 부적합/불일치 또는 기대하지 않은 상황의 원인을 제거하기 위해 취하는 조치이다.</p>\n<h4 class=\"doc-h4\">16) 예방조치(Preventive Action)</h4>\n<p class=\"doc-p\">잠재적인 부적합/불일치 또는 기대하지 않은 상황의 원인을 제거하기 위해 취하는 조치이다.</p>\n<h4 class=\"doc-h4\">17) 효과성(Effectiveness)</h4>\n<p class=\"doc-p\">계획된 활동이 실현되어 계획된 목표가 달성되는 정도이다.</p>\n<h4 class=\"doc-h4\">18) 효율성(Efficiency)</h4>\n<p class=\"doc-p\">사용된 자원과 달성된 결과와의 관계이다.</p>\n<h4 class=\"doc-h4\">19) 부적합 사항</h4>\n<p class=\"doc-p\">작업표준, 관행, 절차, 규정 등 정상적인 경영체제의 수행으로부터 이탈된 모든 행위 및 상태로 물리적 결함, 시험불이행, 부적합 문서, 기자재의 특성이나 성능상의 결함 사항 등이다.</p>\n<h4 class=\"doc-h4\">20) 기록(Record)</h4>\n<p class=\"doc-p\">달성된 결과를 표시하거나 수행한 활동의 증거를 제공하는 문서이다.</p>\n<h4 class=\"doc-h4\">21) 문서(Document)</h4>\n<p class=\"doc-p\">기록, 절차서, 도면, 보고서, 규격 등과 같은 정보 및 정보 지원 매체(종이, 자기, 전자 또는 광학 컴퓨터 디스크, 사진, 견본 또는 그 조합)를 말하며, 내외부적으로 업무상 작성 또는 시행되는 문서와 외부조직으로부터 접수한 모든 문서이다.</p>\n<h4 class=\"doc-h4\">22) 품질(Quality)</h4>\n<p class=\"doc-p\">고유 특성의 집합이 요구사항을 충족시키는 정도이다.</p>\n<h4 class=\"doc-h4\">23) 품질경영(Quality Management)</h4>\n<p class=\"doc-p\">고객이 만족할 수 있는 품질목표를 설정하고 이를 달성하기 위하여 체계적으로 품질을 기획⋅관리⋅보증⋅개선하는 경영 활동이다.</p>\n<h4 class=\"doc-h4\">24) 프로세스(Process)</h4>\n<p class=\"doc-p\">입력을 출력으로 변환시키는 상호 관련되거나 작용하는 활동의 집합이다.</p>\n<h4 class=\"doc-h4\">25) 제품(Product)</h4>\n<p class=\"doc-p\">프로세스의 결과로서 2가지(고주파열처리, 서비스)로 분류되며, 우리 회사의 최종제품은 “고주파열처리”이다.</p>\n<h4 class=\"doc-h4\">26) 고객(Customer)</h4>\n<p class=\"doc-p\">(1) 내부고객은 각 조직 또는 개인의 업무에 영향을 주는 최고 경영자, 상․하위 직급자, 부서/팀(실)간을 의미한다.</p>\n<p class=\"doc-p\">(2) 외부고객은 큐지스에서 생산된 제품을 운영하는 업무관련 조직이다.</p>\n<h4 class=\"doc-h4\">27) 고객만족(Customer Satisfaction)</h4>\n<p class=\"doc-p\">고객의 요구사항이 어느 정도까지 충족되었는지에 대한 고객의 인식 수준이다</p>\n<h4 class=\"doc-h4\">28) 품질기획(Quality Planning)</h4>\n<p class=\"doc-p\">품질경영의 일부로서 품질목표를 수립하고 달성하기 위해 요구 되는 운영 프로세스 및 관련 자원을 규정하는 것이다.</p>\n<h4 class=\"doc-h4\">29) 품질관리(Quality Control)</h4>\n<p class=\"doc-p\">품목이나 설비의 품질요건을 달성하기 위하여 미리 설정된 요건에 따라 설비, 품목 또는 공정의 특성을 측정하고 관리하는 활동이다.</p>\n<h4 class=\"doc-h4\">30) 품질개선(Quality Improvement)</h4>\n<p class=\"doc-p\">조직과 고객에게 부가적인 이익을 제공하기 위한 활동과 공정의 효과 및 능률을 증대시키기 위하여 조직 전반에 걸쳐 취해지는 품질 활동이다.</p>\n<h4 class=\"doc-h4\">31) 품질비용(Quality Cost)</h4>\n<p class=\"doc-p\">만족스런 품질을 확보하기 위하여 필요한 제반 비용으로서 적정수준의 품질을 달성하기 위하여 투입되는 비용(예방비용, 평가비용)과 부적합사항으로 인하여 파생되는 비용(실패비용)을 포함한 총비용이다.</p>\n<h4 class=\"doc-h4\">32) 시방서(Specification)</h4>\n<p class=\"doc-p\">제품 또는 활동(작업)에 대한 요구사항을 명시한 문서이다.</p>\n<h4 class=\"doc-h4\">33) 품질계획서</h4>\n<p class=\"doc-p\">특정 프로젝트, 제품, 프로세스 또는 계약 등에 대한 절차 및 자원관리를 규정한 문서로서 건설사업소에 적용</p>\n<h4 class=\"doc-h4\">34) 추적성(Traceability)</h4>\n<p class=\"doc-p\">고려 대상에 있는 이력, 적용 또는 위치를 추적하기 위한 능력이다.</p>\n<h4 class=\"doc-h4\">35) 품질주관부서</h4>\n<p class=\"doc-p\">회사의 품질업무를 주관하는 본사의 부서이다.</p>\n<h4 class=\"doc-h4\">36) 품질담당부서</h4>\n<p class=\"doc-p\">품질경영매뉴얼에 따라 품질업무를 담당하는 본사의 부서이다</p>\n<h4 class=\"doc-h4\">37) 리스크(risk)</h4>\n<p class=\"doc-p\">불확실성의 영향(effect)을 말한다.</p>\n<h4 class=\"doc-h4\">38) 리스크와 기회(risk and opportunities)</h4>\n<p class=\"doc-p\">잠재적 악영향(위협)과 잠재적 유익한 결과(기회)이다.</p>", "color": "#7dd3fc"}, "qm02": {"chapter_title": "제2장 품질방침", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-02</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제2장 품질방침</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-02                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-02                                    QGIS                        A4 (210mmx297mm)</p>", "color": "#7dd3fc"}, "qm03": {"chapter_title": "제3장 품질경영시스템 프로세스 상호작용", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-03</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제3장 품질경영시스템 프로세스 상호작용</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-03                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-03                                    QGIS                        A4 (210mmx297mm)</p>", "color": "#7dd3fc"}, "qm04": {"chapter_title": "제4장 조직상황", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-04</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제4장 조직상황</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-04                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-04                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용범위</h3>\n<p class=\"doc-p\">본 장은 조직의 대내외 이해관계자의 니즈 및 기대에 대한 이해, 품질경영시스템의 적용 범위 결정, 품질경영시스템 및 필요 프로세스의 수립, 실행 및 유지, 품질경영시스템의 지속적인 개선, 문서화된 정보의 유지 및 보유에 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목 적</h3>\n<p class=\"doc-p\">조직의 내외부 이슈와 이해관계자 니즈 및 요구를 고려하여 품질경영시스템 및 프로세스를 상호 결정하고, 수립하여 운영함으로써 지속적인 유지 개선을 목적으로 한다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">(1) 품질경영시스템을 종합적으로 관리한다.</p>\n<p class=\"doc-p\">3.2 품질담당부서장</p>\n<p class=\"doc-p\">(1) 이해관계자 관리절차를 수립하고 관리한다.</p>\n<p class=\"doc-p\">(2) 품질경영시스템의 적용범위 설정을 승인한다.</p>\n<p class=\"doc-p\">(3) 품질경영매뉴얼 및 절차서를 배부, 관리한다.</p>\n<p class=\"doc-p\">(4) 품질경영시스템의 적용범위를 수립하고 적용범위 내에서 품질경영시스템이 운영되도록 한다.</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 조직과 조직상황의 이해</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 조직의 목적 및 전략적 방향과 관련되거나 품질경영시스템의 의도된 결과를 달성하는데 조직의 능력에 영향을 주는 내・외부 이슈에 대한 정보를 “리스크 관리절차서(QP01-QS014)”에 따라 결정, 모니터링, 검토한다.</p>\n<p class=\"doc-p\">4.2 이해관계자의 니즈와 기대 이해</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 고객 요구사항, 그리고 적용되는 법적 및 규제적 요구사항충족 및 일관성 있게 제공하기 위한 조직의 능력에 이해관계자가 영향 또는 잠재적 영향을 미치기 때문에 품질경영시스템에 관련되는 이해관계자와 이해관계자의 요구사항을 “리스크 관리절차서(QP01-QS014)”에 따라 정한다.</p>\n<p class=\"doc-p\">(2) 품질경영시스템을 통해 공급 서비스를 실현하는 과정에서 조직의 능력에 영향을 미치는 이해관계자로는 대내적으로는 임직원, 대외적으로는 고객, 정부 및 협력사(주주 포함)로 정한다.</p>\n<p class=\"doc-p\">(3) 이해관계자 요구사항</p>\n<p class=\"doc-p\">이해관계자</p>\n<p class=\"doc-p\">요 구 사 항</p>\n<p class=\"doc-p\">임직원</p>\n<p class=\"doc-p\">어려운 경영여건 극복을 통한 성과개선</p>\n<p class=\"doc-p\">고 객</p>\n<p class=\"doc-p\">고객맞춤형 서비스 제공</p>\n<p class=\"doc-p\">정 부</p>\n<p class=\"doc-p\">정부정책 이행 선도 및 친환경안전성 강화</p>\n<p class=\"doc-p\">협력사</p>\n<p class=\"doc-p\">호혜적 상생경영 실천</p>\n<p class=\"doc-p\">4.3 품질경영시스템의 적용범위 결정</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 품질경영시스템 수립 시, 적용범위를 설정하기 위하여 품질경영시스템의 경계 및 적용 가능성에 대해 다음 사항을 고려한다.</p>\n<h4 class=\"doc-h4\">1) 본 장의 4.1절에서 언급된 내외부 이슈</h4>\n<h4 class=\"doc-h4\">2) 본 장의 4.2절에서 언급된 이해관계자의 요구사항</h4>\n<p class=\"doc-p\">(2) 품질경영시스템의 정해진 적용범위 내에서 KS Q ISO 9001의 요구사항이 적용 가능하다면 모든 요구사항을 적용한다.</p>\n<p class=\"doc-p\">(3) 품질경영시스템의 적용범위 내에 포함되지 않는다고 정한 KS Q ISO 9001의 요구사항은 그에 대한 정당한 사유를 포함하여 본 품질경영매뉴얼의 제1장 &quot;개요&quot;에 규정한다.</p>\n<p class=\"doc-p\">(4) 품질경영시스템의 적용범위는 품질경영매뉴얼 제1장 “개요”에 기술하여 문서화된 정보로 이용 가능하고, 유지되도록 한다.</p>\n<p class=\"doc-p\">(5) 적용할 수 없다고 정한 KS Q ISO 9001 표준 요구사항이 제품 및 서비스의 적합성과 고객만족 증진을 보장하기 위한 조직의 능력 또는 책임에 영향을 미치지 않는 경우에만, ISO 9001 표준에 대한 적합성이 주장될 수 있다. 현재 조직에는 KS Q ISO 9001 표준 요구사항이 모두 적용된다.</p>\n<p class=\"doc-p\">4.4 품질경영시스템과 그 프로세스</p>\n<p class=\"doc-p\">(1) 전 조직 및 구성원은 KS Q ISO 9001 표준에서 요구하는 요구사항에 따라 필요한 프로세스와 그 프로세스의 상호작용, 조직 전반에 걸친 프로세스의 적용을 포함하는 품질경영시스템을 수립하고, 문서화하여 실행유지하며, 품질경영시스템의 효과성을 지속적으로 개선한다.</p>\n<p class=\"doc-p\">(2) 전 조직 및 구성원은 품질경영시스템 실행을 위해 다음 사항을 실행한다.</p>\n<h4 class=\"doc-h4\">1) 요구되는 입력과 프로세스로부터 기대되는 출력을 결정하여 (표 4-1) 품질경영시스템 문서화 구조 중 Level II 프로세스 문서에서 구체화한다.</h4>\n<h4 class=\"doc-h4\">2) 프로세스의 순서 및 상호작용을 결정하여 해당 내용을 본 품질경영매뉴얼의 제3장 “품질경영시스템 프로세스 상호 작용”에서 규정한다.</h4>\n<h4 class=\"doc-h4\">3) 프로세스의 효과적인 운용과 관리를 보장하기 위해 필요한 기준과 방법(모니터링, 측정 및 관련 성과지표를 포함)의 결정과 적용은 본 품질경영매뉴얼의 각 장에서 그 기준과 방법을 규정하고, 필요한 경우 관련된 프로세스에서 구체화 한다.</h4>\n<h4 class=\"doc-h4\">4) 프로세스에 필요한 자원의 결정과 자원의 가용성 보장은 본 품질경영매뉴얼 제7장 “지원”에서 결정 및 보장한다.</h4>\n<h4 class=\"doc-h4\">5) 프로세스에 대한 책임과 권한 부여는 본 품질경영매뉴얼의 각 장 및 “조직 및 직무[사규 제2장]”과 관련 프로세스에서 규정한다.</h4>\n<h4 class=\"doc-h4\">6) 본 품질경영매뉴얼 제6장 “4.1 리스크와 기회를 다루는 조치”에서 결정된 리스크와 기회에 대해서는 적절한 조치 계획을 수립하고, 실행한다.</h4>\n<h4 class=\"doc-h4\">7) 프로세스 평가, 내부심사, 경영검토 등을 통해 프로세스가 의도된 결과를 달성함을 보장하기 위해 변경이 필요한 경우 변경 실행, 조치한다.</h4>\n<h4 class=\"doc-h4\">8) 내부심사, 경영검토 등을 통해 프로세스와 품질경영시스템은 지속적으로 개선한다.</h4>\n<h4 class=\"doc-h4\">9) 각 부(실)장은 필요한 정도까지 다음 사항을 실행한다.</h4>\n<p class=\"doc-p\">(a) 프로세스의 운용을 지원하기 위하여 문서화된 정보의 유지</p>\n<p class=\"doc-p\">(b) 프로세스가 계획대로 수행되고 있다는 확신을 갖기 위하여 문서화된 정보의 보유</p>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">조직상황 관련 기록은 “문서규정[사규 제8조]”에 따라 유지 관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련문서</h3>\n<p class=\"doc-p\">(1) 리스크 관리절차서(QP01-QS014)</p>\n<p class=\"doc-p\">(2) 사규 제2장 조직 및 직무</p>\n<p class=\"doc-p\">(3) 문서규정[사규 제8조]</p>\n<p class=\"doc-p\">(4) 제7장 “지원”</p>\n<p class=\"doc-p\">(5) 제6장 “4.1 리스크와 기회를 다루는 조치”</p>\n<h3 class=\"doc-h3\">7. 붙 임</h3>\n<p class=\"doc-p\">(1) 표 4-1. 품질경영시스템 문서화 구조(품질문서 체계)</p>", "color": "#86efac"}, "qm05": {"chapter_title": "제5장 리더쉽", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-05</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제5장 리더쉽</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-05                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-05                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용범위</h3>\n<p class=\"doc-p\">본 장은 조직이 품질경영시스템을 효과적으로 실행하기 위한 경영자 리더십 및 의지, 고객만족 향상, 품질방침 및 품질목표의 수립, 운영과 조직의 역할, 책임 및 권한의 규정에 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">품질경영을 실행하기 위한 경영책임 사항을 규정함으로써 품질경영시스템을 수립, 유지 및 개선 시키는 데 그 목적이 있다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">(1) 품질경영시스템에 대한 리더십과 의지를 실증한다.</p>\n<p class=\"doc-p\">(2) 품질경영시스템 수립 및 실행을 보장하기 위한 자원을 제공하고 지휘한다.</p>\n<p class=\"doc-p\">(3) 품질방침과 품질목표를 수립 및 승인한다.</p>\n<p class=\"doc-p\">(4) 품질담당부서장을 지명한다.</p>\n<p class=\"doc-p\">3.2 품질담당부서장</p>\n<p class=\"doc-p\">(1) 우리공사 품질경영시스템 사후관리심사 및 확대구축 계획을 검토한다.</p>\n<p class=\"doc-p\">(2) 품질방침, 품질경영 매뉴얼, 절차서 제‧개정 업무를 총괄한다.</p>\n<p class=\"doc-p\">(3) 본사 목표, 세부목표 및 추진계획을 종합하고 진행사항을 지속적으로 관리하며 평가한다.</p>\n<p class=\"doc-p\">(4) 품질경영시스템과 관련된 대내외 업무를 총괄 관리한다.</p>\n<p class=\"doc-p\">(5) 본사 경영검토 자료를 수집, 준비하고 관리한다.</p>\n<p class=\"doc-p\">(6) 전 지사 내부심사결과를 종합 관리한다.</p>\n<p class=\"doc-p\">(7) 본사 및 전 지사 품질경영추진계획 실적을 총괄 관리한다.</p>\n<p class=\"doc-p\">3.3 인사담당부서장</p>\n<p class=\"doc-p\">(1) 품질경영시스템을 효율적으로 운영하기 위한 인력을 확보, 지원한다.</p>\n<p class=\"doc-p\">3.6 본사 부(팀)장 및 지사 각 부장</p>\n<p class=\"doc-p\">(1) 해당 부서의 품질경영 관련 업무를 지휘‧감독 및 관련된 사항을 수행한다.</p>\n<h3 class=\"doc-h3\">4. 업무 절차</h3>\n<p class=\"doc-p\">4.1 리더십과 의지</p>\n<p class=\"doc-p\">4.1.1 품질경영시스템을 위한 리더십과 의지</p>\n<p class=\"doc-p\">(1) 대표는 품질경영시스템에 대한 리더십과 의지표명/실행의지를 다음 사항에 의하여 실증한다.</p>\n<h4 class=\"doc-h4\">1) 품질경영시스템의 효과성에 대해 책무를 짐</h4>\n<h4 class=\"doc-h4\">2) 품질경영시스템을 위하여 품질방침 및 품질목표를 수립하며, 품질방침 및 품질목표가 조직 상황과 전략적 방향에 조화됨을 보장</h4>\n<h4 class=\"doc-h4\">3) 품질경영시스템 요구사항이 조직의 비즈니스 프로세스와 통합됨을 보장</h4>\n<h4 class=\"doc-h4\">4) 프로세스 접근법 및 리스크 기반 사고의 활용 촉진</h4>\n<h4 class=\"doc-h4\">5) 품질경영시스템에 필요한 자원의 가용성 보장</h4>\n<h4 class=\"doc-h4\">6) 효과적인 품질경영의 중요성 및 품질경영시스템 요구사항과의 적합성에 대한 중요성을 의사소통</h4>\n<h4 class=\"doc-h4\">7) 품질경영시스템이 의도된 결과를 달성함을 보장</h4>\n<h4 class=\"doc-h4\">8) 품질경영시스템의 효과성에 기여하기 위한 인원을 적극 참여시키고, 지휘하고 지원함</h4>\n<h4 class=\"doc-h4\">9) 개선을 촉진</h4>\n<h4 class=\"doc-h4\">10) 기타 관련 경영자/관리자(처/본부장)의 책임분야에 리더십이 적용될 때, 그들의 리더십을 실증하도록 그 경영자에 대한 지원</h4>\n<p class=\"doc-p\">4.1.2 고객중시</p>\n<p class=\"doc-p\">대표는 다음 사항을 보장함으로 고객중시에 대한 리더십 및 의지표명을 실증한다.</p>\n<p class=\"doc-p\">(1) 고객의 요구사항 및 적용되는 법적, 규제적 요구사항이 결정되고, 이해되며 일괄되게 충족됨</p>\n<p class=\"doc-p\">(2) 제품 및 서비스의 적합성, 그리고 고객만족을 증진시키는 능력에 영향을 미칠 수 있는 리스크와 기회가 결정되고 처리됨</p>\n<p class=\"doc-p\">(3) 고객만족 증진의 중시가 유지되도록 할 것</p>\n<p class=\"doc-p\">4.2 품질방침</p>\n<p class=\"doc-p\">(1) 대표는 다음과 같은 품질방침이 수립, 실행 및 유지되도록 보장한다.</p>\n<h4 class=\"doc-h4\">1) 조직의 활동, 서비스의 특성 등을 포함하여 조직의 목적과 상황에 적절하고 조직의 전략적 방향을 지원</h4>\n<h4 class=\"doc-h4\">2) 품질목표의 설정을 위한 틀을 제공</h4>\n<h4 class=\"doc-h4\">3) 적용되는 요구사항의 충족에 대한 의지표명을 포함</h4>\n<h4 class=\"doc-h4\">4) 품질경영시스템을 지속적으로 개선한다는 의지표명을 포함</h4>\n<p class=\"doc-p\">(2) 품질방침은 품질경영매뉴얼에 삽입, 또는 액자 등의 문서화된 정보로 가용되도록 하며, 게시물/인쇄물(다이어리), 공문, 회람 처리, 인터넷 등을 이용하여 품질관리규정 및 품질경영 진단절차서에 따라 조직 내에서 의사소통, 이해 및 적용되도록 한다.</p>\n<p class=\"doc-p\">4.3 조직의 역할, 책임 및 권한</p>\n<p class=\"doc-p\">(1) 대표는 효과적인 품질경영 촉진을 포함하여 조직 내에서 배정/부여, 의사소통 및 이해됨을 보장한다.</p>\n<p class=\"doc-p\">(2) 대표는 다음을 위한 책임과 권한을 부여 한다.</p>\n<h4 class=\"doc-h4\">1) 품질경영시스템이 해당 국제 표준(KS Q ISO 9001)의 요구사항에 적합함을 보장</h4>\n<h4 class=\"doc-h4\">2) 프로세스가 조직이 의도한 결과물(출력)을 도출하고 있음을 보장</h4>\n<h4 class=\"doc-h4\">3) 품질경영시스템의 성과, 개선의 기회 및 변화나 혁신에 대한 필요성에 관한 보고, 특히 대표에게 보고</h4>\n<h4 class=\"doc-h4\">4) 조직 전반에 걸쳐 고객중시 증진에 대한 촉진을 보장</h4>\n<h4 class=\"doc-h4\">5) 품질경영시스템의 변경이 계획되고, 실행될 때, 품질경영시스템의 온전성이 유지됨을 보장</h4>\n<p class=\"doc-p\">(3) 대표는 권한의 위임에 있어서 부여된 업무를 소속 담당자에게 위임할 수 있으나, 해당 업무에 대한 책임은 위임할 수 없다.</p>", "color": "#86efac"}, "qm06": {"chapter_title": "제6장 기획", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-06</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제6장 기획</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-06                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-06                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용범위</h3>\n<p class=\"doc-p\">본 장은 품질경영시스템에 영향을 줄 수 있는 리스크 및 기회를 다루기 위한 조치, 품질목표의 수립 및 품질목표 달성을 위한 기획, 품질경영시스템의 변경에 대하여 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">품질경영시스템의 리스크 및 기회를 다루기 위한 조치와 품질목표를 수립하고, 이를 달성하기 위한 품질경영시스템을 기획하여 이를 이행, 평가함으로써 지속적인 개선과 품질경영시스템을 효율적이고 효과적으로 유지하는데 그 목적이 있다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 품질담당부서장</p>\n<p class=\"doc-p\">(1) 품질목표의 검토 및 품질목표의 달성을 위한 부서별 계획(세부목표)의 승인</p>\n<p class=\"doc-p\">(2) 품질경영시스템의 변경 시 이에 대한 계획의 수립</p>\n<p class=\"doc-p\">(3) 리스크 및 기회의 결정</p>\n<p class=\"doc-p\">(4) 리스크 및 기회를 다루기 위한 조치계획 및 효과성 평가 결과 승인</p>\n<p class=\"doc-p\">(5) 리스크 및 기회를 다루기 위한 조치계획 및 효과성 평가 결과 보고</p>\n<p class=\"doc-p\">(6) 품질목표 달성을 위한 부서별 계획(세부목표)의 수립</p>\n<p class=\"doc-p\">3.3 구성원</p>\n<p class=\"doc-p\">(1) 품질목표에 대한 인식 및 이해</p>\n<p class=\"doc-p\">(2) 품질목표 달성을 위한 계획의 이행 및 관리</p>\n<p class=\"doc-p\">(3) 리스크 및 기회를 다루기 위해 계획된 조치의 이행</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 리스크 및 기회를 다루기 위한 조치</p>\n<p class=\"doc-p\">4.1.1 리스크 및 기회 결정</p>\n<p class=\"doc-p\">(1) 품질경영시스템을 기획할 때, 품질담당부서장은 조직의 내‧외부 이슈, 이해관계자의 니즈와 기대에 대한 이해, 이해관계자의 요구사항을 고려하며, 다음 사항을 위하여 다루어야 할 필요성이 있는 리스크와 기회를 정한다.</p>\n<h4 class=\"doc-h4\">1) 품질경영시스템이 의도된 결과를 달성할 수 있음을 보증</h4>\n<h4 class=\"doc-h4\">2) 바람직한 영향의 증진</h4>\n<h4 class=\"doc-h4\">3) 바람직하지 않은 영향의 예방 또는 감소</h4>\n<h4 class=\"doc-h4\">4) 개선의 성취</h4>\n<p class=\"doc-p\">4.1.2 리스크 및 기회를 다루기 위한 조치의 기획</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 “리스크관리[QP01-QS014]”에 따라 리스크 관리 적합성에 미치는 잠재적 영향을 고려하여 계획을 수립하고, 실행한다.</p>\n<p class=\"doc-p\">(2) 계획된 조치는 품질경영시스템의 프로세스에 통합하여 실행하고, 실행된 결과에 대해서 효과성을 평가한다.</p>\n<p class=\"doc-p\">(3) 리스크를 다루기 위한 선택사항에는 리스크 회피, 기회를 잡기 위한 리스크 감수, 리스크 요인 제거, 발생가능성이나 결과의 변경, 리스크의 공유 또는 정보에 근거한 의사결정에 의한 리스크 유지가 포함될 수 있다.</p>\n<p class=\"doc-p\">(4) 리스크를 다루기 위하여 취해진 조치는 적합성에 미치는 잠재적 영향에 상응하게 한다.</p>\n<p class=\"doc-p\">(6) 구성원은 프로세스가 계획된 것과 같이 수행되었다는 신뢰를 가져야 할 필요가 있는 범위까지 문서화된 정보를 “리스크관리[QP01-QS014]”에 따라 유지한다.</p>\n<p class=\"doc-p\">4.2 품질목표와 이를 달성하기 위한 기획</p>\n<p class=\"doc-p\">(1) 각 부(실)장은 품질경영시스템에 필요한 관련 기능, 계층 및 프로세스에서 품질목표를 수립한다.</p>\n<p class=\"doc-p\">(2) 품질목표는 다음과 같아야 한다.</p>\n<h4 class=\"doc-h4\">1) 품질방침과의 일관성이 있어야 함</h4>\n<h4 class=\"doc-h4\">2) 측정 가능해야 함</h4>\n<h4 class=\"doc-h4\">3) 적용되는 요구사항이 고려되어야 함</h4>\n<h4 class=\"doc-h4\">4) 서비스의 적합성, 고객만족 증진과 관련되어야 함</h4>\n<h4 class=\"doc-h4\">5) 모니터링이 되어야 함</h4>\n<h4 class=\"doc-h4\">6) 의사소통이 되어야 함</h4>\n<h4 class=\"doc-h4\">7) 필요에 따라 갱신되어야 함</h4>\n<p class=\"doc-p\">(3) 품질목표에 관하여 “품질관리 및 고객대응[사규 제8장]”에 따라 문서화된 정보를 유지한다.</p>\n<p class=\"doc-p\">(4) 품질목표를 달성하는 방법을 기획할 때, 품질담당부서장은 다음 사항을 결정한다.</p>\n<h4 class=\"doc-h4\">1) 달성 대상</h4>\n<h4 class=\"doc-h4\">2) 필요 자원</h4>\n<h4 class=\"doc-h4\">3) 책임자</h4>\n<h4 class=\"doc-h4\">4) 완료 시기</h4>\n<h4 class=\"doc-h4\">5) 결과 평가 방법</h4>\n<p class=\"doc-p\">4.3 변경의 기획</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 품질경영시스템의 변경이 필요하다고 결정하는 경우, 변경은 계획적이고 체계적인 방식으로 수행되게 한다.</p>\n<p class=\"doc-p\">(2) 품질담당부서장은 다음 사항을 고려한다.</p>\n<h4 class=\"doc-h4\">1) 변경의 목적 및 모든 잠재적 결과</h4>\n<h4 class=\"doc-h4\">2) 품질경영시스템의 온전성</h4>\n<h4 class=\"doc-h4\">3) 자원의 가용성</h4>\n<h4 class=\"doc-h4\">4) “조직 및 직무 규정[사규 제2장]”에 따른 책임 및 권한의 부여 또는 재부여</h4>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">기획 관련 기록은 “기록 및 문서관리책임규정[사규 제8조]”에 따라 유지 관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련 문서</h3>\n<p class=\"doc-p\">(1) 리스크관리[QP01-QS014]</p>\n<p class=\"doc-p\">(2) 품질관리 및 고객대응[사규 제8장]</p>\n<p class=\"doc-p\">(3) 조직 및 직무 규정[사규 제2장]</p>\n<p class=\"doc-p\">(4) 기록 및 문서관리책임규정[사규 제8조]</p>", "color": "#fcd34d"}, "qm07": {"chapter_title": "제7장 지원", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-07</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제7장 지원</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-07                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-07                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용 범위</h3>\n<p class=\"doc-p\">본 장은 조직의 품질경영시스템의 수립, 실행, 유지 및 지속적 개선과 프로세스를 운영하는데 필요한 인적자원, 기반구조, 업무 환경을 포함한 자원을 결정하고, 확보 및 유지관리와 인원들에 대한 적격성, 교육훈련, 인식, 의사소통, 정보 등의 관리에 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">품질경영시스템 업무 전반에 걸쳐 지속적인 적절성, 충족성 및 효과성을 보장하기 위하여 필요한 인적자원, 기반구조, 업무환경 등의 자원을 결정, 확보하고 유지관리를 통하여 조직의 성과를 향상시키는데 그 목적이 있다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">품질경영시스템의 수립, 실행 및 유지, 그리고 효과성에 대한 지속적인 개선과 고객만족 증진을 위해 필요한 인적자원, 기반구조, 업무환경 등의 자원을 결정하고, 확보 및 제공에 대한 승인</p>\n<p class=\"doc-p\">3.3 품질담당부서장</p>\n<p class=\"doc-p\">(1) 소속직원에 대한 자체 교육훈련을 총괄 관리한다.</p>\n<p class=\"doc-p\">(2) 외부 이해관계자로부터 제기된 민원을 처리한다.</p>\n<p class=\"doc-p\">(3) 품질경영에 영향을 미치는 업무의 수행을 위한 문서의 작성, 검토, 승인, 배부, 보관, 개정, 폐기 등을 관련 절차에 따라 실행하여야 한다.</p>\n<p class=\"doc-p\">3.4 교육주관부서장</p>\n<p class=\"doc-p\">(1) 교육주관부서에서 실시하는 모든 임직원의 교육훈련을 주관한다.</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 자원</p>\n<p class=\"doc-p\">4.1.1 일반사항</p>\n<p class=\"doc-p\">품질담당부서장은 품질경영시스템의 수립, 실행, 유지, 지속적 개선을 위하여 다음을 고려한 필요한 자원을 결정하고, 관리절차 등에 따라 제공한다.</p>\n<p class=\"doc-p\">(1) 기존 내부자원의 능력 및 제약사항</p>\n<p class=\"doc-p\">(2) 외부공급자로부터 획득할 필요가 있는 것</p>\n<p class=\"doc-p\">4.1.2 인원</p>\n<p class=\"doc-p\">품질담당부서장은 품질경영시스템의 효과적인 실행 운용 및 관리에 필요한 인원을 정하고 제공한다.</p>\n<p class=\"doc-p\">4.1.3 기반구조</p>\n<p class=\"doc-p\">품질담당부서장은 프로세스의 운용을 위한  다음을 포함한 필요한 기반구조를 결정, 제공 및 유지 한다.</p>\n<p class=\"doc-p\">(1) 건물(사무실, 각종 창고 등) 및 부대시설</p>\n<h4 class=\"doc-h4\">1) 담당부서장은 사무실, 각종 창고 등이 적합하게 유지되도록 관리한다.</h4>\n<p class=\"doc-p\">(2) 네트워크 정보 시스템 및 통신 시설</p>\n<h4 class=\"doc-h4\">1) 담당부서장은 네트워크 정보 시스템 및 통신 시설을 별도 관리한다.</h4>\n<p class=\"doc-p\">4.1.4 프로세스 운용 환경</p>\n<p class=\"doc-p\">(1) 각 부(실)장은 프로세스 운용에 필요한, 그리고 공급 서비스의 적합성 달성에 필요한 적절한 환경(사회적, 심리적, 물리적 요인 등으로 구성)을 결정, 제공 및 유지하여야 한다.</p>\n<p class=\"doc-p\">(2) 프로세스 운용 환경</p>\n<h4 class=\"doc-h4\">1) 물리적 환경(예 : 온도, 습도,  열, 분진, 밝기(조도), 공기흐름, 위생, 소음, 진동, 전자파 등)</h4>\n<p class=\"doc-p\">물리적 환경</p>\n<p class=\"doc-p\">관리기준</p>\n<p class=\"doc-p\">측정주기</p>\n<p class=\"doc-p\">적용대상</p>\n<p class=\"doc-p\">20 ℃ 15 ℃</p>\n<p class=\"doc-p\">1회/일</p>\n<p class=\"doc-p\">사무실</p>\n<p class=\"doc-p\">65 % 15 %</p>\n<p class=\"doc-p\">500 lux 이상</p>\n<p class=\"doc-p\">1회/월</p>\n<p class=\"doc-p\">사무실, 현장</p>\n<p class=\"doc-p\">법적기준</p>\n<p class=\"doc-p\">1회/년</p>\n<p class=\"doc-p\">작업환경</p>\n<p class=\"doc-p\">법적기준</p>\n<p class=\"doc-p\">1회/월</p>\n<h4 class=\"doc-h4\">2) 사회적 환경 (예 : 비차별, 평온,  비대립 등)</h4>\n<p class=\"doc-p\">사회적 환경</p>\n<p class=\"doc-p\">관리기준</p>\n<p class=\"doc-p\">측정주기</p>\n<p class=\"doc-p\">적용대상</p>\n<p class=\"doc-p\">직원행동규범</p>\n<p class=\"doc-p\">윤리규정[사규 제12조]</p>\n<p class=\"doc-p\">임직원</p>\n<p class=\"doc-p\">고충상담</p>\n<p class=\"doc-p\">임직원</p>\n<h4 class=\"doc-h4\">3) 심리적 환경 (예 : 스트레스 완화,  극심한 피로예방, 정서적 보호 등)</h4>\n<p class=\"doc-p\">심리적 환경</p>\n<p class=\"doc-p\">관리기준</p>\n<p class=\"doc-p\">측정주기</p>\n<p class=\"doc-p\">적용대상</p>\n<p class=\"doc-p\">성희롱방지교육</p>\n<p class=\"doc-p\">성희롱예방(사규 제39조)</p>\n<p class=\"doc-p\">2회/년</p>\n<p class=\"doc-p\">임직원</p>\n<p class=\"doc-p\">안전보건관리</p>\n<p class=\"doc-p\">안전보건관리(사규 제40조))</p>\n<p class=\"doc-p\">임직원</p>\n<p class=\"doc-p\">건강검진</p>\n<p class=\"doc-p\">복리후생[사규 제41조]</p>\n<p class=\"doc-p\">1회/년</p>\n<p class=\"doc-p\">임직원</p>\n<p class=\"doc-p\">4.1.5 모니터링 자원과 측정 자원</p>\n<p class=\"doc-p\">4.1.5.1 모니터링 자원과 측정자원의 관리</p>\n<p class=\"doc-p\">(1) 공급 서비스가 요구사항에 대하여 적합한지를 검증하기 위하여 모니터링 및 측정이 활용되는 경우, 품질담당부서장은 유효하고 신뢰할 수 있는 결과를 보장하기 위하여 필요한 자원을 결정하고 제공한다.</p>\n<p class=\"doc-p\">(2) 품질담당부서장은 제공되는 자원이 다음과 같음을 보장한다.</p>\n<h4 class=\"doc-h4\">1) 수행되는 특정 유형의 모니터링과 측정 활동에 적절함</h4>\n<h4 class=\"doc-h4\">2) 자원의 목적에 지속적으로 적합함을 보장하도록 유지됨</h4>\n<p class=\"doc-p\">4.1.5.2 측정 소급성</p>\n<p class=\"doc-p\">(1) 측정 소급성은, 법적 또는 규제적 요구사항, 고객 또는 관련 이해관계자의 기대 혹은 조직에 의해 고려되는 측정 결과의 유효성에 신뢰를 제공하는 핵심부분이 된다.</p>\n<p class=\"doc-p\">(2) 측정장비는 “검사설비관리지침서(QP04-QI610)”에 따라 다음과 같게 한다.</p>\n<h4 class=\"doc-h4\">1) 국제 측정표준 또는 국가 측정표준에 소급 가능한 측정표준과 비교하여 규정된 주기 또는 사용 전에 검증 또는 교정 혹은 두 가지 모두 시행될 것. 그러한 표준이 없는 경우, 교정 또는 검증에 사용된 근거는 문서화된 정보로 유지될 것.</h4>\n<h4 class=\"doc-h4\">2) 장비의 교정상태를 결정할 수 있도록 식별될 것.</h4>\n<h4 class=\"doc-h4\">3) 교정상태 및 후속되는 측정 결과를 무효화시킬 수 있는 조정, 손상 또는 열화로부터 보호될 것</h4>\n<p class=\"doc-p\">(3) 측정장비 담당부장은 조직의 계획된 검증 또는 교정, 혹은 사용 중 장비에 결함 또는 의도한 목적에 맞지 않는 것으로 발견/판명된 경우, 이전 측정 결과의 유효성에 부정적인 영향을 미쳤는지 여부에 대해 규명하고, 필요한 시정조치를 적절하게 취한다.</p>\n<p class=\"doc-p\">4.1.6 조직의 지식</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 조직의 프로세스 운용 및 공급 서비스의 적합성 달성에 필요한 지식을 “조직 지식 관리[사규 제48조]”에 따라 결정하며, 이 지식은 유지되고 필요한 정도까지 이용 가능하도록 한다.</p>\n<p class=\"doc-p\">(2) 니즈 및 경향의 변화에 따라 새로운 지식이 필요한 경우, 품질담당부서장은 현재의 지식을 고려하여 추가로 필요한 지식 및 요구되는 최신 정보를 어떻게 입수 또는 접근할 것인지 방법을 “문서관리[사규 제8조]”에 따라 결정한다.</p>\n<h4 class=\"doc-h4\">1) 조직의 지식에는 조직 설립 목적에 따른 고유업무를 수행하는데 필요한 정보 및 경험 등이 포함될 수 있다.</h4>\n<h4 class=\"doc-h4\">2) 조직의 지식은 조직에게 특정한 지식으로서 일반적으로 경험에 의해 얻어지며, 이는 조직의 목표를 달성하기 위하여 활용되고 공유되는 정보이다.</h4>\n<h4 class=\"doc-h4\">3) 조직의 지식은 다음을 기반으로 할 수 있다.</h4>\n<p class=\"doc-p\">(a) 내부 출처(예: 작업표준서, 교육기록, 설비,공정, 불량개선 사례 등)</p>\n<p class=\"doc-p\">(b) 외부 출처(예: 표준, 학계, 컨퍼런스, 고객 또는 외부공급자로부터 수집된 지식 등)</p>\n<p class=\"doc-p\">4.2 역량/적격성</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 다음 사항을 실행한다.</p>\n<h4 class=\"doc-h4\">1) 품질경영시스템의 성과 및 효과성에 영향을 미치는 업무를 조직의 관리 하에 수행하는 인원에 필요한 역량을 결정</h4>\n<h4 class=\"doc-h4\">2) 이들 인원이 적절한 학력, 교육훈련 또는 경험에 근거하여 역량이 있음을 보장</h4>\n<h4 class=\"doc-h4\">3) 적용 가능한 경우, 필요한 역량을 얻기 위한 조치를 취하고, 취해진 조치의 효과성을 평가</h4>\n<h4 class=\"doc-h4\">4) 역량의 증거로 적절한 문서화된 정보를 “기록 및 문서관리책임[사규 제8조]”에 따른 보유</h4>\n<p class=\"doc-p\">(2) 적용할 수 있는 조치에는, 예를 들어 현재 고용된 인원에 대한 교육훈련 제공, 멘토링이나 재배치 실시 또는 역량이 있는 인원의 고용이나 그러한 인원과의 계약 체결 등을 포함할 수 있다.</p>\n<p class=\"doc-p\">4.3 인식</p>\n<p class=\"doc-p\">각 부(실)장은 조직의 관리 하에 업무를 수행하는 인원이 품질방침을 인식하게 관리한다.</p>\n<p class=\"doc-p\">(1) 품질방침</p>\n<p class=\"doc-p\">(2) 관련된 품질목표</p>\n<p class=\"doc-p\">(3) 개선된 성과의 이점을 포함하여, 품질경영시스템의 효과성에 대한 자신의 기여</p>\n<p class=\"doc-p\">4.4 의사소통</p>\n<p class=\"doc-p\">4.4.1 일반사항</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 다음 사항을 포함하여 품질경영시스템에 관계되는 내부 및 외부 의사소통을 통해 결정하고, 실행한다.</p>\n<h4 class=\"doc-h4\">1) 의사소통 내용</h4>\n<h4 class=\"doc-h4\">2) 의사소통 시기</h4>\n<h4 class=\"doc-h4\">3) 의사소통 대상</h4>\n<h4 class=\"doc-h4\">4) 의사소통 방법</h4>\n<h4 class=\"doc-h4\">5) 의사소통 담당자</h4>\n<p class=\"doc-p\">4.4.2 내부/외부 의사소통</p>\n<p class=\"doc-p\">조직은 품질경영시스템 관하여 표 7-1에 따라 소통하며, 전 구성원이 참여하여 의사소통 가능함을 보장한다.</p>\n<p class=\"doc-p\">표 7-1. 주요의사소통 수단</p>\n<p class=\"doc-p\">의사소통 내용</p>\n<p class=\"doc-p\">방법/수단</p>\n<p class=\"doc-p\">(문서화된 정보)</p>\n<p class=\"doc-p\">이해관계자</p>\n<p class=\"doc-p\">세부항목</p>\n<p class=\"doc-p\">주요 내부이슈</p>\n<p class=\"doc-p\">1회/년</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">회의,열람,주요업무</p>\n<p class=\"doc-p\">주요 외부이슈</p>\n<p class=\"doc-p\">관계자</p>\n<p class=\"doc-p\">이해관계자의</p>\n<p class=\"doc-p\">니즈/요구사항</p>\n<p class=\"doc-p\">1회/년,</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">회의,열람,업무활동별 이해관계자 현황,중요 이해관계자 요구사항</p>\n<p class=\"doc-p\">리스크</p>\n<p class=\"doc-p\">및 기회</p>\n<p class=\"doc-p\">품질리스크</p>\n<p class=\"doc-p\">및 기회</p>\n<p class=\"doc-p\">1회/년</p>\n<p class=\"doc-p\">,발생시</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">회의,열람,리스크관리 절차서준수</p>\n<p class=\"doc-p\">품질방침</p>\n<p class=\"doc-p\">변경시</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">게시, 품질경영매뉴얼</p>\n<p class=\"doc-p\">연간 사업계획</p>\n<p class=\"doc-p\">1회/년</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">회의, 열람 / 사업계획서</p>\n<p class=\"doc-p\">품질목표</p>\n<p class=\"doc-p\">1회/</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">회의, 자료</p>\n<p class=\"doc-p\">법 및</p>\n<p class=\"doc-p\">시행규칙</p>\n<p class=\"doc-p\">변경시</p>\n<p class=\"doc-p\">해당부서</p>\n<p class=\"doc-p\">등록,게시, 열람, 회의,사규</p>\n<p class=\"doc-p\">4.5 문서화된 정보</p>\n<p class=\"doc-p\">4.5.1 일반사항</p>\n<p class=\"doc-p\">조직의 품질경영시스템에는 다음 사항을 포함하게 한다.</p>\n<p class=\"doc-p\">(1) KS Q ISO 9001 표준에서 요구하는 문서화된 정보</p>\n<p class=\"doc-p\">(2) 품질경영시스템의 효과성을 위해 필요한 것으로 조직에 의해 결정된 문서화된 정보</p>\n<p class=\"doc-p\">4.5.2 작성 및 개정</p>\n<p class=\"doc-p\">문서화된 정보를 작성 및 개정할 경우에 따라 다음 사항의 적절함을 보장하게 한다.</p>\n<p class=\"doc-p\">(1) 식별 및 내용 (예: 제목, 날자, 작성자, 또는 문서번호)</p>\n<p class=\"doc-p\">(2) 형식(예: 언어, 소프트웨어 버전, 그래픽) 및 매체 (예: 종이, 전자 매체)</p>\n<p class=\"doc-p\">(3) 적절성 및 충족성에 대한 검토 및 승인</p>\n<p class=\"doc-p\">4.5.3 문서화된 정보의 관리</p>\n<p class=\"doc-p\">(1) 각 부(실)장은 품질경영시스템 및 KS Q ISO 9001 표준에 의해 요구되는 문서화된 정보는 다음 사항을 보장하기 위해 관리되게 한다.</p>\n<h4 class=\"doc-h4\">1) 필요한 장소 및 필요한 시기에 사용할 수 있고, 사용하기에 적절함</h4>\n<h4 class=\"doc-h4\">2) “정보보안[사규 제53조]”에 따라 충분하게 보호됨(예: 기밀유지 실패, 부적절한 사용 또는 완전성 훼손으로부터)</h4>\n<p class=\"doc-p\">(2) 문서화된 정보의 관리를 위해, 각 처(실)장은 다음 활동 중 적용되는 사항을 다루어야 한다.</p>\n<h4 class=\"doc-h4\">1) 배포, 접근, 검색 및 사용</h4>\n<h4 class=\"doc-h4\">2) 가독성 보존을 포함하는 보관 및 보존</h4>\n<h4 class=\"doc-h4\">3) 변경 관리 (예: 버전 관리)</h4>\n<h4 class=\"doc-h4\">4) 보유 및 폐기</h4>\n<p class=\"doc-p\">(3) 품질경영시스템의 기획과 운용을 위해 필요하다고 각 부(실)장이 정한 외부출처의 문서화된 정보는 적절하게 식별되고 관리되게 한다.</p>\n<p class=\"doc-p\">(4) 적합성의 증거로 보유 중인 문서화된 정보는 의도하지 않은 수정으로부터 보호되어야 한다.</p>\n<p class=\"doc-p\">(5) 접근(access)은 문서화된 정보를 보는 것만 허가하거나, 문서화된 정보를 보고 변경하는 것을 허가하는 등 권한에 대한 결정을 의미할 수 있다.</p>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">지원 관련 기록은 “기록 및 문서관리책임[사규 제8조]”에 따라 유지관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련 문서</h3>\n<p class=\"doc-p\">(1) 검사설비관리지침서(QP04-QI610)</p>\n<p class=\"doc-p\">(2) 조직 지식 관리[사규 제48조]</p>\n<p class=\"doc-p\">(3) 문서관리[사규 제8조]</p>\n<p class=\"doc-p\">(4) 기록 및 문서관리책임[사규 제8조]</p>\n<p class=\"doc-p\">(5) 정보보안[사규 제53조]</p>", "color": "#fcd34d"}, "qm08": {"chapter_title": "제8장 운용", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-08</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제8장 운용</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-08                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-08                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용 범위</h3>\n<p class=\"doc-p\">본 장은 품질경영시스템의 운용 기획 및 관리에 대한 요구사항의 결정, 외부에서 제공되는 프로세스 및 부적합 출력의 관리에 대하여 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">고객요구와 기대를 파악하는데 필요한 프로세스의 순서를 기획하고 운영하여 효율적이고, 효과적인 품질경영시스템으로서 운영된다는 것을 보장하는데 그 목적이 있다</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">(1) 운영계획 및 기획에 대한 승인</p>\n<p class=\"doc-p\">(2) 고객과의 의사소통 계획에 대한 승인</p>\n<p class=\"doc-p\">(3) 고객의 요구사항 결정 및 검토</p>\n<p class=\"doc-p\">(4) 외부에서 제공되는 프로세스 및 관리방법 결정</p>\n<p class=\"doc-p\">3.2 부(실)장 각 부장</p>\n<p class=\"doc-p\">(1) 운영계획에 대한 보고</p>\n<p class=\"doc-p\">(2) 고객과의 의사소통 계획에 대한 보고</p>\n<p class=\"doc-p\">(3) 제품 및 서비스의 검증관리 및 보고</p>\n<p class=\"doc-p\">(4) 식별 및 추적에 대한 관리</p>\n<p class=\"doc-p\">3.3 구성원</p>\n<p class=\"doc-p\">(1) 품질경영시스템에 따른 실행</p>\n<p class=\"doc-p\">(2) 운영 기획 및 개발</p>\n<p class=\"doc-p\">(3) 고객과의 의사소통 및 창구 역할</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 운영 기획 및 관리</p>\n<p class=\"doc-p\">4.1.1 기획</p>\n<p class=\"doc-p\">각 부(실)장은 다음 사항을 통하여 계획, 실행 및 관리하여야 한다.</p>\n<p class=\"doc-p\">(1) 고주파 열처리 부품 공급 서비스에 대한 요구사항 결정한다.</p>\n<p class=\"doc-p\">(2) 고주파 열처리 계획 수립 시 다음 사항을 결정한다</p>\n<p class=\"doc-p\">a) 품질목표 및 요구사항</p>\n<p class=\"doc-p\">b) 프로세스의 기준 수립 및 문서화된 정보의 필요성, 특정 자원의 확보에 대한 필요성</p>\n<p class=\"doc-p\">c) 검증, 모니터링, 검사 및 시험 등 확인활동 및 적격판정 기준</p>\n<p class=\"doc-p\">d) 제품이 요구사항을 충족한다는 확인활동에 대한 기록</p>\n<p class=\"doc-p\">(3) 기준에 따른 절차 관리의 실행</p>\n<p class=\"doc-p\">(4) 다음을 위해 필요한 정도로 문서화된 정보의 결정, 유지 및 보유</p>\n<p class=\"doc-p\">a) 절차가 계획된 대로 수행되었음에 대한 신뢰 확보</p>\n<p class=\"doc-p\">b) 요구사항에 적합함을 실증</p>\n<p class=\"doc-p\">4.2 요구사항</p>\n<p class=\"doc-p\">고객의 요구사항을 명확히 파악하여 회사의 능력과 부합되는지 검토함으로써, 계약 관련된 요구사항을 충실히 수행할 수 있음을 보장하기 위한 고객 관련 프로세스에 대해 적용한다.</p>\n<p class=\"doc-p\">4.2.1 고객과의 의사소통</p>\n<p class=\"doc-p\">대표은 다음 사항을 포함하여 수립한다.</p>\n<p class=\"doc-p\">(1) 고주파 열처리 관련 정보 제공</p>\n<p class=\"doc-p\">(2) 고객 불평을 포함하여 피드백 입수</p>\n<p class=\"doc-p\">(3) 비상조치를 위한 특정 요구사항을 “비상사태대비 및 대응절차</p>\n<p class=\"doc-p\">[QP05-QS050]” 에 따른 수립</p>\n<p class=\"doc-p\">4.2.2 제품과 관련된 고객 요구사항의 결정</p>\n<p class=\"doc-p\">(1) 해당 부서장은 요구 사항의 검토를 위해 다음 사항을 결정한다.</p>\n<h4 class=\"doc-h4\">1) 고객이 규정한 요구사항</h4>\n<h4 class=\"doc-h4\">2) 고객이 요구하지 않았지만 합리적인 사업수행을 위해 필요한 사항</h4>\n<h4 class=\"doc-h4\">3) 제품과 관련된 법적 규제사항을 포함한 의무사항</h4>\n<h4 class=\"doc-h4\">4) 회사가 결정한 모든 추가 요구사항</h4>\n<p class=\"doc-p\">4.2.3 제품과 관련된 요구사항의 검토</p>\n<p class=\"doc-p\">(1) 해당 부서장은 고객의 요구사항이 해결되었음을 보장한다.</p>\n<p class=\"doc-p\">(2) 고객이 요구사항을 문서화된 상태로 제시하지 않는 경우, 고객요구사항은 계약/수락 이전에 이를 확인한다.</p>\n<p class=\"doc-p\">(3) 요구사항이 변경되는 경우, 해당 부서장은 관련 문서화된 정보가 수정됨을 보장하고, 관련 조직에 변경사항을 통보하여 관련 인원에 변경된 요구사항을 인식하고 있음을 보장한다.</p>\n<p class=\"doc-p\">4.3 부적합 제품의 관리</p>\n<p class=\"doc-p\">(1) 대표은 의도하지 않은 작업 또는 인도를 방지하기 위해 식별되고, 관리됨을 보장한다.</p>\n<p class=\"doc-p\">(2) 대표은 부적합의 성질과 부적합이 미치는 영향을 고려하여 적절한 조치를 취한다.</p>\n<p class=\"doc-p\">(3) 이 조치는 발견된 부적합에도 적용된다.</p>\n<p class=\"doc-p\">(4) 조직은 다음의 문서화된 정보를 “부적합품관리 및 시정조치[사규 제46조]”에 따라 보유한다.</p>\n<h4 class=\"doc-h4\">1) 부적합에 대한 기술</h4>\n<h4 class=\"doc-h4\">2) 취해진 조치에 대한 기술</h4>\n<h4 class=\"doc-h4\">3) 부적합에 관한 활동을 결정하는 책임의 식별</h4>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">운용 관련 기록은 “기록 및 문서관리책임[사규 제8조]”에 따라 유지 관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련 문서</h3>\n<p class=\"doc-p\">(1) 비상사태대비 및 대응절차 [QP05-QS050]</p>\n<p class=\"doc-p\">(2) 부적합품관리 및 시정조치[사규 제46조]</p>\n<p class=\"doc-p\">(3) 기록 및 문서관리책임[사규 제8조]</p>", "color": "#f9a8d4"}, "qm09": {"chapter_title": "제9장 성과평가", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-09</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">汤捯품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제9장 성과평가</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-09                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-09                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용 범위</h3>\n<p class=\"doc-p\">본 장은 조직 운용 및 품질경영시스템 실행에 대한 성과 평가에 대하여 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">품질경영시스템, 고객만족, 프로세스 및 모니터링 및 측정을 통하여 현재의 적합성, 효율성 및 효과성 수준을 파악하는데 그 목적이 있다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">(1) 경영검토 결과 승인</p>\n<p class=\"doc-p\">(2) 고객만족도조사 계획 및 결과 승인</p>\n<p class=\"doc-p\">(3) 데이터분석 결과 승인</p>\n<p class=\"doc-p\">(4) 내부심사 계획 및 결과 승인</p>\n<p class=\"doc-p\">(5) 경영검토 결과 검토</p>\n<p class=\"doc-p\">3.3 품질담당부서장</p>\n<p class=\"doc-p\">(1) 고객만족도조사 계획 및 결과 보고</p>\n<p class=\"doc-p\">(2) 데이터분석 결과 보고</p>\n<p class=\"doc-p\">(3) 내부심사 계획 및 결과 검토</p>\n<p class=\"doc-p\">(4) 경영검토 결과의 보고</p>\n<p class=\"doc-p\">3.4 내부심사원</p>\n<p class=\"doc-p\">내부심사 계획 및 결과 보고</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 모니터링, 측정, 분석 및 평가</p>\n<p class=\"doc-p\">4.1.1 일반사항</p>\n<p class=\"doc-p\">(1) 품질담당부부장은 다음 사항을 결정한다.</p>\n<h4 class=\"doc-h4\">1) 모니터링 및 측정의 대상</h4>\n<h4 class=\"doc-h4\">2) 유효한 결과를 보장하기 위해 필요한 모니터링, 측정, 분석 및 평가에 대한 방법</h4>\n<h4 class=\"doc-h4\">3) 모니터링 및 측정 수행 시기</h4>\n<h4 class=\"doc-h4\">4) 모니터링 및 측정의 결과에 대한 분석 및 평가 시기</h4>\n<p class=\"doc-p\">4.1.2 고객만족</p>\n<p class=\"doc-p\">(1) 해당 부(실)장은 고객 요구사항(니즈 및 기대) 및 법적 규제사항을 충족시키는지에 대하여 고객(이해관계자)의 인식과 관련된 정보를 수집, 모니터링 및 검토하여 해당업무에 반영한다.</p>\n<p class=\"doc-p\">(2) 해당장은 필요시 품질에 대한 고객만족의 모니터링 및 측정을 위하여 다음 데이터의 수집에 대한 책임이 있다.</p>\n<h4 class=\"doc-h4\">1) 고객 불만사항</h4>\n<h4 class=\"doc-h4\">2) 고객 인터뷰 또는 설문조사</h4>\n<h4 class=\"doc-h4\">3) 벤치마킹</h4>\n<h4 class=\"doc-h4\">4) 고객 조직 및 매체의 보고서</h4>\n<h4 class=\"doc-h4\">5) 주요 모니터링 및 측정 관리(QP06-QS060)에 따른다.</h4>\n<p class=\"doc-p\">프로세스</p>\n<p class=\"doc-p\">프로세스 활동</p>\n<p class=\"doc-p\">관리주기</p>\n<p class=\"doc-p\">관리자</p>\n<p class=\"doc-p\">모니터링</p>\n<p class=\"doc-p\">리스크와 기회 파악</p>\n<p class=\"doc-p\">리스크 요인 감소대책 수립, 실행 및 기회활용</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">법규 등 검토</p>\n<p class=\"doc-p\">법규준수여부 확인</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">품질 목표</p>\n<p class=\"doc-p\">목표설정 및 관리</p>\n<p class=\"doc-p\">년 1회</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">품질 추진계획</p>\n<p class=\"doc-p\">품질 활동 추진 계획 수립</p>\n<p class=\"doc-p\">년 1회</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">조직 및 책임</p>\n<p class=\"doc-p\">개인별 업무분장</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">조직/업무분장 변경시 처리</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">교육, 훈련 및</p>\n<p class=\"doc-p\">교육 및 훈련 계획 수립시행</p>\n<p class=\"doc-p\">년 1회</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">의사소통 및</p>\n<p class=\"doc-p\">정보제공</p>\n<p class=\"doc-p\">자격확인</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">품질 관련 의견 접수 및 처리결과 기록보고</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">시설 유지관리</p>\n<p class=\"doc-p\">시설/설비 점검실시 여부</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">생산부</p>\n<p class=\"doc-p\">품질 분석 및 시험</p>\n<p class=\"doc-p\">품질 분석 및 시험 실시여부</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">품질관리부</p>\n<p class=\"doc-p\">문서화</p>\n<p class=\"doc-p\">문서화/표준화 여부 확인</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">문서관리</p>\n<p class=\"doc-p\">문서등록 및 배포활동</p>\n<p class=\"doc-p\">문서 개정관리</p>\n<p class=\"doc-p\">발생시</p>\n<p class=\"doc-p\">관리부</p>\n<p class=\"doc-p\">4.1.3 분석 및 평가</p>\n<p class=\"doc-p\">(1) 해당 부(실)장은 다음 사항을 위하여 필요한 데이터 및 정보를 결정, 수집, 전산 통계 프로그램으로 분석 및 평가한다.</p>\n<p class=\"doc-p\">(2) 데이터 분석 결과를 다음 사항의 평가를 위하여 사용한다.</p>\n<h4 class=\"doc-h4\">1) 제품 및 서비스의 적합성</h4>\n<h4 class=\"doc-h4\">2) 고객 만족도</h4>\n<h4 class=\"doc-h4\">3) 품질경영시스템의 성과 및 효과성</h4>\n<h4 class=\"doc-h4\">4) 기획의 효과적인 실행 여부</h4>\n<h4 class=\"doc-h4\">5) 리스크와 기회를 다루기 위하여 취해진 조치의 효과성</h4>\n<h4 class=\"doc-h4\">6) 외부공급자의 성과</h4>\n<h4 class=\"doc-h4\">7) 품질경영시스템의 개선 필요성</h4>\n<p class=\"doc-p\">4.2 내부심사</p>\n<p class=\"doc-p\">(1) 품질담당부서장은 다음 사항을 결정하기 위하여 년 1회 이상 내부심사를 수행한다.</p>\n<p class=\"doc-p\">a) 품질경영시스템이 ISO 9001 표준의 요구사항 및 당사 조직의 경영조건에 적합한지 여부</p>\n<p class=\"doc-p\">b) 품질경영시스템이 효과적으로 실행되고 유지되는지 여부</p>\n<p class=\"doc-p\">(2) 품질담당부서장은 이전 심사의 결과뿐 아니라 심사 대상 프로세스 및 분야의 상태와 중요성을 고려하여 심사 프로그램을 작성하고, 이에 맞는 심사 기준, 범위, 주기 및 방법 등을 정한다.</p>\n<p class=\"doc-p\">(3) 품질담당부서장은 자신의 업무와 직접 관련이 없는 인원 중에서 심사원을 선정하고, 심사프로세스의 객관성 및 공평성이 보장되도록 조치한다.</p>\n<p class=\"doc-p\">(4) 품질담당부서장은 심사의 계획, 수행, 독립성 보장, 결과의 보고 및 기록유지에 대한 책임이 있다.</p>\n<p class=\"doc-p\">(5) 경영진단 대상 업무에 책임을 지는 경영자는 발견된 부적합 및 원인을 제거하기 위한 조치가 적시에 취해질 수 있도록 보장한다.</p>\n<p class=\"doc-p\">4.3 경영검토/경영평가</p>\n<p class=\"doc-p\">(1) 대표은 조직의 전략적 방향에 대한 품질경영시스템의 지속적인 적절성, 충족성, 효과성 및 정렬성을 보장하기 위해 계획된 주기로 조직의 품질경영시스템을 검토한다.</p>\n<p class=\"doc-p\">(2) 경영검토는 다음의 입력사항을 고려하여 계획하고, 수행한다.</p>\n<h4 class=\"doc-h4\">1) 이전 경영검토에 따른 조치의 상태</h4>\n<h4 class=\"doc-h4\">2) 품질경영시스템과 관련된 외부 및 내부 이슈의 변경</h4>\n<h4 class=\"doc-h4\">3) 다음의 경향을 포함한 품질경영시스템의 성과 및 효과성에 대한 정보</h4>\n<p class=\"doc-p\">(a) 고객만족 및 관련 이해관계자로부터의 피드백</p>\n<p class=\"doc-p\">(b) 품질목표의 달성 정도</p>\n<p class=\"doc-p\">(c) 프로세스의 성과, 연구개발사업 관리서비스의 적합성</p>\n<p class=\"doc-p\">(d) 부적합 및 시정조치</p>\n<p class=\"doc-p\">(e) 모니터링 및 측정 결과</p>\n<p class=\"doc-p\">(f) 심사결과(내부심사, 외부심사, 인증기관 심사)</p>\n<p class=\"doc-p\">(g) 외부공급자의 성과</p>\n<h4 class=\"doc-h4\">4) 자원의 충족성</h4>\n<h4 class=\"doc-h4\">5) 리스크와 기회를 다루기 위해 취해진 조치의 효과성</h4>\n<h4 class=\"doc-h4\">6) 개선 기회</h4>\n<p class=\"doc-p\">(3) 경영검토의 출력사항에는 다음 사항과 관련된 결정과 조치가 포함되어야 한다.</p>\n<h4 class=\"doc-h4\">1) 개선 기회</h4>\n<h4 class=\"doc-h4\">2) 품질경영시스템 변경에 대한 모든 필요성</h4>\n<h4 class=\"doc-h4\">3) 자원의 필요성</h4>\n<p class=\"doc-p\">(4) 경영검토 결과의 증거로 문서화된 정보를 “기록 및 문서관리 책임[사규 제8조]”에 따라 보유한다.</p>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">성과평가 관련 기록은 “기록 및 문서관리 책임[사규 제8조]”에 따라 유지 관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련 문서</h3>\n<p class=\"doc-p\">(1) 모니터링 및 측정 관리(QP06-QS060)</p>\n<p class=\"doc-p\">(2) 기록 및 문서관리 책임[사규 제8조]</p>", "color": "#f9a8d4"}, "qm10": {"chapter_title": "제10장 개 선", "meta_html": "<div class=\"meta-cell\"><span class=\"meta-k\">표준번호</span><span class=\"meta-v\">QGIS-QM-10</span></div><div class=\"meta-cell\"><span class=\"meta-k\">주관부서</span><span class=\"meta-v\">품질개발구매</span></div><div class=\"meta-cell\"><span class=\"meta-k\">개정번호</span><span class=\"meta-v\">제10장 개 선</span></div><div class=\"meta-cell\"><span class=\"meta-k\">제정일자</span><span class=\"meta-v\">2026.03.31</span></div><div class=\"meta-cell\"><span class=\"meta-k\">페이지</span><span class=\"meta-v\">QGIS-QM-10                                    QGIS                        A4 (210mmx297mm)</span></div>", "body_html": "<p class=\"doc-p\">제정일자</p>\n<p class=\"doc-p\">2026.03.31</p>\n<p class=\"doc-p\">페이지</p>\n<p class=\"doc-p\">QGIS-QM-10                                    QGIS                        A4 (210mmx297mm)</p>\n<h3 class=\"doc-h3\">1. 적용 범위</h3>\n<p class=\"doc-p\">본 장은 조직의 부적합 재발 방지, 시정 조치, 지속적 개선에 대하여 적용한다.</p>\n<h3 class=\"doc-h3\">2. 목적</h3>\n<p class=\"doc-p\">부적합의 재발 방지와 본 품질경영매뉴얼 “9장 성과 평가“의 정보를 활용하여 지속적 개선을 통해 품질경영시스템의 효과성 유지 및 증진을 시키는데 그 목적이 있다.</p>\n<h3 class=\"doc-h3\">3. 책임과 권한</h3>\n<p class=\"doc-p\">3.1 대표</p>\n<p class=\"doc-p\">(1) 지속적 개선, 개선의 기회 결정 및 선택</p>\n<p class=\"doc-p\">(2) 시정 결과, 시정조치와 예방조치 계획 및 결과 승인</p>\n<p class=\"doc-p\">(3) 고객만족 증진을 위한 조치 관리</p>\n<p class=\"doc-p\">3.2 품질담당부서장</p>\n<p class=\"doc-p\">(1) 시정 결과, 시정조치 계획 및 결과 보고</p>\n<p class=\"doc-p\">(2) 예방조치 계획 및 결과 보고</p>\n<p class=\"doc-p\">3.3 구성원</p>\n<p class=\"doc-p\">(1) 시정조치 및 예방조치 실행</p>\n<h3 class=\"doc-h3\">4. 업무절차</h3>\n<p class=\"doc-p\">4.1 일반사항</p>\n<p class=\"doc-p\">(1) 대표는 개선의 기회를 결정 및 선택하고, 고객 요구사항의 충족 및 고객만족 증진을 위해 필요한 모든 조치를 실행한다.</p>\n<p class=\"doc-p\">(2) 조치에는 다음 사항을 포함한다.</p>\n<h4 class=\"doc-h4\">1) 요구사항을 충족시키기 위한 것뿐만 아니라 미래의 니즈와 기대를 다루기 위한 제품 및 서비스의 개선</h4>\n<h4 class=\"doc-h4\">2) 시정, 예방 또는 바람직하지 않는 영향의 감소</h4>\n<h4 class=\"doc-h4\">3) 품질경영시스템의 성과 및 효과성 개선</h4>\n<p class=\"doc-p\">4.2 부적합 및 시정조치</p>\n<p class=\"doc-p\">(1) 불만족에서 야기된 모든 것을 포함하여 부적합이 발생하면 대표는 다음 사항을 실행한다.</p>\n<h4 class=\"doc-h4\">1) 부적합에 대한 대처 시, 해당되는 경우 다음 사항을 포함한다.</h4>\n<p class=\"doc-p\">(a) 부적합을 관리하고, 시정하기 위한 조치의 실시</p>\n<p class=\"doc-p\">(b) 결과의 처리</p>\n<h4 class=\"doc-h4\">2) 부적합이 재발하거나 다른 곳에서 발생하지 않게 하기 위해 부적합의 원인을 제거하기 위한 조치의 필요성을 다음 사항에 의하여 평가한다.</h4>\n<p class=\"doc-p\">(a) 부적합의 검토와 분석</p>\n<p class=\"doc-p\">(b) 부적합의 원인 결정</p>\n<p class=\"doc-p\">(c) 유사한 부적합의 존재 여부 또는 잠재적인 발생 여부 결정</p>\n<h4 class=\"doc-h4\">3) 필요한 모든 조치의 실행</h4>\n<h4 class=\"doc-h4\">4) 취해진 모든 시정조치의 효과성 검토</h4>\n<h4 class=\"doc-h4\">5) 필요한 경우, 기획 시 결정된 리스크와 기회의 갱신</h4>\n<h4 class=\"doc-h4\">6) 필요한 경우, “부적합품 관리 및 시정조치 [사규 46조]”에 따른 품질경영시스템의 변경</h4>\n<p class=\"doc-p\">(2) 다음 사항에 대한 증거로 문서화된 정보를 “기록 및 문서관리책임[사규 제8조]”에 따라 보유한다.</p>\n<h4 class=\"doc-h4\">1) 부적합의 성질 및 취해진 모든 후속조치</h4>\n<h4 class=\"doc-h4\">2) 모든 시정조치의 결과</h4>\n<p class=\"doc-p\">4.3 지속적 개선</p>\n<h4 class=\"doc-h4\">1) 대표는 데이터분석등을 통해 품질경영시스템의 적절성, 충족성 및 효과성을 지속적으로 개선한다.</h4>\n<h4 class=\"doc-h4\">2) 대표는 지속적 개선의 일부로서 다루어야 할 니즈 또는 기회가 있는지를 결정하기 위해 분석 및 평가의 결과, 경영검토의 출력사항을 고려한다.</h4>\n<h3 class=\"doc-h3\">5. 기록</h3>\n<p class=\"doc-p\">개선 관련 기록은 “기록 및 문서관리책임[사규 제8조]”에 따라 유지 관리한다.</p>\n<h3 class=\"doc-h3\">6. 관련 문서</h3>\n<p class=\"doc-p\">(1) 기록 및 문서관리책임[사규 제8조]</p>", "color": "#fb923c"}};
+
+// ───── Graph Data ─────
+const NODES = [
+  {id:"qm",   code:"QGIS-QM", label:"품질경영매뉴얼",        r:26, color:"#a78bfa", section:"qm",   iso:"전체 ISO 9001:2015"},
+  {id:"qm01", code:"QM-01",   label:"개요",                  r:14, color:"#7dd3fc", section:"qm01", iso:"ISO 9001:2015 서문"},
+  {id:"qm02", code:"QM-02",   label:"품질방침",              r:14, color:"#7dd3fc", section:"qm02", iso:"ISO 9001:2015 §5.2"},
+  {id:"qm03", code:"QM-03",   label:"QMS 프로세스 상호작용", r:14, color:"#7dd3fc", section:"qm03", iso:"ISO 9001:2015 §4.4"},
+  {id:"qm04", code:"QM-04",   label:"조직상황",              r:14, color:"#86efac", section:"qm04", iso:"ISO 9001:2015 §4"},
+  {id:"qm05", code:"QM-05",   label:"리더십",                r:14, color:"#86efac", section:"qm05", iso:"ISO 9001:2015 §5"},
+  {id:"qm06", code:"QM-06",   label:"기획",                  r:14, color:"#fcd34d", section:"qm06", iso:"ISO 9001:2015 §6"},
+  {id:"qm07", code:"QM-07",   label:"지원",                  r:14, color:"#fcd34d", section:"qm07", iso:"ISO 9001:2015 §7"},
+  {id:"qm08", code:"QM-08",   label:"운용",                  r:14, color:"#f9a8d4", section:"qm08", iso:"ISO 9001:2015 §8"},
+  {id:"qm09", code:"QM-09",   label:"성과평가",              r:14, color:"#f9a8d4", section:"qm09", iso:"ISO 9001:2015 §9"},
+  {id:"qm10", code:"QM-10",   label:"개선",                  r:18, color:"#fb923c", section:"qm10", iso:"ISO 9001:2015 §10"},
+];
+
+const RAW_LINKS = [
+  {s:"qm",   t:"qm01",tp:"hub"},{s:"qm",  t:"qm02",tp:"hub"},{s:"qm",  t:"qm03",tp:"hub"},
+  {s:"qm",   t:"qm04",tp:"hub"},{s:"qm",  t:"qm05",tp:"hub"},{s:"qm",  t:"qm06",tp:"hub"},
+  {s:"qm",   t:"qm07",tp:"hub"},{s:"qm",  t:"qm08",tp:"hub"},{s:"qm",  t:"qm09",tp:"hub"},
+  {s:"qm",   t:"qm10",tp:"hub"},
+  {s:"qm05", t:"qm02",tp:"rel"},
+  {s:"qm04", t:"qm06",tp:"rel"},
+  {s:"qm05", t:"qm06",tp:"rel"},
+  {s:"qm06", t:"qm07",tp:"rel"},
+  {s:"qm07", t:"qm08",tp:"rel"},
+  {s:"qm08", t:"qm09",tp:"rel"},
+  {s:"qm09", t:"qm10",tp:"rel"},
+  {s:"qm10", t:"qm06",tp:"rel"},
+  {s:"qm01", t:"qm03",tp:"rel"},
+];
+
+// Section detail content
+const SECTION_INFO = {
+  qm:   {title:"QGIS-QM 품질경영매뉴얼 전체 개요", desc:"QGIS 기반 GIS 서비스 전반에 대한 ISO 9001:2015 품질경영시스템(QMS) 매뉴얼 최상위 문서입니다. 모든 하위 섹션(QM-01 ~ QM-10)의 허브 역할을 하며, 품질방침·목표·프로세스 상호작용을 포괄합니다."},
+  qm01: {title:"QM-01 개요", desc:"조직의 일반 현황, 매뉴얼 적용 범위, 관련 용어 및 정의를 규정합니다. ISO 9001:2015 서문 요건에 대응하며 QM-03 프로세스 상호작용 문서와 직접 연계됩니다."},
+  qm02: {title:"QM-02 품질방침", desc:"최고경영자가 승인한 품질방침 선언문과 품질목표를 포함합니다. ISO 9001:2015 §5.2 요건에 대응하며 리더십(QM-05) 문서와 연계됩니다."},
+  qm03: {title:"QM-03 QMS 프로세스 상호작용", desc:"QMS 전체 프로세스의 입력·출력·상호작용 관계를 다이어그램으로 정의합니다. ISO 9001:2015 §4.4 요건에 대응합니다."},
+  qm04: {title:"QM-04 조직상황", desc:"내·외부 이해관계자 분석(SWOT/PEST), 적용범위 결정, QMS 범위 문서를 포함합니다. ISO 9001:2015 §4 요건에 대응하며 기획(QM-06)과 연계됩니다."},
+  qm05: {title:"QM-05 리더십", desc:"최고경영자의 리더십 책임, 품질방침 수립·전달, 역할·책임·권한 부여 사항을 규정합니다. ISO 9001:2015 §5 요건에 대응합니다."},
+  qm06: {title:"QM-06 기획", desc:"리스크·기회 파악, 품질목표 수립 및 달성 계획, 변경 관리 계획을 포함합니다. ISO 9001:2015 §6 요건에 대응합니다."},
+  qm07: {title:"QM-07 지원", desc:"자원(인적·인프라·환경), 적격성·인식·소통, 문서화된 정보 관리 절차를 규정합니다. ISO 9001:2015 §7 요건에 대응합니다."},
+  qm08: {title:"QM-08 운용", desc:"GIS 서비스 기획·설계·개발·외부 공급자 관리·납품 및 납품 후 활동을 규정합니다. ISO 9001:2015 §8 요건에 대응합니다."},
+  qm09: {title:"QM-09 성과평가", desc:"모니터링·측정·분석·평가, 내부심사, 경영검토 절차를 규정합니다. ISO 9001:2015 §9 요건에 대응하며 개선(QM-10)으로 연계됩니다."},
+  qm10: {title:"QM-10 개선", desc:"부적합 관리, 시정조치, 지속적 개선(PDCA) 체계를 규정합니다. ISO 9001:2015 §10 요건에 대응하며 기획(QM-06)으로 피드백 루프를 형성합니다."},
+};
+
+// ───── Clock ─────
+function updateClock() {
+  const now = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('clock-time').textContent =
+    now.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  document.getElementById('clock-date').textContent =
+    `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ───── Toast ─────
+function showToast(msg, dur=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ───── Search ─────
+const searchInput = document.getElementById('searchInput');
+const clearBtn    = document.getElementById('clearBtn');
+const srPanel     = document.getElementById('search-results');
+const sbSearch    = document.getElementById('sb-search');
+
+function highlight(text, q) {
+  if (!q) return text;
+  const rx = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(rx, '<mark>$1</mark>');
+}
+
+function runSearch(q) {
+  sbSearch.textContent = q ? `검색 중: "${q}"` : '검색 대기 중';
+  if (!q.trim()) { srPanel.classList.remove('open'); return; }
+
+  const results = NODES.filter(n =>
+    n.label.includes(q) || n.code.toLowerCase().includes(q.toLowerCase()) ||
+    n.iso.includes(q) || (SECTION_INFO[n.id] && SECTION_INFO[n.id].desc.includes(q))
+  );
+
+  if (!results.length) {
+    srPanel.innerHTML = `<div class="sr-header"><span>검색 결과 없음</span><span>${q}</span></div>
+      <div style="padding:16px;text-align:center;color:rgba(155,191,214,0.5);font-size:13px">일치하는 문서가 없습니다</div>`;
+    srPanel.classList.add('open');
+    return;
+  }
+
+  srPanel.innerHTML = `<div class="sr-header"><span>검색 결과 ${results.length}건</span><span style="color:#00b4d8">${q}</span></div>`
+    + results.map(n => {
+      const si = SECTION_INFO[n.id] || {};
+      return `<div class="sr-item" role="option" onclick="openSection('${n.id}')">
+        <span class="sr-code">${highlight(n.code, q)}</span>
+        <div>
+          <div class="sr-label">${highlight(n.label, q)}</div>
+          <div class="sr-desc">${highlight((si.desc || '').slice(0, 80) + '…', q)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  srPanel.classList.add('open');
+  sbSearch.textContent = `결과 ${results.length}건 — "${q}"`;
+}
+
+searchInput.addEventListener('input', () => {
+  const v = searchInput.value;
+  document.getElementById('charUsed').textContent = v.length;
+  clearBtn.style.display = v ? 'block' : 'none';
+  runSearch(v);
+});
+
+clearBtn.addEventListener('click', () => {
+  searchInput.value = '';
+  document.getElementById('charUsed').textContent = '0';
+  clearBtn.style.display = 'none';
+  srPanel.classList.remove('open');
+  sbSearch.textContent = '검색 대기 중';
+  searchInput.focus();
+});
+
+document.addEventListener('click', e => {
+  if (!srPanel.contains(e.target) && e.target !== searchInput) srPanel.classList.remove('open');
+});
+
+// ───── Menu (2-level) ─────
+const menuItems  = document.querySelectorAll('.menu-item');
+const subItems   = document.querySelectorAll('.sub-item');
+const submenubar = document.getElementById('submenubar');
+
+// Placeholder content for non-QM top menus
+const TOP_MENU_INFO = {
+  process:   { title:'프로세스 문서',     desc:'GIS 서비스 전반의 핵심 프로세스 절차를 정의한 문서 목록입니다. (준비 중)' },
+  procedure: { title:'절차서',           desc:'각 업무 단위의 세부 수행 절차를 규정한 문서 목록입니다. (준비 중)' },
+  guideline: { title:'지침서',           desc:'업무 수행 기준 및 참고 지침을 담은 문서 목록입니다. (준비 중)' },
+  docs:      { title:'각종문서',         desc:'보고서, 기록지, 양식 등 기타 품질 관련 문서 목록입니다. (준비 중)' },
+};
+
+menuItems.forEach(btn => {
+  btn.addEventListener('click', () => {
+    menuItems.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const menu = btn.dataset.menu;
+
+    if (menu === 'qm') {
+      submenubar.classList.add('visible');
+      // re-activate last sub or default to graph
+      const lastActive = [...subItems].find(s => s.classList.contains('active'));
+      openSection(lastActive ? lastActive.dataset.section : 'graph');
+    } else {
+      submenubar.classList.remove('visible');
+      subItems.forEach(s => s.classList.remove('active'));
+      showTopMenuContent(menu);
+    }
+  });
+});
+
+subItems.forEach(btn => {
+  btn.addEventListener('click', () => {
+    subItems.forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    openSection(btn.dataset.section);
+  });
+});
+
+function showTopMenuContent(menuKey) {
+  srPanel.classList.remove('open');
+  const gc  = document.getElementById('graph-container');
+  const sc  = document.getElementById('section-content');
+  const pt  = document.getElementById('panelTitle');
+  const ptag = document.getElementById('panelTag');
+  const info = TOP_MENU_INFO[menuKey];
+  if (!info) return;
+
+  gc.style.display  = 'none';
+  sc.style.display  = 'block';
+  pt.textContent    = info.title;
+  ptag.textContent  = '준비 중';
+
+  sc.innerHTML = `
+    <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;gap:18px;margin-top:80px">
+      <div style="font-size:48px;opacity:.25">📁</div>
+      <div style="font-size:18px;font-weight:600;color:#1e293b">${info.title}</div>
+      <div style="font-size:14px;color:#64748b;text-align:center;line-height:1.7;max-width:380px">${info.desc}</div>
+    </div>`;
+}
+
+function openSection(sectionId) {
+  srPanel.classList.remove('open');
+  const gc   = document.getElementById('graph-container');
+  const sc   = document.getElementById('section-content');
+  const pt   = document.getElementById('panelTitle');
+  const ptag = document.getElementById('panelTag');
+
+  // ensure top-menu '품질경영매뉴얼' is active
+  menuItems.forEach(b => b.classList.remove('active'));
+  const qmBtn = [...menuItems].find(b => b.dataset.menu === 'qm');
+  if (qmBtn) qmBtn.classList.add('active');
+  submenubar.classList.add('visible');
+
+  // sync sub-item highlight
+  subItems.forEach(s => s.classList.remove('active'));
+  const matchedSub = [...subItems].find(s => s.dataset.section === sectionId);
+  if (matchedSub) matchedSub.classList.add('active');
+
+  if (sectionId === 'graph') {
+    gc.style.display = 'block';
+    sc.style.display = 'none';
+    pt.textContent   = 'QGIS 품질경영매뉴얼 — 문서 관계 그래프';
+    ptag.textContent = '11 nodes · 19 links';
+    return;
+  }
+
+  const info = SECTION_INFO[sectionId] || {};
+  const hwp  = HWP_DOCS[sectionId];
+  if (!info.title && !hwp) return;
+
+  gc.style.display = 'none';
+  sc.style.display = 'block';
+  const node  = NODES.find(n => n.id === sectionId);
+  const clr = node ? node.color : '#a78bfa';
+
+  pt.textContent   = `${node ? node.code : sectionId} — ${info.title}`;
+  ptag.textContent = node ? node.iso : '';
+
+  if (hwp && hwp.body_html && hwp.body_html.trim().length > 30) {
+    // ── HWP 원문 렌더링 ──
+    sc.innerHTML = `
+      <div class="doc-viewer">
+        <div class="doc-header-card">
+          <div class="doc-icon" style="background:${clr}18;border:1px solid ${clr}33">📄</div>
+          <div class="doc-title-block">
+            <div class="doc-code" style="color:${clr}">${node ? node.code : sectionId}</div>
+            <div class="doc-chapter-title">${hwp.chapter_title}</div>
+          </div>
+        </div>
+        <div class="doc-meta-grid">${hwp.meta_html}</div>
+        <div class="doc-body">${hwp.body_html}</div>
+        <button class="back-btn" onclick="openSection('graph')">← 그래프로 돌아가기</button>
+      </div>`;
+  } else {
+    // ── fallback: 설명 카드 ──
+    sc.innerHTML = `
+      <div class="doc-viewer">
+        <div class="doc-header-card">
+          <div class="doc-icon" style="background:${clr}18;border:1px solid ${clr}33">📄</div>
+          <div class="doc-title-block">
+            <div class="doc-code" style="color:${clr}">${node ? node.code : sectionId}</div>
+            <div class="doc-chapter-title">${info.title}</div>
+          </div>
+        </div>
+        <div class="doc-body">
+          <p class="doc-p">${info.desc}</p>
+        </div>
+        <button class="back-btn" onclick="openSection('graph')">← 그래프로 돌아가기</button>
+      </div>`;
+  }
+
+  showToast(`${node ? node.code : sectionId} 문서를 불러왔습니다`);
+}
+
+// ───── D3 Graph ─────
+(function initGraph() {
+  if (typeof d3 === 'undefined') { setTimeout(initGraph, 200); return; }
+
+  const links = RAW_LINKS.map(l => ({source:l.s, target:l.t, tp:l.tp}));
+  const svg   = d3.select('#qg');
+  const wrap  = document.getElementById('graph-container');
+  const tip   = document.getElementById('qg-tip');
+
+  function dims() {
+    return { W: wrap.clientWidth || 680, H: wrap.clientHeight || 490 };
+  }
+
+  const defs = svg.append('defs');
+  const fg = defs.append('filter').attr('id','glow-n').attr('x','-80%').attr('y','-80%').attr('width','260%').attr('height','260%');
+  fg.append('feGaussianBlur').attr('stdDeviation','3.5').attr('result','b');
+  const m1 = fg.append('feMerge'); m1.append('feMergeNode').attr('in','b'); m1.append('feMergeNode').attr('in','SourceGraphic');
+  const fg2 = defs.append('filter').attr('id','glow-h').attr('x','-100%').attr('y','-100%').attr('width','300%').attr('height','300%');
+  fg2.append('feGaussianBlur').attr('stdDeviation','7').attr('result','b2');
+  const m2 = fg2.append('feMerge'); m2.append('feMergeNode').attr('in','b2'); m2.append('feMergeNode').attr('in','SourceGraphic');
+
+  const g    = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.2, 5]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom).on('dblclick.zoom', null);
+
+  function restart() {
+    const {W, H} = dims();
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
+    sim.force('center', d3.forceCenter(W / 2, H / 2)).alpha(0.3).restart();
+  }
+
+  const sim = d3.forceSimulation(NODES)
+    .force('link',    d3.forceLink(links).id(d=>d.id).distance(d=>d.tp==='hub'?120:65).strength(d=>d.tp==='hub'?0.4:0.2))
+    .force('charge',  d3.forceManyBody().strength(-380))
+    .force('center',  d3.forceCenter(dims().W/2, dims().H/2))
+    .force('collide', d3.forceCollide(d=>d.r+26));
+
+  const linkEl = g.append('g').selectAll('line').data(links).join('line')
+    .attr('stroke', d => d.tp==='hub' ? 'rgba(167,139,250,0.35)' : 'rgba(30,41,59,0.18)')
+    .attr('stroke-width', d => d.tp==='hub' ? 1.5 : 0.8)
+    .attr('stroke-dasharray', d => d.tp==='rel' ? '4 3' : null);
+
+  const nodeEl = g.append('g').selectAll('g').data(NODES).join('g')
+    .attr('cursor','pointer')
+    .call(d3.drag()
+      .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end',   (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }))
+    .on('click', (e,d) => { e.stopPropagation(); openSection(d.section); })
+    .on('mousemove', (e,d) => {
+      const r = wrap.getBoundingClientRect();
+      let lx = e.clientX-r.left+14, ly = e.clientY-r.top+14;
+      if (lx+240 > r.width) lx = e.clientX-r.left-240;
+      tip.style.display='block'; tip.style.left=lx+'px'; tip.style.top=ly+'px';
+      tip.innerHTML = `<span style="color:${d.color};font-weight:500;font-size:12px">${d.code}</span><br>${d.label}<br><span style="color:rgba(30,41,59,0.45);font-size:10px">${d.iso}<br>클릭하면 상세 확인 ↗</span>`;
+    })
+    .on('mouseout', () => { tip.style.display='none'; });
+
+  nodeEl.append('circle').attr('r',d=>d.r+10).attr('fill',d=>d.color).attr('fill-opacity',0.07).attr('stroke','none');
+  nodeEl.append('circle').attr('r',d=>d.r).attr('fill',d=>d.color).attr('fill-opacity',d=>d.id==='qm'?0.92:0.72)
+    .attr('filter',d=>d.id==='qm'?'url(#glow-h)':'url(#glow-n)');
+
+  nodeEl.filter(d=>d.id==='qm').append('text')
+    .attr('text-anchor','middle').attr('dominant-baseline','central')
+    .attr('fill','#fff').attr('fill-opacity',0.9).attr('font-size','9px').attr('font-weight','600')
+    .text('QM');
+
+  nodeEl.append('text')
+    .attr('text-anchor','middle').attr('dy',d=>d.r+13)
+    .attr('fill',d=>d.color).attr('fill-opacity',0.85).attr('font-size','9.5px')
+    .text(d=>d.code);
+
+  nodeEl.append('text')
+    .attr('text-anchor','middle').attr('dy',d=>d.r+25)
+    .attr('fill','rgba(30,41,59,0.5)').attr('font-size','8.5px')
+    .text(d=>{ const s=d.label; return s.length>8?s.slice(0,8)+'…':s; });
+
+  sim.on('tick', () => {
+    linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+          .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+
+  document.getElementById('qg-zi').addEventListener('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.35));
+  document.getElementById('qg-zo').addEventListener('click', () => svg.transition().duration(300).call(zoom.scaleBy, 0.75));
+  document.getElementById('qg-zr').addEventListener('click', () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity));
+
+  new ResizeObserver(restart).observe(wrap);
+})();
+</script>
+</body>
+</html>
