@@ -399,7 +399,7 @@
     align-items:flex-end;
     gap:4px;
     height:140px;
-    padding-top:8px;
+    padding-top:24px;
   }
   .bars .bar{
     flex:1;
@@ -407,6 +407,19 @@
     border-radius:3px 3px 0 0;
     min-height:4px;
     position:relative;
+  }
+  .bars .bar .bar-label{
+    position:absolute;
+    left:0; right:0;
+    bottom:100%;
+    margin-bottom:4px;
+    text-align:center;
+    font-family:var(--font-mono);
+    font-size:0.62rem;
+    font-weight:600;
+    color:var(--text);
+    white-space:nowrap;
+    line-height:1.2;
   }
   .bars.muted .bar{
     background:linear-gradient(180deg, #5B86C9 0%, #3D6BB0 100%);
@@ -847,17 +860,24 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
 
   // generate pseudo-random but stable bar chart data (12 months / categories)
-  function makeBars(containerId, values, max){
+  function makeBars(containerId, values, max, formatter){
     const el = document.getElementById(containerId);
     if(!el) return;
     el.innerHTML = '';
     const safeMax = (max && max > 0) ? max : 1;
+    const fmt = formatter || (v => Number(v).toLocaleString());
     values.forEach(v=>{
       const bar = document.createElement('div');
       bar.className = 'bar';
       const pct = Math.max(0, Math.min(100, (v / safeMax) * 100));
       bar.style.height = pct + '%';
       bar.title = v;
+
+      const label = document.createElement('span');
+      label.className = 'bar-label';
+      label.textContent = fmt(v);
+      bar.appendChild(label);
+
       el.appendChild(bar);
     });
   }
@@ -892,10 +912,15 @@
 
     const pointsStr = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
     const circlesStr = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5"/>`).join('');
+    const labelsStr = pts.map((p, i)=>{
+      const ty = Math.max(9, p.y - 8);
+      return `<text x="${p.x.toFixed(1)}" y="${ty.toFixed(1)}" font-size="9" font-family="IBM Plex Mono, monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">${Number(values[i]).toFixed(2)}%</text>`;
+    }).join('');
 
     el.innerHTML = `
       <polyline points="${pointsStr}" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       <g fill="#FF5C5C">${circlesStr}</g>
+      <g>${labelsStr}</g>
     `;
   }
 
@@ -940,15 +965,15 @@
       const monthlyRate       = d.monthlyRate || [];
       const months = monthlyProduction.map(x => x.month);
 
-      makeBars('bar-prod', monthlyProduction.map(x=>x.value), Math.max(...monthlyProduction.map(x=>x.value), 1));
+      makeBars('bar-prod', monthlyProduction.map(x=>x.value), Math.max(...monthlyProduction.map(x=>x.value), 1), v=>Number(v).toLocaleString());
       setAxisLabels('axis-prod', months);
 
-      makeBars('bar-rate', monthlyRate.map(x=>x.value), Math.max(...monthlyRate.map(x=>x.value), 100));
+      makeBars('bar-rate', monthlyRate.map(x=>x.value), Math.max(...monthlyRate.map(x=>x.value), 100), v=>Number(v).toFixed(1)+'%');
       setAxisLabels('axis-rate', months.length ? months : monthlyRate.map(x=>x.month));
 
       // ── 누적 생산실적 ─────────────────────────────────
       const cumulativeProduction = d.cumulativeProduction || [];
-      makeBars('bar-cumprod', cumulativeProduction.map(x=>x.value), Math.max(...cumulativeProduction.map(x=>x.value), 1));
+      makeBars('bar-cumprod', cumulativeProduction.map(x=>x.value), Math.max(...cumulativeProduction.map(x=>x.value), 1), v=>Number(v).toLocaleString());
       setAxisLabels('axis-cumprod', cumulativeProduction.map(x=>x.month));
       const footProd = document.getElementById('foot-cumprod');
       if(footProd){
@@ -958,7 +983,7 @@
 
       // ── 누적 가동률 ───────────────────────────────────
       const cumulativeRate = d.cumulativeRate || [];
-      makeBars('bar-cumrate', cumulativeRate.map(x=>x.value), Math.max(...cumulativeRate.map(x=>x.value), 100));
+      makeBars('bar-cumrate', cumulativeRate.map(x=>x.value), Math.max(...cumulativeRate.map(x=>x.value), 100), v=>Number(v).toFixed(1)+'%');
       setAxisLabels('axis-cumrate', cumulativeRate.map(x=>x.month));
       const footRate = document.getElementById('foot-cumrate');
       if(footRate){
