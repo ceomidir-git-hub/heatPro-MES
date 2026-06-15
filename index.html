@@ -613,6 +613,47 @@
     font-size:0.85rem;
   }
 
+  /* 날짜 이동(◀▶) 컨트롤 */
+  .date-nav{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .date-nav button{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:5px 10px;
+    cursor:pointer;
+    font-size:0.85rem;
+    font-family:var(--font-mono);
+    line-height:1;
+  }
+  .date-nav button:hover{
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+  .date-nav button:disabled:hover{
+    border-color:var(--line);
+    color:var(--text);
+  }
+  .date-nav button:disabled{
+    opacity:0.4;
+    cursor:default;
+  }
+  .date-nav .date-label{
+    font-family:var(--font-mono);
+    font-size:0.9rem;
+    font-weight:600;
+    padding:5px 14px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:var(--panel);
+    min-width:128px;
+    text-align:center;
+  }
+
   body.light-theme{
     --bg:#F5F7FA;
     --panel:#FFFFFF;
@@ -676,7 +717,14 @@
   <main class="main">
 
     <div class="page-head">
-      <h1>대시보드</h1>
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <h1>대시보드</h1>
+        <div class="date-nav">
+          <button onclick="changeDate(-1)" title="이전 날짜">◀</button>
+          <span class="date-label" id="selectedDateLabel">-</span>
+          <button id="nextDateBtn" onclick="changeDate(1)" title="다음 날짜">▶</button>
+        </div>
+      </div>
       <div class="crumb">HOME / 대시보드 · 날짜 : <span id="crumbDate"></span></div>
     </div>
 
@@ -859,6 +907,72 @@
   // ════════════════════════════════════════════════════════════
   const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
 
+  // ════════════════════════════════════════════════════════════
+  // 날짜 이동(◀▶) — 선택한 날짜를 "오늘"로 취급해서 대시보드를 다시 조회
+  // ════════════════════════════════════════════════════════════
+  let selectedDate = new Date(); // 기본값: 시스템 오늘 날짜
+
+  // Date 객체 → 'yyyy-MM-dd'
+  function formatDateYMD(d){
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Date 객체 → 'yyyy-MM-dd(요일)'
+  function formatDateLabel(d){
+    const days = ['일','월','화','수','목','금','토'];
+    return `${formatDateYMD(d)}(${days[d.getDay()]})`;
+  }
+
+  // 시간 정보 제거한 '오늘' Date 객체 (시스템 실제 오늘 날짜)
+  function getSystemTodayDateOnly(){
+    const t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  // 화면의 날짜 표시(제목 옆 라벨 / crumb / 기준일) 갱신
+  function updateDateDisplay(){
+    const dateStr = formatDateYMD(selectedDate);
+    const labelEl = document.getElementById('selectedDateLabel');
+    const crumbEl = document.getElementById('crumbDate');
+    const kpiDateEl = document.getElementById('kpiDate');
+    const nextBtn = document.getElementById('nextDateBtn');
+
+    if(labelEl)   labelEl.textContent = formatDateLabel(selectedDate);
+    if(crumbEl)   crumbEl.textContent = dateStr;
+    if(kpiDateEl) kpiDateEl.textContent = dateStr;
+
+    // 선택한 날짜가 시스템상 오늘이면 ▶(다음 날짜) 버튼 비활성화 (미래로 이동 방지)
+    if(nextBtn){
+      const today = getSystemTodayDateOnly();
+      const sel = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const isToday = sel.getTime() >= today.getTime();
+      nextBtn.disabled = isToday;
+      nextBtn.style.opacity = isToday ? '0.4' : '1';
+      nextBtn.style.cursor = isToday ? 'default' : 'pointer';
+    }
+  }
+
+  // ◀ / ▶ 버튼: 선택 날짜를 하루 이동하고, 그 날짜를 "오늘"로 보고 대시보드 재조회
+  // 단, 시스템상 실제 오늘 날짜보다 미래로는 이동할 수 없음 (예: 오늘이 6/15면 ▶로 6/16 이상 이동 불가)
+  function changeDate(offsetDays){
+    const candidate = new Date(selectedDate);
+    candidate.setDate(candidate.getDate() + offsetDays);
+
+    const today = getSystemTodayDateOnly();
+    const candidateDateOnly = new Date(candidate.getFullYear(), candidate.getMonth(), candidate.getDate());
+
+    if(candidateDateOnly.getTime() > today.getTime()){
+      return; // 오늘보다 미래로는 이동하지 않음
+    }
+
+    selectedDate = candidate;
+    updateDateDisplay();
+    loadDashboard();
+  }
+
   // generate pseudo-random but stable bar chart data (12 months / categories)
   function makeBars(containerId, values, max, formatter){
     const el = document.getElementById(containerId);
@@ -927,7 +1041,9 @@
   // 구글 시트(Apps Script) 대시보드 데이터 로딩
   async function loadDashboard(){
     try{
-      const res = await fetch(API_URL);
+      // 선택한 날짜(◀▶로 변경된 날짜)를 'date' 파라미터로 함께 전달
+      const dateParam = formatDateYMD(selectedDate);
+      const res = await fetch(`${API_URL}?date=${dateParam}`);
       const data = await res.json();
 
       if(data.error){
@@ -1006,9 +1122,7 @@
     }
   }
 
-  loadDashboard();
-
-  // 시스템 날짜 자동 표시
+  // 시스템 날짜 자동 표시 (상단 우측 "가동중" 표시용 — 실제 시스템 오늘 날짜)
   function updateSystemDate(){
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -1017,15 +1131,13 @@
     const currentDate = `${yyyy}-${mm}-${dd}`;
 
     const a = document.getElementById('systemDate');
-    const b = document.getElementById('crumbDate');
-    const c = document.getElementById('kpiDate');
-
     if(a) a.textContent = currentDate;
-    if(b) b.textContent = currentDate;
-    if(c) c.textContent = currentDate;
   }
 
+  // 초기화: 상단 시스템 날짜 표시 → 선택 날짜(기본 오늘) 표시 → 대시보드 로드
   updateSystemDate();
+  updateDateDisplay();
+  loadDashboard();
 
 
   function toggleTheme(){
