@@ -943,7 +943,7 @@ function saveToExcel() {
   function dateCell(addr, str, s) {
     const serial = dateSerial(str);
     if (serial) {
-      ws[addr] = { v: serial, t: 'n', z: 'yyyy-mm-dd', s: {...s, numFmt: 14} };
+      ws[addr] = { v: serial, t: 'n', z: 'yyyy-mm-dd', s: s };
     } else {
       cell(addr, str, s);
     }
