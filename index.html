@@ -1038,13 +1038,22 @@
     `;
   }
 
+  // ◀▶ 버튼을 빠르게 여러 번 누르면 응답이 도착하는 순서가 뒤바뀔 수 있어,
+  // "가장 마지막으로 보낸 요청"의 결과만 화면에 반영하도록 ID로 추적함
+  let dashboardRequestId = 0;
+
   // 구글 시트(Apps Script) 대시보드 데이터 로딩
   async function loadDashboard(){
+    const requestId = ++dashboardRequestId;
     try{
       // 선택한 날짜(◀▶로 변경된 날짜)를 'date' 파라미터로 함께 전달
       const dateParam = formatDateYMD(selectedDate);
       const res = await fetch(`${API_URL}?date=${dateParam}`);
       const data = await res.json();
+
+      // 이 응답을 보낸 뒤에 더 최신 요청(다른 날짜)이 시작되었다면,
+      // 이 응답은 화면에 적용하지 않고 무시함 (날짜/데이터 불일치 방지)
+      if(requestId !== dashboardRequestId) return;
 
       if(data.error){
         console.error('대시보드 데이터 오류:', data.error);
