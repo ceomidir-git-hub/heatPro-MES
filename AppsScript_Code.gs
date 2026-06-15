@@ -27,6 +27,10 @@ function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    // index.html의 날짜 이동(◀▶) 버튼에서 전달하는 ?date=yyyy-MM-dd 파라미터
+    // 값이 있으면 그 날짜를 "오늘"로 취급해서 대시보드를 계산함
+    const selectedDate = (e && e.parameter && e.parameter.date) ? e.parameter.date : null;
+
     const result = {
       employees: readColumn(ss, '직원코드', '이름'),
       customers: readColumn(ss, '고객사', '고객사'),
@@ -34,7 +38,7 @@ function doGet(e) {
       equipment: readEquipment(ss),
       products:  readProducts(ss),
       dbCount:   getDbDataCount(ss),
-      dashboard: buildDashboard(ss)
+      dashboard: buildDashboard(ss, selectedDate)
     };
 
     return jsonOut(result);
@@ -43,8 +47,9 @@ function doGet(e) {
   }
 }
 
-// ── 대시보드 집계: 오늘 KPI + 월별/누적 차트 데이터 ─────────
-function buildDashboard(ss) {
+// ── 대시보드 집계: 선택한 날짜(또는 오늘) 기준 KPI + 월별/누적 차트 데이터 ─────────
+// selectedDate: 'yyyy-MM-dd' 형식 문자열. 없거나 형식이 잘못되면 시스템 오늘 날짜 사용
+function buildDashboard(ss, selectedDate) {
   var sheet = ss.getSheetByName(DB_SHEET_NAME);
   var empty = {
     todayJobCount: 0, todayProduction: 0, todayShipment: 0, todayEquipment: [],
@@ -60,9 +65,16 @@ function buildDashboard(ss) {
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h).trim(); });
   var data    = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
 
-  var tz       = Session.getScriptTimeZone();
-  var todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
-  var thisYear = String(new Date().getFullYear());
+  var tz = Session.getScriptTimeZone();
+
+  // 'date' 파라미터(yyyy-MM-dd)가 유효하면 그 날짜를 "오늘"로 사용, 그렇지 않으면 시스템 오늘 날짜 사용
+  var todayStr;
+  if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+    todayStr = selectedDate;
+  } else {
+    todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  }
+  var thisYear = todayStr.substring(0, 4); // 월별/누적 차트도 선택한 날짜의 연도를 기준으로 집계
 
   function colIdx(name) { return headers.indexOf(name); }
   var dateCol   = colIdx('작업일');
