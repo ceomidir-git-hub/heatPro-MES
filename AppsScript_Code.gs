@@ -22,6 +22,10 @@
 
 const DB_SHEET_NAME = 'DB DATA 2026';
 
+// 날짜 계산/저장 시 항상 한국 시간대를 기준으로 사용 (프로젝트의 스크립트 시간대 설정과 무관하게 고정)
+// → 시간대 설정에 따라 날짜가 하루씩 어긋나는 문제를 방지
+const APP_TZ = 'Asia/Seoul';
+
 // ── GET: RAW DATA 전체 불러오기 + 대시보드 집계 ────────────
 function doGet(e) {
   try {
@@ -65,7 +69,11 @@ function buildDashboard(ss, selectedDate) {
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h).trim(); });
   var data    = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
 
-  var tz = Session.getScriptTimeZone();
+  // ⚠️ 스프레드시트의 시간대(셀에 표시되는 날짜 기준)를 사용해야
+  //    "오늘작업건수" 등의 날짜 비교가 시트에 보이는 날짜와 정확히 일치합니다.
+  //    (Session.getScriptTimeZone()은 Apps Script 프로젝트 설정 시간대로,
+  //     스프레드시트 시간대와 다를 경우 날짜가 하루 어긋날 수 있습니다)
+  var tz = ss.getSpreadsheetTimeZone();
 
   // 'date' 파라미터(yyyy-MM-dd)가 유효하면 그 날짜를 "오늘"로 사용, 그렇지 않으면 시스템 오늘 날짜 사용
   var todayStr;
@@ -284,10 +292,12 @@ function saveRecord(ss, record) {
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
 
   // 날짜 비교용: 시트의 Date 객체 또는 문자열을 yyyy-MM-dd 문자열로 변환
+  // (스프레드시트 시간대 기준 — 셀에 표시되는 날짜와 일치시킴)
+  const tz = ss.getSpreadsheetTimeZone();
   function cellToDateStr(v) {
     if (!v) return '';
     if (Object.prototype.toString.call(v) === '[object Date]') {
-      return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
     }
     const m = String(v).match(/(\d{4})-(\d{2})-(\d{2})/);
     return m ? m[0] : String(v).trim();
@@ -366,10 +376,12 @@ function queryByDate(ss, dateStr) {
   const tagCol  = headers.indexOf('출고일');
   const DATE_COLS = [dateCol, inspCol, tagCol];
 
+  // 스프레드시트 시간대 기준 — 셀에 표시되는 날짜와 일치시킴
+  const tz = ss.getSpreadsheetTimeZone();
   function cellToDateStr(v) {
     if (!v) return '';
     if (Object.prototype.toString.call(v) === '[object Date]') {
-      return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
     }
     const m = String(v).match(/(\d{4})-(\d{2})-(\d{2})/);
     return m ? m[0] : String(v).trim();
