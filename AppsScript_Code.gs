@@ -22,9 +22,55 @@
 
 const DB_SHEET_NAME = 'DB DATA 2026';
 
-// 날짜 계산/저장 시 항상 한국 시간대를 기준으로 사용 (프로젝트의 스크립트 시간대 설정과 무관하게 고정)
-// → 시간대 설정에 따라 날짜가 하루씩 어긋나는 문제를 방지
-const APP_TZ = 'Asia/Seoul';
+// 스프레드시트의 시간대를 안전하게 가져옴
+// (getSpreadsheetTimeZone()이 실패하거나 비정상 값을 반환할 경우를 대비해
+//  Session.getScriptTimeZone() → 'Asia/Seoul' 순으로 대체)
+function getTz(ss) {
+  try {
+    var tz = ss.getSpreadsheetTimeZone();
+    if (tz && typeof tz === 'string') return tz;
+  } catch (e) {}
+  try {
+    var tz2 = Session.getScriptTimeZone();
+    if (tz2 && typeof tz2 === 'string') return tz2;
+  } catch (e) {}
+  return 'Asia/Seoul';
+}
+
+// ════════════════════════════════════════════════════════════
+// [임시 디버깅용] 날짜 값 진단 함수
+// Apps Script 편집기에서 이 함수를 선택 → ▶실행 → 보기>실행 기록(로그)에서 결과 확인
+// 확인 후에는 이 함수를 지워도 됩니다 (doGet/doPost와 무관, 안전함)
+// ════════════════════════════════════════════════════════════
+function debugDates() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = getTz(ss);
+  Logger.log('getTz() 결과 (실제 코드가 쓰는 시간대): ' + tz);
+  Logger.log('Spreadsheet TimeZone (raw, 빈 값일 수 있음): "' + ss.getSpreadsheetTimeZone() + '"');
+  Logger.log('Script TimeZone: ' + Session.getScriptTimeZone());
+  Logger.log('Spreadsheet Locale: ' + ss.getSpreadsheetLocale());
+
+  const sheet = ss.getSheetByName(DB_SHEET_NAME);
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h).trim(); });
+  const dateCol = headers.indexOf('작업일');
+  const lastRow = sheet.getLastRow();
+
+  for (let r = lastRow - 4; r <= lastRow; r++) {
+    const cell = sheet.getRange(r, dateCol + 1);
+    const v = cell.getValue();
+    const isDate = (Object.prototype.toString.call(v) === '[object Date]');
+    Logger.log(
+      'Row ' + r +
+      ' | raw=' + v +
+      ' | isDate=' + isDate +
+      ' | ISO=' + (isDate ? v.toISOString() : 'N/A') +
+      ' | fmt(getTz)=' + (isDate ? Utilities.formatDate(v, tz, 'yyyy-MM-dd') : 'N/A') +
+      ' | cellNumberFormat=' + cell.getNumberFormat() +
+      ' | displayValue=' + cell.getDisplayValue()
+    );
+  }
+}
 
 // ── GET: RAW DATA 전체 불러오기 + 대시보드 집계 ────────────
 function doGet(e) {
@@ -73,7 +119,7 @@ function buildDashboard(ss, selectedDate) {
   //    "오늘작업건수" 등의 날짜 비교가 시트에 보이는 날짜와 정확히 일치합니다.
   //    (Session.getScriptTimeZone()은 Apps Script 프로젝트 설정 시간대로,
   //     스프레드시트 시간대와 다를 경우 날짜가 하루 어긋날 수 있습니다)
-  var tz = ss.getSpreadsheetTimeZone();
+  var tz = getTz(ss);
 
   // 'date' 파라미터(yyyy-MM-dd)가 유효하면 그 날짜를 "오늘"로 사용, 그렇지 않으면 시스템 오늘 날짜 사용
   var todayStr;
@@ -293,7 +339,7 @@ function saveRecord(ss, record) {
 
   // 날짜 비교용: 시트의 Date 객체 또는 문자열을 yyyy-MM-dd 문자열로 변환
   // (스프레드시트 시간대 기준 — 셀에 표시되는 날짜와 일치시킴)
-  const tz = ss.getSpreadsheetTimeZone();
+  const tz = getTz(ss);
   function cellToDateStr(v) {
     if (!v) return '';
     if (Object.prototype.toString.call(v) === '[object Date]') {
@@ -345,9 +391,19 @@ function saveRecord(ss, record) {
     return v;
   });
 
+  // DATE_FIELDS에 해당하는 컬럼 인덱스(0-based) — 저장 후 표시 형식 통일에 사용
+  const dateColIdxs = DATE_FIELDS.map(h => headers.indexOf(h)).filter(i => i >= 0);
+
+  function applyDateFormat(rowNum) {
+    dateColIdxs.forEach(idx => {
+      sheet.getRange(rowNum, idx + 1).setNumberFormat('yyyy-mm-dd');
+    });
+  }
+
   if (targetRow > 0) {
     // 수정 모드
     sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowValues]);
+    applyDateFormat(targetRow);
     return { result: 'updated', row: targetRow, no: rowValues[headers.indexOf('No')] };
   } else {
     // 신규 행 추가
@@ -355,6 +411,7 @@ function saveRecord(ss, record) {
     const noIdx = headers.indexOf('No');
     if (noIdx >= 0) rowValues[noIdx] = newRowNo;
     sheet.appendRow(rowValues);
+    applyDateFormat(sheet.getLastRow());
     return { result: 'inserted', row: sheet.getLastRow(), no: newRowNo };
   }
 }
@@ -377,7 +434,7 @@ function queryByDate(ss, dateStr) {
   const DATE_COLS = [dateCol, inspCol, tagCol];
 
   // 스프레드시트 시간대 기준 — 셀에 표시되는 날짜와 일치시킴
-  const tz = ss.getSpreadsheetTimeZone();
+  const tz = getTz(ss);
   function cellToDateStr(v) {
     if (!v) return '';
     if (Object.prototype.toString.call(v) === '[object Date]') {
