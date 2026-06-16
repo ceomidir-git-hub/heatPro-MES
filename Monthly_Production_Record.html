@@ -163,45 +163,120 @@ function processData(rows,month){
     rateArr.push(i<actualDays&&inputArr[i]>0?Math.round(resultArr[i]/inputArr[i]*1000)/10:null);
   }
 
-  renderChart(actualDays,month,rateArr);
+  renderChart(actualDays,month,rateArr,resultArr);
   renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr,
               totalPlan,totalInput,totalResult,totalDiff,totalRate);
 }
 
-function renderChart(actualDays,month,rateArr){
-  var labels=[],chartData=[],targetData=[];
+function renderChart(actualDays,month,rateArr,resultArr){
+  var labels=[],rateData=[],targetData=[],barData=[];
   for(var i=0;i<MAX_DAYS;i++){
     labels.push(i<actualDays?(i+1):'');
-    chartData.push(i<actualDays&&rateArr[i]!==null?rateArr[i]:undefined);
+    rateData.push(i<actualDays&&rateArr[i]!==null?rateArr[i]:undefined);
     targetData.push(i<actualDays?TARGET:undefined);
+    barData.push(i<actualDays&&resultArr[i]>0?resultArr[i]:undefined);
   }
   if(myChart) myChart.destroy();
   var ctx=document.getElementById('myChart').getContext('2d');
   myChart=new Chart(ctx,{
-    type:'line',
+    type:'bar',  // 기본 type은 bar (혼합형 기준)
     data:{labels:labels,datasets:[
-      {label:'달성율(%)',data:chartData,borderColor:'#cc0000',backgroundColor:'rgba(204,0,0,0.08)',
-       borderWidth:2,pointBackgroundColor:'#cc0000',pointRadius:4,pointHoverRadius:6,tension:0,spanGaps:false},
-      {label:'목표('+TARGET+'%)',data:targetData,borderColor:'#aaa',borderWidth:1,
-       borderDash:[6,3],pointRadius:0,tension:0}
+      // ① 생산실적 막대 (왼쪽 Y축)
+      {
+        type:'bar',
+        label:'생산실적(ea)',
+        data:barData,
+        backgroundColor:'rgba(26,90,140,0.5)',
+        borderColor:'rgba(26,90,140,0.8)',
+        borderWidth:1,
+        yAxisID:'y2',
+        order:2
+      },
+      // ② 달성율 꺾은선 (오른쪽 Y축)
+      {
+        type:'line',
+        label:'달성율(%)',
+        data:rateData,
+        borderColor:'#cc0000',
+        backgroundColor:'rgba(204,0,0,0.05)',
+        borderWidth:2,
+        pointBackgroundColor:'#cc0000',
+        pointRadius:4,
+        pointHoverRadius:6,
+        tension:0,
+        spanGaps:false,
+        yAxisID:'y',
+        order:1
+      },
+      // ③ 목표선 꺾은선 (오른쪽 Y축)
+      {
+        type:'line',
+        label:'목표('+TARGET+'%)',
+        data:targetData,
+        borderColor:'#aaa',
+        borderWidth:1,
+        borderDash:[6,3],
+        pointRadius:0,
+        tension:0,
+        yAxisID:'y',
+        order:3
+      }
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{position:'top',labels:{font:{size:11}}},
-        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y!==undefined?c.parsed.y+'%':'-');}}}
+        tooltip:{callbacks:{
+          label:function(c){
+            if(c.dataset.label==='생산실적(ea)') return c.dataset.label+': '+(c.parsed.y!==undefined?Number(c.parsed.y).toLocaleString()+'ea':'-');
+            return c.dataset.label+': '+(c.parsed.y!==undefined?c.parsed.y+'%':'-');
+          }
+        }}
       },
       scales:{
-        x:{title:{display:true,text:'일(Day)',font:{size:11}},ticks:{font:{size:10}},grid:{color:'#eee'}},
-        y:{min:0,max:120,title:{display:true,text:'달성율(%)',font:{size:11}},
-           ticks:{font:{size:10},callback:function(v){return v+'%';}},grid:{color:'#eee'}}
+        x:{
+          title:{display:true,text:'일(Day)',font:{size:11}},
+          ticks:{font:{size:10}},
+          grid:{color:'#eee'}
+        },
+        // 오른쪽 Y축 — 달성율(%)
+        y:{
+          position:'right',
+          min:0, max:120,
+          title:{display:true,text:'달성율(%)',font:{size:11}},
+          ticks:{font:{size:10},callback:function(v){return v+'%';}},
+          grid:{color:'#eee'}
+        },
+        // 왼쪽 Y축 — 생산실적(ea)
+        y2:{
+          position:'left',
+          min:0,
+          title:{display:true,text:'생산실적(ea)',font:{size:11}},
+          ticks:{font:{size:10},callback:function(v){return Number(v).toLocaleString();}},
+          grid:{drawOnChartArea:false}  // 격자선 중복 방지
+        }
       }
     },
-    plugins:[{id:'lbl',afterDatasetsDraw:function(chart){
-      var ds=chart.data.datasets[0],meta=chart.getDatasetMeta(0),c2=chart.ctx;
-      c2.save();c2.font='bold 10px Malgun Gothic';c2.fillStyle='#cc0000';c2.textAlign='center';
-      meta.data.forEach(function(pt,i){var v=ds.data[i];if(v!==undefined&&v!==null)c2.fillText(v+'%',pt.x,pt.y-8);});
-      c2.restore();
-    }}]
+    plugins:[{
+      id:'lbl',
+      afterDatasetsDraw:function(chart){
+        // 달성율 꺾은선 레이블
+        var ds=chart.data.datasets[1];
+        var meta=chart.getDatasetMeta(1);
+        var c2=chart.ctx;
+        c2.save();
+        c2.font='bold 10px Malgun Gothic';
+        c2.fillStyle='#cc0000';
+        c2.textAlign='center';
+        meta.data.forEach(function(pt,i){
+          var v=ds.data[i];
+          if(v!==undefined&&v!==null) c2.fillText(v+'%',pt.x,pt.y-8);
+        });
+        c2.restore();
+      }
+    }]
   });
 }
 
@@ -261,53 +336,4 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
   //   → [실적(rowspan3)] [생산실적] [합계] [1~31] = 1+1+1+31 = 34 → 오버!
   //
   //   해결: 헤더를 [구분][항목][합계][1~31] = 34열로 맞추고
-  //   일반행은 [라벨(colspan=2)][합계][1~31] = 1+1+31+1 구조로.
-  // ──────────────────────────────────────────────
-  // 최종 결정: 헤더 34열, 일반행 colspan=2로 구분+항목 병합
-  // ──────────────────────────────────────────────
-
-  // 위 주석대로 헤더를 34열로 재구성
-  hdr='<th colspan="2">구분</th><th class="total-col" style="color:#fff;">합계</th>';
-  for(var d=1;d<=MAX_DAYS;d++){
-    if(d<=actualDays){
-      var cls=isHoliday(YEAR,month,d)?'th-holiday':'';
-      hdr+='<th class="'+cls+'">'+d+'</th>';
-    } else {
-      hdr+='<th class="th-none">'+d+'</th>';
-    }
-  }
-
-  // 일반행: [라벨(colspan=2)] + dataCells(32셀) = 34열
-  function makeRow2(label,arr,total,isRate){
-    return '<tr><td class="col-label" colspan="2">'+label+'</td>'+dataCells(arr,total,isRate)+'</tr>';
-  }
-
-  // 실적행: [실적(rowspan3,1셀)] + [생산실적(1셀)] + dataCells(32셀) = 34열
-  var resultRows='';
-  resultRows+='<tr>'
-    +'<td class="col-group" rowspan="3">실적</td>'
-    +'<td class="col-sub">생산실적</td>'
-    +dataCells(resultArr,totalResult,false)
-    +'</tr>';
-  resultRows+='<tr class="row-diff">'
-    +'<td class="col-sub">차이</td>'
-    +dataCells(diffArr,totalDiff,false)
-    +'</tr>';
-  resultRows+='<tr class="row-rate">'
-    +'<td class="col-sub">달성율(%)</td>'
-    +dataCells(rateArr,totalRate,true)
-    +'</tr>';
-
-  var html='<table><thead><tr>'+hdr+'</tr></thead><tbody>';
-  html+=makeRow2('월간생산계획',planArr,totalPlan,false);
-  html+=makeRow2('생산계획',inputArr,totalInput,false);
-  html+=resultRows;
-  html+='</tbody></table>';
-
-  document.getElementById('tableArea').innerHTML=html;
-}
-
-window.onload=function(){loadData();};
-</script>
-</body>
-</html>
+  //   일반행은 [라벨(col
