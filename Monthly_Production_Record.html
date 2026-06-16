@@ -6,515 +6,272 @@
 <title>월생산실적 | HeatPro MES</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
-    background: #f0f2f5;
-    color: #222;
-    min-height: 100vh;
-  }
-
-  /* ── 상단 헤더 ── */
-  .top-bar {
-    background: #1a3a5c;
-    color: #fff;
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .top-bar h1 { font-size: clamp(14px, 2vw, 20px); font-weight: 700; letter-spacing: 1px; }
-  .top-bar .sub { font-size: clamp(11px, 1.2vw, 13px); opacity: 0.75; }
-
-  /* ── 조회 패널 ── */
-  .search-panel {
-    background: #fff;
-    border-bottom: 2px solid #1a3a5c;
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .search-panel label { font-size: 13px; font-weight: 600; color: #1a3a5c; }
-  .search-panel select {
-    padding: 5px 10px;
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: inherit;
-  }
-  .btn-search {
-    background: #1a3a5c;
-    color: #fff;
-    border: none;
-    padding: 6px 18px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .btn-search:hover { background: #2a5a8c; }
-
-  /* ── 메인 컨테이너 ── */
-  .container { padding: 16px; }
-
-  /* ── 카드 ── */
-  .card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-  .card-title {
-    background: #1a3a5c;
-    color: #fff;
-    padding: 8px 16px;
-    font-size: clamp(13px, 1.5vw, 15px);
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .card-title .target { font-size: 12px; font-weight: 400; opacity: 0.85; }
-  .card-body { padding: 12px; }
-
-  /* ── 차트 ── */
-  .chart-wrap {
-    position: relative;
-    width: 100%;
-    height: clamp(200px, 30vw, 320px);
-  }
-
-  /* ── 테이블 ── */
-  .tbl-wrap { overflow-x: auto; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: clamp(10px, 1.1vw, 13px);
-    min-width: 1000px;
-  }
-  th, td {
-    border: 1px solid #ccc;
-    text-align: center;
-    padding: 4px 3px;
-    white-space: nowrap;
-  }
-  thead th {
-    background: #1a3a5c;
-    color: #fff;
-    font-weight: 600;
-  }
-
-  /* 토요일·일요일·공휴일 → 모두 빨간색 */
-  .th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
-  /* 데이터 셀도 빨간색 배경 연하게 */
-  .td-holiday { background: #fff5f5 !important; }
-
-  /* 해당 월에 없는 날짜 열 (회색) */
-  .th-none { background: #cccccc !important; color: #999 !important; }
-  .td-none { background: #eeeeee !important; color: #bbb !important; }
-
-  tbody tr td:first-child {
-    background: #f5f7fa;
-    font-weight: 600;
-    color: #1a3a5c;
-  }
-  tbody tr td:nth-child(2) {
-    background: #fff8e1;
-    font-weight: 700;
-    color: #333;
-  }
-
-  /* 실적 그룹 */
-  tr.row-result td:first-child,
-  tr.row-diff   td:first-child,
-  tr.row-rate   td:first-child { background: #e8ecf5; }
-
-  tr.row-diff td { color: #1a3a5c; }
-  tr.row-rate td { color: #cc0000; font-weight: 700; }
-
-  /* 합계 열 강조 */
-  td.total-col { background: #fff8e1 !important; font-weight: 700; color: #333; }
-
-  /* ── 범례 ── */
-  .legend {
-    display: flex;
-    gap: 16px;
-    font-size: 11px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-  }
-  .legend-item { display: flex; align-items: center; gap: 4px; }
-  .legend-dot {
-    width: 12px; height: 12px; border-radius: 2px; display: inline-block;
-  }
-  .legend-dot.holiday { background: #ff2222; }
-  .legend-dot.none    { background: #cccccc; }
-
-  /* ── 로딩/에러 ── */
-  .status-box {
-    text-align: center;
-    padding: 40px;
-    color: #888;
-    font-size: 14px;
-  }
-  .status-box.error { color: #c00; }
-  .spinner {
-    display: inline-block;
-    width: 24px; height: 24px;
-    border: 3px solid #ddd;
-    border-top-color: #1a3a5c;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 8px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+.top-bar { background: #1a3a5c; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.top-bar h1 { font-size: clamp(14px,2vw,20px); font-weight: 700; letter-spacing: 1px; }
+.top-bar .sub { font-size: clamp(11px,1.2vw,13px); opacity: 0.75; }
+.search-panel { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-panel label { font-size: 13px; font-weight: 600; color: #1a3a5c; }
+.search-panel select { padding: 5px 10px; border: 1px solid #aaa; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.btn-search { background: #1a3a5c; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
+.btn-search:hover { background: #2a5a8c; }
+.container { padding: 16px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+.card-title { background: #1a3a5c; color: #fff; padding: 8px 16px; font-size: clamp(13px,1.5vw,15px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.card-title .target { font-size: 12px; font-weight: 400; opacity: 0.85; }
+.card-body { padding: 12px; }
+.chart-wrap { position: relative; width: 100%; height: clamp(200px,30vw,320px); }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(10px,1.1vw,13px); min-width: 1000px; }
+th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; }
+thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
+.th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
+.td-holiday { background: #fff5f5 !important; }
+.th-none { background: #cccccc !important; color: #999 !important; }
+.td-none { background: #eeeeee !important; color: #bbb !important; }
+tbody tr td:first-child { background: #f5f7fa; font-weight: 600; color: #1a3a5c; }
+tbody tr td:nth-child(2) { background: #fff8e1; font-weight: 700; color: #333; }
+tr.row-result td:first-child, tr.row-diff td:first-child, tr.row-rate td:first-child { background: #e8ecf5; }
+tr.row-diff td { color: #1a3a5c; }
+tr.row-rate td { color: #cc0000; font-weight: 700; }
+td.total-col { background: #fff8e1 !important; font-weight: 700; color: #333; }
+.legend { display: flex; gap: 16px; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend-dot.holiday { background: #ff2222; }
+.legend-dot.none { background: #cccccc; }
+.status-box { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+.status-box.error { color: #c00; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: #1a3a5c; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- 상단 헤더 -->
 <div class="top-bar">
   <h1>📊 월생산실적 (Monthly Production Record)</h1>
   <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
 </div>
 
-<!-- 조회 패널 -->
 <div class="search-panel">
   <label>조회 월 :</label>
   <select id="selMonth">
-    <option value="1">1월</option>
-    <option value="2">2월</option>
-    <option value="3">3월</option>
-    <option value="4">4월</option>
-    <option value="5">5월</option>
-    <option value="6" selected>6월</option>
-    <option value="7">7월</option>
-    <option value="8">8월</option>
-    <option value="9">9월</option>
-    <option value="10">10월</option>
-    <option value="11">11월</option>
-    <option value="12">12월</option>
+    <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+    <option value="4">4월</option><option value="5">5월</option><option value="6" selected>6월</option>
+    <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+    <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
   </select>
   <button class="btn-search" onclick="loadData()">조 회</button>
 </div>
 
-<!-- 메인 -->
 <div class="container">
-
-  <!-- 차트 카드 -->
   <div class="card">
     <div class="card-title">
       <span id="chartTitle">생산실적 현황 ( 6월 )</span>
       <span class="target">[목표 : 90%]</span>
     </div>
     <div class="card-body">
-      <div class="chart-wrap">
-        <canvas id="myChart"></canvas>
-      </div>
+      <div class="chart-wrap"><canvas id="myChart"></canvas></div>
     </div>
   </div>
-
-  <!-- 테이블 카드 -->
   <div class="card">
     <div class="card-title">월별 생산실적 상세</div>
     <div class="card-body">
-      <!-- 범례 -->
       <div class="legend">
-        <div class="legend-item">
-          <span class="legend-dot holiday"></span>
-          <span>토요일 · 일요일 · 공휴일</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot none"></span>
-          <span>해당 월 없는 날짜</span>
-        </div>
+        <div class="legend-item"><span class="legend-dot holiday"></span><span>토요일 · 일요일 · 공휴일</span></div>
+        <div class="legend-item"><span class="legend-dot none"></span><span>해당 월 없는 날짜</span></div>
       </div>
       <div id="tableArea" class="tbl-wrap">
-        <div class="status-box">
-          <div class="spinner"></div><br>데이터를 불러오는 중입니다...
-        </div>
+        <div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
-// =============================================
-// 설정
-// =============================================
-const API_URL  = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
-const YEAR     = 2026;
-const TARGET   = 90;   // 목표 달성율(%)
-const MAX_DAYS = 31;   // 테이블 열 항상 31개 고정
+var API_URL  = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var YEAR     = 2026;
+var TARGET   = 90;
+var MAX_DAYS = 31;
+var myChart  = null;
+var currentMonth = 6;
 
-let myChart = null;
+var HOLIDAYS = ['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01',
+  '2026-05-05','2026-05-25','2026-06-06','2026-08-15',
+  '2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'];
 
-// =============================================
-// 2026년 대한민국 공휴일 목록
-// 형식: 'YYYY-MM-DD'
-// =============================================
-const HOLIDAYS_2026 = new Set([
-  '2026-01-01', // 신정
-  '2026-01-28', // 설날 연휴
-  '2026-01-29', // 설날
-  '2026-01-30', // 설날 연휴
-  '2026-03-01', // 삼일절
-  '2026-05-05', // 어린이날
-  '2026-05-25', // 부처님오신날 (음력 4/8 → 양력 확인 필요, 잠정)
-  '2026-06-06', // 현충일
-  '2026-08-15', // 광복절
-  '2026-09-24', // 추석 연휴
-  '2026-09-25', // 추석
-  '2026-09-26', // 추석 연휴
-  '2026-10-03', // 개천절
-  '2026-10-09', // 한글날
-  '2026-12-25', // 크리스마스
-]);
-
-// =============================================
-// 날짜 유틸
-// =============================================
-function getDaysInMonth(year, month) {
-  return new Date(year, month, 0).getDate();
+function getDaysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+function getDow(y,m,d){ return new Date(y,m-1,d).getDay(); }
+function isHoliday(y,m,d){
+  var dow=getDow(y,m,d);
+  if(dow===0||dow===6) return true;
+  var k=y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d);
+  return HOLIDAYS.indexOf(k)>=0;
 }
 
-function getDayOfWeek(year, month, day) {
-  return new Date(year, month - 1, day).getDay(); // 0=일, 6=토
-}
-
-// 토요일(6), 일요일(0), 공휴일 여부 판단
-function isHoliday(year, month, day) {
-  const dow = getDayOfWeek(year, month, day);
-  if (dow === 0 || dow === 6) return true; // 일·토
-  const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  return HOLIDAYS_2026.has(key);
-}
-
-// =============================================
-// 데이터 로드
-// =============================================
-async function loadData() {
-  const month = parseInt(document.getElementById('selMonth').value);
-  document.getElementById('chartTitle').textContent = `생산실적 현황 ( ${month}월 )`;
+// JSONP 방식으로 데이터 로드
+function loadData(){
+  currentMonth = parseInt(document.getElementById('selMonth').value);
+  document.getElementById('chartTitle').textContent = '생산실적 현황 ( '+currentMonth+'월 )';
   document.getElementById('tableArea').innerHTML =
     '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
 
-  try {
-    const res  = await fetch(API_URL + '?action=monthly&year=' + YEAR + '&month=' + month);
-    const json = await res.json();
-    if (json.error) throw new Error(json.error);
-    processData(json.rawRows || [], month);
-  } catch (e) {
-    document.getElementById('tableArea').innerHTML =
-      `<div class="status-box error">⚠️ 데이터 로드 실패: ${e.message}<br><small>API URL 또는 네트워크를 확인하세요.</small></div>`;
-    console.error(e);
-  }
+  var old = document.getElementById('_gs');
+  if(old) old.parentNode.removeChild(old);
+
+  window._cb = function(json){
+    if(json.error){ showError(json.error); return; }
+    processData(json.rawRows||[], currentMonth);
+  };
+
+  var s = document.createElement('script');
+  s.id  = '_gs';
+  s.src = API_URL+'?action=monthly&year='+YEAR+'&month='+currentMonth+'&callback=_cb';
+  s.onerror = function(){ showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
+  document.body.appendChild(s);
 }
 
-// =============================================
-// 데이터 처리
-// =============================================
-function processData(rows, month) {
-  const actualDays = getDaysInMonth(YEAR, month);
+function showError(msg){
+  document.getElementById('tableArea').innerHTML =
+    '<div class="status-box error">⚠️ '+msg+'</div>';
+}
 
-  const planArr   = new Array(MAX_DAYS).fill(0);
-  const inputArr  = new Array(MAX_DAYS).fill(0);
-  const resultArr = new Array(MAX_DAYS).fill(0);
+function processData(rows, month){
+  var actualDays = getDaysInMonth(YEAR, month);
+  var planArr=[], inputArr=[], resultArr=[];
+  for(var i=0;i<MAX_DAYS;i++){ planArr.push(0); inputArr.push(0); resultArr.push(0); }
 
-  rows.forEach(function(row) {
-    const d = new Date(row['작업일']);
-    if (isNaN(d)) return;
-    if (d.getFullYear() !== YEAR || d.getMonth() + 1 !== month) return;
-    const idx = d.getDate() - 1;
-    if (idx >= MAX_DAYS) return;
-    planArr[idx]   += (Number(row['계획수량']) || 0);
-    inputArr[idx]  += (Number(row['투입수량']) || 0);
-    resultArr[idx] += (Number(row['양품수량']) || 0) + (Number(row['불량수량']) || 0);
-  });
+  for(var ri=0;ri<rows.length;ri++){
+    var row=rows[ri];
+    var ds=row['작업일']||'';
+    if(!ds) continue;
+    var pts=ds.split('-');
+    if(pts.length<3) continue;
+    var y=parseInt(pts[0]),mo=parseInt(pts[1]),day=parseInt(pts[2]);
+    if(y!==YEAR||mo!==month) continue;
+    var idx=day-1;
+    if(idx<0||idx>=MAX_DAYS) continue;
+    planArr[idx]   += (Number(row['계획수량'])||0);
+    inputArr[idx]  += (Number(row['투입수량'])||0);
+    resultArr[idx] += (Number(row['양품수량'])||0)+(Number(row['불량수량'])||0);
+  }
 
-  // 합계 (실제 일수 범위만)
-  const sumRange  = arr => arr.slice(0, actualDays).reduce((a, b) => a + b, 0);
-  const totalPlan   = sumRange(planArr);
-  const totalInput  = sumRange(inputArr);
-  const totalResult = sumRange(resultArr);
-  const totalDiff   = totalInput - totalResult;
-  const totalRate   = totalInput > 0
-    ? Math.round(totalResult / totalInput * 1000) / 10 : null;
+  var totalPlan=0,totalInput=0,totalResult=0;
+  for(var i=0;i<actualDays;i++){
+    totalPlan+=planArr[i]; totalInput+=inputArr[i]; totalResult+=resultArr[i];
+  }
+  var totalDiff = totalInput-totalResult;
+  var totalRate = totalInput>0 ? Math.round(totalResult/totalInput*1000)/10 : null;
 
-  // 차이·달성율 (31칸, 없는 날은 null)
-  const diffArr = inputArr.map((v, i) =>
-    i < actualDays && v > 0 ? v - resultArr[i] : null
-  );
-  const rateArr = inputArr.map((v, i) =>
-    i < actualDays && v > 0
-      ? Math.round(resultArr[i] / v * 1000) / 10
-      : null
-  );
+  var diffArr=[], rateArr=[];
+  for(var i=0;i<MAX_DAYS;i++){
+    diffArr.push(i<actualDays&&inputArr[i]>0 ? inputArr[i]-resultArr[i] : null);
+    rateArr.push(i<actualDays&&inputArr[i]>0 ? Math.round(resultArr[i]/inputArr[i]*1000)/10 : null);
+  }
 
   renderChart(actualDays, month, rateArr);
-  renderTable(actualDays, month,
-    planArr, inputArr, resultArr, diffArr, rateArr,
-    totalPlan, totalInput, totalResult, totalDiff, totalRate);
+  renderTable(actualDays, month, planArr, inputArr, resultArr, diffArr, rateArr,
+              totalPlan, totalInput, totalResult, totalDiff, totalRate);
 }
 
-// =============================================
-// 차트 렌더링
-// =============================================
-function renderChart(actualDays, month, rateArr) {
-  const labels = Array.from({length: MAX_DAYS}, (_, i) =>
-    i < actualDays ? (i + 1) : ''
-  );
-  const chartData = rateArr.map((v, i) =>
-    i < actualDays && v !== null ? v : undefined
-  );
-
-  if (myChart) myChart.destroy();
-
-  const ctx = document.getElementById('myChart').getContext('2d');
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: '달성율(%)',
-          data: chartData,
-          borderColor: '#cc0000',
-          backgroundColor: 'rgba(204,0,0,0.08)',
-          borderWidth: 2,
-          pointBackgroundColor: '#cc0000',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0,
-          spanGaps: false,
-        },
-        {
-          label: '목표(' + TARGET + '%)',
-          data: Array.from({length: MAX_DAYS}, (_, i) =>
-            i < actualDays ? TARGET : undefined
-          ),
-          borderColor: '#aaa',
-          borderWidth: 1,
-          borderDash: [6, 3],
-          pointRadius: 0,
-          tension: 0,
-        }
+function renderChart(actualDays, month, rateArr){
+  var labels=[], chartData=[], targetData=[];
+  for(var i=0;i<MAX_DAYS;i++){
+    labels.push(i<actualDays?(i+1):'');
+    chartData.push(i<actualDays&&rateArr[i]!==null?rateArr[i]:undefined);
+    targetData.push(i<actualDays?TARGET:undefined);
+  }
+  if(myChart) myChart.destroy();
+  var ctx=document.getElementById('myChart').getContext('2d');
+  myChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'달성율(%)',data:chartData,borderColor:'#cc0000',backgroundColor:'rgba(204,0,0,0.08)',
+         borderWidth:2,pointBackgroundColor:'#cc0000',pointRadius:4,pointHoverRadius:6,tension:0,spanGaps:false},
+        {label:'목표('+TARGET+'%)',data:targetData,borderColor:'#aaa',borderWidth:1,
+         borderDash:[6,3],pointRadius:0,tension:0}
       ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', labels: { font: { size: 11 } } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.dataset.label + ': ' +
-              (ctx.parsed.y !== undefined ? ctx.parsed.y + '%' : '-')
-          }
-        }
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{font:{size:11}}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y!==undefined?c.parsed.y+'%':'-');}}}
       },
-      scales: {
-        x: {
-          title: { display: true, text: '일(Day)', font: { size: 11 } },
-          ticks: { font: { size: 10 } },
-          grid: { color: '#eee' }
-        },
-        y: {
-          min: 0, max: 120,
-          title: { display: true, text: '달성율(%)', font: { size: 11 } },
-          ticks: { font: { size: 10 }, callback: v => v + '%' },
-          grid: { color: '#eee' }
-        }
+      scales:{
+        x:{title:{display:true,text:'일(Day)',font:{size:11}},ticks:{font:{size:10}},grid:{color:'#eee'}},
+        y:{min:0,max:120,title:{display:true,text:'달성율(%)',font:{size:11}},
+           ticks:{font:{size:10},callback:function(v){return v+'%';}},grid:{color:'#eee'}}
       }
     },
-    plugins: [{
-      id: 'dataLabels',
-      afterDatasetsDraw(chart) {
-        const ds   = chart.data.datasets[0];
-        const meta = chart.getDatasetMeta(0);
-        const ctx2 = chart.ctx;
-        ctx2.save();
-        ctx2.font      = 'bold 10px Malgun Gothic';
-        ctx2.fillStyle = '#cc0000';
-        ctx2.textAlign = 'center';
-        meta.data.forEach((pt, i) => {
-          const v = ds.data[i];
-          if (v !== undefined && v !== null) {
-            ctx2.fillText(v + '%', pt.x, pt.y - 8);
-          }
+    plugins:[{
+      id:'lbl',
+      afterDatasetsDraw:function(chart){
+        var ds=chart.data.datasets[0];
+        var meta=chart.getDatasetMeta(0);
+        var c2=chart.ctx;
+        c2.save();
+        c2.font='bold 10px Malgun Gothic';
+        c2.fillStyle='#cc0000';
+        c2.textAlign='center';
+        meta.data.forEach(function(pt,i){
+          var v=ds.data[i];
+          if(v!==undefined&&v!==null) c2.fillText(v+'%',pt.x,pt.y-8);
         });
-        ctx2.restore();
+        c2.restore();
       }
     }]
   });
 }
 
-// =============================================
-// 테이블 렌더링
-// =============================================
-function renderTable(actualDays, month,
-                     planArr, inputArr, resultArr, diffArr, rateArr,
-                     totalPlan, totalInput, totalResult, totalDiff, totalRate) {
+function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr,
+                     totalPlan,totalInput,totalResult,totalDiff,totalRate){
+  var fmt=function(v){return(v===null||v===undefined||v===0)?'':Number(v).toLocaleString();};
+  var fmtR=function(v){return(v===null||v===undefined)?'':v+'%';};
 
-  const fmt     = v => (v === null || v === undefined || v === 0) ? '' : Number(v).toLocaleString();
-  const fmtRate = v => (v === null || v === undefined) ? '' : v + '%';
-
-  // ── 날짜 헤더 (31칸 고정) ──
-  let dayHeaders = '<th>구분</th><th>합계</th>';
-  for (let d = 1; d <= MAX_DAYS; d++) {
-    if (d <= actualDays) {
-      const holiday = isHoliday(YEAR, month, d);
-      const cls = holiday ? 'th-holiday' : '';
-      dayHeaders += `<th class="${cls}">${d}</th>`;
+  var hdr='<th>구분</th><th>합계</th>';
+  for(var d=1;d<=MAX_DAYS;d++){
+    if(d<=actualDays){
+      var cls=isHoliday(YEAR,month,d)?'th-holiday':'';
+      hdr+='<th class="'+cls+'">'+d+'</th>';
     } else {
-      dayHeaders += `<th class="th-none">${d}</th>`;
+      hdr+='<th class="th-none">'+d+'</th>';
     }
   }
 
-  // ── 셀 생성 (구분+합계+31칸, 공휴일 연한 빨강, 없는 날 회색) ──
-  // makeRow: 구분열 + 합계열 + 31일 데이터열 (총 33열)
-  const makeRow = (label, arr, total, isRate = false) => {
-    let cells = `<td>${label}</td><td class="total-col">${isRate ? fmtRate(total) : fmt(total)}</td>`;
-    for (let i = 0; i < MAX_DAYS; i++) {
-      const d = i + 1;
-      if (i < actualDays) {
-        const holiday = isHoliday(YEAR, month, d);
-        const cls = holiday ? 'td-holiday' : '';
-        const val = isRate ? fmtRate(arr[i]) : fmt(arr[i]);
-        cells += `<td class="${cls}">${val}</td>`;
+  function makeCells(label,arr,total,isRate){
+    var c='<td>'+label+'</td><td class="total-col">'+(isRate?fmtR(total):fmt(total))+'</td>';
+    for(var i=0;i<MAX_DAYS;i++){
+      var day=i+1;
+      if(i<actualDays){
+        var tc=isHoliday(YEAR,month,day)?'td-holiday':'';
+        c+='<td class="'+tc+'">'+(isRate?fmtR(arr[i]):fmt(arr[i]))+'</td>';
       } else {
-        cells += `<td class="td-none"></td>`;
+        c+='<td class="td-none"></td>';
       }
     }
-    return `<tr>${cells}</tr>`;
-  };
+    return c;
+  }
 
-  // makeRowspan: 실적 그룹 (첫 번째 열에 rowspan=3, 나머지 동일)
-  const makeRowspan = (groupLabel, label, arr, total, isRate = false) => {
-    let cells = `<td rowspan="3" style="background:#e8ecf5;font-weight:700;color:#1a3a5c;">${groupLabel}</td>`;
-    cells += `<td>${label}</td><td class="total-col">${isRate ? fmtRate(total) : fmt(total)}</td>`;
-    for (let i = 0; i < MAX_DAYS; i++) {
-      const d = i + 1;
-      if (i < actualDays) {
-        const holiday = isHoliday(YEAR, month, d);
-        const cls = holiday ? 'td-holiday' : '';
-        const val = isRate ? fmtRate(arr[i]) : fmt(arr[i]);
-        cells += `<td class="${cls}">${val}</td>`;
-      } else {
-        cells += `<td class="td-none"></td>`;
-      }
-    }
-    return `<tr class="row-result">${cells}</tr>`;
-  };
+  function makeRow(label,arr,total,isRate){
+    return '<tr>'+makeCells(label,arr,total,isRate)+'</tr>';
+  }
 
-  // makeSubRow: 실적 그룹 하위 행 (구분열 없음 - rowspan으로 병합됨)
-  const makeSubRow = (cls, label, arr, total, isRate = false) => {
-    let cells = `<td>$
+  var html='<table><thead><tr>'+hdr+'</tr></thead><tbody>';
+  html+=makeRow('월간생산계획',planArr,totalPlan,false);
+  html+=makeRow('생산계획',inputArr,totalInput,false);
+  html+='<tr class="row-result"><td rowspan="3" style="background:#e8ecf5;font-weight:700;color:#1a3a5c;">실적</td>'+makeCells('생산실적',resultArr,totalResult,false)+'</tr>';
+  html+='<tr class="row-diff">'+makeCells('차이',diffArr,totalDiff,false)+'</tr>';
+  html+='<tr class="row-rate">'+makeCells('달성율(%)',rateArr,totalRate,true)+'</tr>';
+  html+='</tbody></table>';
+
+  document.getElementById('tableArea').innerHTML=html;
+}
+
+window.onload=function(){ loadData(); };
+</script>
+</body>
+</html>
