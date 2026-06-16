@@ -479,8 +479,9 @@ function renderTable(actualDays, month,
     }
   }
 
-  // ── 셀 생성 (31칸, 공휴일 연한 빨강, 없는 날 회색) ──
-  const makeCells = (label, arr, total, isRate = false) => {
+  // ── 셀 생성 (구분+합계+31칸, 공휴일 연한 빨강, 없는 날 회색) ──
+  // makeRow: 구분열 + 합계열 + 31일 데이터열 (총 33열)
+  const makeRow = (label, arr, total, isRate = false) => {
     let cells = `<td>${label}</td><td class="total-col">${isRate ? fmtRate(total) : fmt(total)}</td>`;
     for (let i = 0; i < MAX_DAYS; i++) {
       const d = i + 1;
@@ -493,39 +494,27 @@ function renderTable(actualDays, month,
         cells += `<td class="td-none"></td>`;
       }
     }
-    return cells;
+    return `<tr>${cells}</tr>`;
   };
 
-  const makeRow = (label, arr, total, isRate = false) =>
-    `<tr>${makeCells(label, arr, total, isRate)}</tr>`;
+  // makeRowspan: 실적 그룹 (첫 번째 열에 rowspan=3, 나머지 동일)
+  const makeRowspan = (groupLabel, label, arr, total, isRate = false) => {
+    let cells = `<td rowspan="3" style="background:#e8ecf5;font-weight:700;color:#1a3a5c;">${groupLabel}</td>`;
+    cells += `<td>${label}</td><td class="total-col">${isRate ? fmtRate(total) : fmt(total)}</td>`;
+    for (let i = 0; i < MAX_DAYS; i++) {
+      const d = i + 1;
+      if (i < actualDays) {
+        const holiday = isHoliday(YEAR, month, d);
+        const cls = holiday ? 'td-holiday' : '';
+        const val = isRate ? fmtRate(arr[i]) : fmt(arr[i]);
+        cells += `<td class="${cls}">${val}</td>`;
+      } else {
+        cells += `<td class="td-none"></td>`;
+      }
+    }
+    return `<tr class="row-result">${cells}</tr>`;
+  };
 
-  const html = `
-    <table>
-      <thead><tr>${dayHeaders}</tr></thead>
-      <tbody>
-        ${makeRow('월간생산계획', planArr,   totalPlan)}
-        ${makeRow('생산계획',     inputArr,  totalInput)}
-        <tr class="row-result">
-          <td rowspan="3" style="background:#e8ecf5;font-weight:700;color:#1a3a5c;">실적</td>
-          ${makeCells('생산실적', resultArr, totalResult)}
-        </tr>
-        <tr class="row-diff">
-          ${makeCells('차이', diffArr, totalDiff)}
-        </tr>
-        <tr class="row-rate">
-          ${makeCells('달성율(%)', rateArr, totalRate, true)}
-        </tr>
-      </tbody>
-    </table>
-  `;
-
-  document.getElementById('tableArea').innerHTML = html;
-}
-
-// =============================================
-// 초기 실행
-// =============================================
-window.addEventListener('DOMContentLoaded', loadData);
-</script>
-</body>
-</html>
+  // makeSubRow: 실적 그룹 하위 행 (구분열 없음 - rowspan으로 병합됨)
+  const makeSubRow = (cls, label, arr, total, isRate = false) => {
+    let cells = `<td>$
