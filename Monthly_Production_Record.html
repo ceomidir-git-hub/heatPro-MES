@@ -30,9 +30,9 @@ thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .td-holiday { background: #fff5f5 !important; }
 .th-none { background: #cccccc !important; color: #999 !important; }
 .td-none { background: #eeeeee !important; color: #bbb !important; }
-td.col-group { background: #f5f7fa; font-weight: 600; color: #1a3a5c; }
-td.col-item  { background: #f5f7fa; font-weight: 600; color: #1a3a5c; }
-td.col-sijuk { background: #e8ecf5 !important; font-weight: 700; color: #1a3a5c; }
+td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; }
+td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; }
+td.col-sub   { background: #f5f7fa; font-weight: 600; color: #1a3a5c; }
 td.total-col { background: #fff8e1 !important; font-weight: 700; color: #333; }
 tr.row-diff td { color: #1a3a5c; }
 tr.row-rate td { color: #cc0000; font-weight: 700; }
@@ -210,9 +210,21 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
   var fmt=function(v){return(v===null||v===undefined||v===0)?'':Number(v).toLocaleString();};
   var fmtR=function(v){return(v===null||v===undefined)?'':v+'%';};
 
-  // ── 헤더: 구분 / 항목 / 합계 / 1~31일 ──
-  // 구분과 항목을 분리해서 rowspan/colspan 문제 완전 해결
-  var hdr='<th rowspan="1">구분</th><th rowspan="1">항목</th><th>합계</th>';
+  /*
+   * 최종 열 구조:
+   * 헤더  : [구분] [합계] [1]~[31]  → 총 33열
+   * 일반행: [라벨(colspan없음)] [합계] [1]~[31]  → 총 33열
+   * 실적행: [실적(rowspan3)] [생산실적] [합계] [1]~[31]  → 총 33열
+   *         (rowspan3이 구분 1칸을 차지하고 나머지 32칸이 이어짐)
+   *
+   * ※ 헤더를 [구분][항목][합계]로 3열로 만들면
+   *   일반행도 3열이 돼서 항목열이 생기는 문제 발생.
+   *   따라서 헤더는 [구분][합계]로 2열만 두고,
+   *   실적행만 내부에서 [실적][생산실적]을 붙여 처리.
+   */
+
+  // ── 헤더: 구분 + 합계 + 1~31 (총 33열) ──
+  var hdr='<th>구분</th><th class="total-col" style="color:#fff;">합계</th>';
   for(var d=1;d<=MAX_DAYS;d++){
     if(d<=actualDays){
       var cls=isHoliday(YEAR,month,d)?'th-holiday':'';
@@ -222,7 +234,7 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
     }
   }
 
-  // ── 데이터 셀 생성 ──
+  // ── 데이터 셀: 합계 + 31일 (총 32셀) ──
   function dataCells(arr,total,isRate){
     var c='<td class="total-col">'+(isRate?fmtR(total):fmt(total))+'</td>';
     for(var i=0;i<MAX_DAYS;i++){
@@ -237,43 +249,59 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
     return c;
   }
 
-  // ── 일반 행 (구분+항목 병합 없음) ──
-  function makeRow(group,item,arr,total,isRate){
-    return '<tr>'
-      +'<td class="col-group">'+group+'</td>'
-      +'<td class="col-item">'+item+'</td>'
-      +dataCells(arr,total,isRate)
-      +'</tr>';
+  // ── 일반 행: 라벨(1셀) + dataCells(32셀) = 33셀 ──
+  function makeRow(label,arr,total,isRate){
+    return '<tr><td class="col-label">'+label+'</td>'+dataCells(arr,total,isRate)+'</tr>';
   }
 
-  // ── 실적 그룹 3행 (구분열만 rowspan=3) ──
-  function makeResultRows(planArr,inputArr,resultArr,diffArr,rateArr,
-                          totalPlan,totalInput,totalResult,totalDiff,totalRate){
-    var r='';
-    // 생산실적 행 (구분 rowspan=3)
-    r+='<tr>'
-      +'<td class="col-sijuk" rowspan="3">실적</td>'
-      +'<td class="col-item">생산실적</td>'
-      +dataCells(resultArr,totalResult,false)
-      +'</tr>';
-    // 차이 행
-    r+='<tr class="row-diff">'
-      +'<td class="col-item">차이</td>'
-      +dataCells(diffArr,totalDiff,false)
-      +'</tr>';
-    // 달성율 행
-    r+='<tr class="row-rate">'
-      +'<td class="col-item">달성율(%)</td>'
-      +dataCells(rateArr,totalRate,true)
-      +'</tr>';
-    return r;
+  // ── 실적 그룹:
+  //   생산실적행: [실적(rowspan3,1셀)] + [생산실적(1셀)] + dataCells(32셀) = 34셀?
+  //   → 안됨. rowspan=3인 셀이 1열을 차지하므로
+  //     나머지는 32셀만 있어야 33열이 됨.
+  //   → [실적(rowspan3)] [생산실적] [합계] [1~31] = 1+1+1+31 = 34 → 오버!
+  //
+  //   해결: 헤더를 [구분][항목][합계][1~31] = 34열로 맞추고
+  //   일반행은 [라벨(colspan=2)][합계][1~31] = 1+1+31+1 구조로.
+  // ──────────────────────────────────────────────
+  // 최종 결정: 헤더 34열, 일반행 colspan=2로 구분+항목 병합
+  // ──────────────────────────────────────────────
+
+  // 위 주석대로 헤더를 34열로 재구성
+  hdr='<th colspan="2">구분</th><th class="total-col" style="color:#fff;">합계</th>';
+  for(var d=1;d<=MAX_DAYS;d++){
+    if(d<=actualDays){
+      var cls=isHoliday(YEAR,month,d)?'th-holiday':'';
+      hdr+='<th class="'+cls+'">'+d+'</th>';
+    } else {
+      hdr+='<th class="th-none">'+d+'</th>';
+    }
   }
+
+  // 일반행: [라벨(colspan=2)] + dataCells(32셀) = 34열
+  function makeRow2(label,arr,total,isRate){
+    return '<tr><td class="col-label" colspan="2">'+label+'</td>'+dataCells(arr,total,isRate)+'</tr>';
+  }
+
+  // 실적행: [실적(rowspan3,1셀)] + [생산실적(1셀)] + dataCells(32셀) = 34열
+  var resultRows='';
+  resultRows+='<tr>'
+    +'<td class="col-group" rowspan="3">실적</td>'
+    +'<td class="col-sub">생산실적</td>'
+    +dataCells(resultArr,totalResult,false)
+    +'</tr>';
+  resultRows+='<tr class="row-diff">'
+    +'<td class="col-sub">차이</td>'
+    +dataCells(diffArr,totalDiff,false)
+    +'</tr>';
+  resultRows+='<tr class="row-rate">'
+    +'<td class="col-sub">달성율(%)</td>'
+    +dataCells(rateArr,totalRate,true)
+    +'</tr>';
 
   var html='<table><thead><tr>'+hdr+'</tr></thead><tbody>';
-  html+=makeRow('월간생산계획','',planArr,totalPlan,false);
-  html+=makeRow('생산계획','',inputArr,totalInput,false);
-  html+=makeResultRows(planArr,inputArr,resultArr,diffArr,rateArr,
-                       totalPlan,totalInput,totalResult,totalDiff,totalRate);
+  html+=makeRow2('월간생산계획',planArr,totalPlan,false);
+  html+=makeRow2('생산계획',inputArr,totalInput,false);
+  html+=resultRows;
   html+='</tbody></table>';
 
   document.getElementById('tableArea').innerHTML=html;
