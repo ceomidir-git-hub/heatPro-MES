@@ -336,4 +336,53 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
   //   → [실적(rowspan3)] [생산실적] [합계] [1~31] = 1+1+1+31 = 34 → 오버!
   //
   //   해결: 헤더를 [구분][항목][합계][1~31] = 34열로 맞추고
-  //   일반행은 [라벨(col
+  //   일반행은 [라벨(colspan=2)][합계][1~31] = 1+1+31+1 구조로.
+  // ──────────────────────────────────────────────
+  // 최종 결정: 헤더 34열, 일반행 colspan=2로 구분+항목 병합
+  // ──────────────────────────────────────────────
+
+  // 위 주석대로 헤더를 34열로 재구성
+  hdr='<th colspan="2">구분</th><th class="total-col" style="color:#fff;">합계</th>';
+  for(var d=1;d<=MAX_DAYS;d++){
+    if(d<=actualDays){
+      var cls=isHoliday(YEAR,month,d)?'th-holiday':'';
+      hdr+='<th class="'+cls+'">'+d+'</th>';
+    } else {
+      hdr+='<th class="th-none">'+d+'</th>';
+    }
+  }
+
+  // 일반행: [라벨(colspan=2)] + dataCells(32셀) = 34열
+  function makeRow2(label,arr,total,isRate){
+    return '<tr><td class="col-label" colspan="2">'+label+'</td>'+dataCells(arr,total,isRate)+'</tr>';
+  }
+
+  // 실적행: [실적(rowspan3,1셀)] + [생산실적(1셀)] + dataCells(32셀) = 34열
+  var resultRows='';
+  resultRows+='<tr>'
+    +'<td class="col-group" rowspan="3">실적</td>'
+    +'<td class="col-sub">생산실적</td>'
+    +dataCells(resultArr,totalResult,false)
+    +'</tr>';
+  resultRows+='<tr class="row-diff">'
+    +'<td class="col-sub">차이</td>'
+    +dataCells(diffArr,totalDiff,false)
+    +'</tr>';
+  resultRows+='<tr class="row-rate">'
+    +'<td class="col-sub">달성율(%)</td>'
+    +dataCells(rateArr,totalRate,true)
+    +'</tr>';
+
+  var html='<table><thead><tr>'+hdr+'</tr></thead><tbody>';
+  html+=makeRow2('월간생산계획',planArr,totalPlan,false);
+  html+=makeRow2('생산계획',inputArr,totalInput,false);
+  html+=resultRows;
+  html+='</tbody></table>';
+
+  document.getElementById('tableArea').innerHTML=html;
+}
+
+window.onload=function(){loadData();};
+</script>
+</body>
+</html>
