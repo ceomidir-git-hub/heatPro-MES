@@ -262,18 +262,32 @@ function renderChart(actualDays,month,rateArr,resultArr){
     plugins:[{
       id:'lbl',
       afterDatasetsDraw:function(chart){
-        // 달성율 꺾은선 레이블
-        var ds=chart.data.datasets[1];
-        var meta=chart.getDatasetMeta(1);
         var c2=chart.ctx;
         c2.save();
+        c2.textAlign='center';
+
+        // ① 막대(생산실적) 위에 수량 값 표시
+        var barDs=chart.data.datasets[0];
+        var barMeta=chart.getDatasetMeta(0);
+        c2.font='bold 10px Malgun Gothic';
+        c2.fillStyle='rgba(26,90,140,0.9)';
+        barMeta.data.forEach(function(bar,i){
+          var v=barDs.data[i];
+          if(v!==undefined&&v!==null){
+            c2.fillText(Number(v).toLocaleString(),bar.x,bar.y-5);
+          }
+        });
+
+        // ② 달성율 꺾은선 위에 % 값 표시
+        var lineDs=chart.data.datasets[1];
+        var lineMeta=chart.getDatasetMeta(1);
         c2.font='bold 10px Malgun Gothic';
         c2.fillStyle='#cc0000';
-        c2.textAlign='center';
-        meta.data.forEach(function(pt,i){
-          var v=ds.data[i];
+        lineMeta.data.forEach(function(pt,i){
+          var v=lineDs.data[i];
           if(v!==undefined&&v!==null) c2.fillText(v+'%',pt.x,pt.y-8);
         });
+
         c2.restore();
       }
     }]
