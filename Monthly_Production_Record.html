@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>월생산실적 | HeatPro MES</title>
+<title>월생산달성율 | HeatPro MES</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,7 +50,7 @@ tr.row-rate td { color: #cc0000; font-weight: 700; }
 <body>
 
 <div class="top-bar">
-  <h1>📊 월생산실적 (Monthly Production Record)</h1>
+  <h1>📊 월생산달성율 (Monthly Production Achievement)</h1>
   <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
 </div>
 
@@ -68,7 +68,7 @@ tr.row-rate td { color: #cc0000; font-weight: 700; }
 <div class="container">
   <div class="card">
     <div class="card-title">
-      <span id="chartTitle">생산실적 현황 ( 6월 )</span>
+      <span id="chartTitle">생산실적 달성율 현황 ( 6월 )</span>
       <span class="target">[목표 : 90%]</span>
     </div>
     <div class="card-body">
@@ -112,7 +112,7 @@ function isHoliday(y,m,d){
 
 function loadData(){
   currentMonth=parseInt(document.getElementById('selMonth').value);
-  document.getElementById('chartTitle').textContent='생산실적 현황 ( '+currentMonth+'월 )';
+  document.getElementById('chartTitle').textContent='생산실적 달성율 현황 ( '+currentMonth+'월 )';
   document.getElementById('tableArea').innerHTML=
     '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
   var old=document.getElementById('_gs');
