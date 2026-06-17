@@ -668,12 +668,12 @@ function resetFilter() {
 
 /* ── 테이블 렌더링 ── */
 var QT_OPTS   = ['양호', '미실시', '불량'];
-var RES_OPTS  = ['합격', '불합격', '대기'];
+var RES_OPTS  = ['양호', '불량', '대기'];
 var CERT_OPTS = ['합격', '반려', '대기'];
 
 function certBadge(v) {
   var val = v || '대기';
-  var cls = val === '합격' ? 'b-pass' : val === '불합격' || val === '반려' ? 'b-fail' : 'b-wait';
+  var cls = val === '합격' ? 'b-pass' : val === '불합격' ? 'b-fail' : 'b-wait';
   return '<td><span class="badge ' + cls + ' cert-badge">' + val + '</span></td>';
 }
 
@@ -735,10 +735,10 @@ function markModified(el) {
 }
 
 function syncCert(el, idx) {
-  var val = el.value;
-  var certMap = { '양호': '합격', '합격': '합격', '불량': '불합격', '불합격': '반려', '대기': '대기' };
+  var val     = el.value;
+  var certMap = { '양호': '합격', '불량': '불합격', '대기': '대기' };
   var certVal = certMap[val] || '대기';
-  var cls     = certVal === '합격' ? 'b-pass' : certVal === '불합격' || certVal === '반려' ? 'b-fail' : 'b-wait';
+  var cls     = certVal === '합격' ? 'b-pass' : certVal === '불합격' ? 'b-fail' : 'b-wait';
   var tr = document.querySelector('tr[data-idx="' + idx + '"]');
   if (!tr) return;
   var certSpan = tr.querySelector('.cert-badge');
