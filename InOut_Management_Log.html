@@ -671,6 +671,12 @@ var QT_OPTS   = ['양호', '미실시', '불량'];
 var RES_OPTS  = ['합격', '불합격', '대기'];
 var CERT_OPTS = ['합격', '반려', '대기'];
 
+function certBadge(v) {
+  var val = v || '대기';
+  var cls = val === '합격' ? 'b-pass' : val === '불합격' || val === '반려' ? 'b-fail' : 'b-wait';
+  return '<td><span class="badge ' + cls + ' cert-badge">' + val + '</span></td>';
+}
+
 function renderTable(rows) {
   document.getElementById('tCount').textContent = rows.length + '건';
   var tbody = document.getElementById('tbody');
@@ -693,7 +699,7 @@ function renderTable(rows) {
       tdInput('출고일',   r.출고일,   'date', i) +
       tdInput('출고수량', r.출고수량, 'number', i) +
       tdSelect('검사결과', r.검사결과 || '대기', RES_OPTS, i) +
-      tdSelect('성적서',   r.성적서   || '대기', CERT_OPTS, i) +
+      certBadge(r.성적서) +
       '<td><button class="save-btn" id="sbtn-' + i + '" onclick="saveRow(' + i + ')">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
         '저장</button></td>' +
@@ -715,8 +721,9 @@ function tdSelect(field, val, opts, idx) {
   var options = opts.map(function (o) {
     return '<option' + (o === val ? ' selected' : '') + '>' + o + '</option>';
   }).join('');
+  var extra = field === '검사결과' ? ' onchange="markModified(this);syncCert(this,idx)"' : ' onchange="markModified(this)"';
   return '<td><select class="td-input" data-field="' + field + '" data-idx="' + idx + '"' +
-    ' onchange="markModified(this)">' + options + '</select></td>';
+    extra + '>' + options + '</select></td>';
 }
 
 function esc(v) {
@@ -725,6 +732,19 @@ function esc(v) {
 
 function markModified(el) {
   el.classList.add('modified');
+}
+
+function syncCert(el, idx) {
+  var val = el.value;
+  var certMap = { '양호': '합격', '합격': '합격', '불량': '불합격', '불합격': '반려', '대기': '대기' };
+  var certVal = certMap[val] || '대기';
+  var cls     = certVal === '합격' ? 'b-pass' : certVal === '불합격' || certVal === '반려' ? 'b-fail' : 'b-wait';
+  var tr = document.querySelector('tr[data-idx="' + idx + '"]');
+  if (!tr) return;
+  var certSpan = tr.querySelector('.cert-badge');
+  if (!certSpan) return;
+  certSpan.className = 'badge ' + cls + ' cert-badge';
+  certSpan.textContent = certVal;
 }
 
 /* ── 행 저장 (doPost) ── */
