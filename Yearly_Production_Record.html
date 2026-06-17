@@ -1,53 +1,536 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>년생산실적 — HeatPro MES</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>년생산실적 | HeatPro MES</title>
 <style>
-  :root {
-    --bg:#15181D; --panel:#1F242C; --line:#323A46;
-    --text:#EAF0F6; --muted:#8A99AC; --accent:#FF6B35;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background:var(--bg); color:var(--text);
-    font-family:'Noto Sans KR', sans-serif;
-    min-height:100vh;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:16px;
-  }
-  .icon { font-size:3rem; }
-  .title { font-size:2rem; font-weight:700; letter-spacing:0.04em; }
-  .sub {
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.9rem; color:var(--muted); letter-spacing:0.1em;
-  }
-  .badge {
-    margin-top:8px;
-    padding:6px 20px;
-    border:1px solid var(--line);
-    border-radius:999px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.8rem; color:var(--muted);
-  }
-  .back {
-    margin-top:32px;
-    padding:10px 28px;
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:8px; color:var(--muted);
-    text-decoration:none; font-size:0.9rem;
-    transition:color 0.15s, border-color 0.15s;
-  }
-  .back:hover { color:var(--accent); border-color:var(--accent); }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#185FA5;--blue-lt:#E6F1FB;--blue-dk:#0C447C;
+  --green:#3B6D11;--green-lt:#EAF3DE;--green-dk:#27500A;
+  --amber:#854F0B;--amber-lt:#FAEEDA;
+  --red:#A32D2D;--red-lt:#FCEBEB;
+  --gray:#5F5E5A;--gray-lt:#F1EFE8;--gray-bd:#D3D1C7;
+  --bg:#F8F7F4;--white:#FFFFFF;--text:#2C2C2A;--text-sub:#888780;--text-hi:#444441;
+}
+body{font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+
+/* ── 상단 헤더 ── */
+.top-header{background:var(--white);border-bottom:1px solid var(--gray-bd);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;}
+.logo svg{width:20px;height:20px;}
+nav{display:flex;gap:4px;}
+nav a{font-size:12px;color:var(--text-sub);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid transparent;}
+nav a:hover{background:var(--gray-lt);color:var(--text);}
+nav a.active{background:var(--blue-lt);color:var(--blue-dk);border-color:#B5D4F4;font-weight:500;}
+
+/* ── 레이아웃 ── */
+.container{max-width:1280px;margin:0 auto;padding:20px 20px 48px;width:100%;}
+.page-title{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.page-title svg{width:20px;height:20px;color:var(--blue);flex-shrink:0;}
+.page-title h1{font-size:18px;font-weight:700;}
+.page-title .sub{font-size:12px;color:var(--text-sub);}
+.year-badge{margin-left:auto;background:var(--blue-lt);color:var(--blue-dk);font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;}
+
+/* ── 필터 ── */
+.filter-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;padding:13px 16px;margin-bottom:14px;}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.fg{display:flex;align-items:center;gap:6px;}
+.fg label{font-size:12px;color:var(--text-sub);white-space:nowrap;}
+.fg select{height:32px;border:1px solid var(--gray-bd);border-radius:6px;padding:0 10px;font-size:12px;color:var(--text);background:var(--white);outline:none;}
+.fg select:focus{border-color:var(--blue);}
+.btn-row{display:flex;gap:6px;margin-left:auto;}
+.btn{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--gray-bd);background:var(--white);color:var(--text-sub);transition:background .1s;}
+.btn:hover{background:var(--gray-lt);}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-primary:hover{background:var(--blue-dk);}
+
+/* ── 차트 카드 ── */
+.chart-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;padding:18px 18px 14px;margin-bottom:14px;}
+.chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.chart-title{font-size:14px;font-weight:600;color:var(--text);}
+.legend{display:flex;gap:16px;font-size:11px;color:var(--text-sub);}
+.legend span{display:flex;align-items:center;gap:5px;}
+.leg-bar{width:12px;height:12px;border-radius:2px;background:#378ADD;flex-shrink:0;}
+.leg-line{width:18px;height:2px;background:#E24B4A;flex-shrink:0;position:relative;}
+.leg-line::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:#fff;border:2px solid #E24B4A;}
+
+/* ── 테이블 카드 ── */
+.table-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;overflow:hidden;}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--gray-bd);}
+.t-title{font-size:13px;font-weight:600;color:var(--text);}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:760px;}
+thead th{padding:8px 8px;text-align:center;font-size:11px;font-weight:600;background:var(--gray-lt);color:var(--text-sub);border-bottom:1px solid var(--gray-bd);border-right:1px solid var(--gray-bd);white-space:nowrap;}
+thead th:last-child{border-right:none;}
+tbody td{padding:7px 8px;text-align:center;border-bottom:1px solid #EEECEA;border-right:1px solid #EEECEA;color:var(--text);font-size:12px;}
+tbody td:last-child{border-right:none;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:#FAFAF8;}
+.td-month{font-weight:500;color:var(--text-sub);}
+.td-empty{color:var(--gray-bd);}
+.td-total{background:var(--gray-lt)!important;font-weight:600;color:var(--text);}
+.td-total-label{background:var(--gray-lt)!important;font-weight:600;color:var(--text);text-align:center;}
+
+/* ── 상태 바 ── */
+.status-bar{display:flex;align-items:center;gap:6px;padding:8px 16px;border-top:1px solid var(--gray-bd);font-size:11px;color:var(--text-sub);}
+.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-ok{background:var(--green);}
+.dot-loading{background:var(--amber);animation:pulse 1s infinite;}
+.dot-error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── 토스트 ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text-hi);color:#fff;font-size:13px;padding:10px 20px;border-radius:8px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+@media(max-width:768px){.page-title h1{font-size:16px;}.chart-top{flex-direction:column;gap:8px;align-items:flex-start;}}
 </style>
 </head>
 <body>
-  <div class="icon">📅</div>
-  <div class="title">년생산실적</div>
-  <div class="sub">YEARLY PRODUCTION RECORD · HeatPro MES</div>
-  <div class="badge">🚧 준비 중</div>
-  <a class="back" href="index.html">← 대시보드로 돌아가기</a>
+
+<!-- 상단 헤더 -->
+<header class="top-header">
+  <a class="logo" href="https://ceomidir-git-hub.github.io/heatPro-MES/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    HeatPro MES
+  </a>
+  <nav>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/">대시보드</a>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/GitHub_Worksheet.html">작업일보</a>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/Monthly_Production_Record.html">월생산실적</a>
+    <a class="active" href="#">년생산실적</a>
+  </nav>
+</header>
+
+<main class="container">
+
+  <!-- 페이지 타이틀 -->
+  <div class="page-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+    <h1>년생산실적</h1>
+    <span class="sub">Yearly Production Record</span>
+    <span class="year-badge" id="yearBadge">2026년도</span>
+  </div>
+
+  <!-- 필터 -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="fg">
+        <label>연도</label>
+        <select id="selYear">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="loadData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          조회
+        </button>
+        <button class="btn" onclick="exportCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV 내보내기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 차트 -->
+  <div class="chart-card">
+    <div class="chart-top">
+      <span class="chart-title" id="chartTitle">월별 투입수량 및 가동시간 (H)</span>
+      <div class="legend">
+        <span><span class="leg-bar"></span>투입수량 (EA)</span>
+        <span><span class="leg-line"></span>가동시간 (H)</span>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:280px;">
+      <canvas id="yearlyChart" role="img" aria-label="월별 투입수량 막대 및 가동시간 꺾은선 혼합 차트">
+        월별 투입수량 및 가동시간 데이터
+      </canvas>
+    </div>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="table-card">
+    <div class="table-toolbar">
+      <span class="t-title" id="tableTitle">생산 실적 월별 통합 요약</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:50px;">연도</th>
+            <th style="width:36px;">월</th>
+            <th style="width:68px;">작업건수</th>
+            <th style="width:76px;">투입수량</th>
+            <th style="width:76px;">양품수량</th>
+            <th style="width:68px;">불량수량</th>
+            <th style="width:74px;">재작업수량</th>
+            <th style="width:80px;">가동시간(H)</th>
+            <th style="width:84px;">비가동시간(H)</th>
+            <th style="width:80px;">불량률(PPM)</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="11" style="padding:30px;color:var(--text-sub);font-size:13px;">데이터를 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="status-bar">
+      <span class="status-dot dot-loading" id="sDot"></span>
+      <span id="sText">데이터 로드 중...</span>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var yearlyChart = null;
+var monthlyData = [];  // 집계된 12개월 데이터
+
+// ── 월 이름 ──
+var MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+// ── 초기 로드 ──
+window.onload = function () {
+  loadData();
+};
+
+// ── 데이터 로드 (JSONP) ──
+function loadData() {
+  var year = parseInt(document.getElementById('selYear').value);
+  document.getElementById('yearBadge').textContent = year + '년도';
+  setStatus('loading', '데이터 불러오는 중...');
+
+  var cb = 'cbYearly_' + Date.now();
+  var sc = document.createElement('script');
+  sc.src = API_URL + '?action=yearly&year=' + year + '&callback=' + cb;
+
+  window[cb] = function (data) {
+    document.head.removeChild(sc);
+    delete window[cb];
+    if (data && data.rows) {
+      processData(data.rows, year);
+      setStatus('ok', year + '년 데이터 로드 완료');
+    } else {
+      renderTable([], year);
+      renderChart([], []);
+      setStatus('error', '데이터가 없습니다.');
+    }
+  };
+
+  sc.onerror = function () {
+    document.head.removeChild(sc);
+    delete window[cb];
+    renderTable([], year);
+    renderChart([], []);
+    setStatus('error', 'API 연결 실패 — Code.gs에 action=yearly 분기를 추가하세요.');
+  };
+
+  document.head.appendChild(sc);
+
+  setTimeout(function () {
+    if (window[cb]) {
+      document.head.removeChild(sc);
+      delete window[cb];
+      renderTable([], year);
+      renderChart([], []);
+      setStatus('error', '응답 시간 초과 (10초)');
+    }
+  }, 10000);
+}
+
+// ── 데이터 집계 (월별 그룹) ──
+function processData(rows, year) {
+  // 12개월 빈 슬롯 초기화
+  var agg = [];
+  for (var m = 1; m <= 12; m++) {
+    agg.push({ month: m, jobCount: 0, input: 0, good: 0, bad: 0, rework: 0, opTime: 0, nonOpTime: 0, hasData: false });
+  }
+
+  rows.forEach(function (r) {
+    var workDate = String(r['작업일'] || '');
+    if (!workDate || workDate.length < 7) return;
+    var rowYear  = parseInt(workDate.substring(0, 4));
+    var rowMonth = parseInt(workDate.substring(5, 7));
+    if (rowYear !== year || rowMonth < 1 || rowMonth > 12) return;
+
+    var slot = agg[rowMonth - 1];
+    slot.hasData   = true;
+    slot.jobCount  += 1;
+    slot.input     += toNum(r['투입수량']);
+    slot.good      += toNum(r['양품수량']);
+    slot.bad       += toNum(r['불량수량']);
+    slot.rework    += toNum(r['재작업수량']);
+    slot.opTime    += toNum(r['가동시간']);
+    slot.nonOpTime += toNum(r['비가동시간']);
+  });
+
+  monthlyData = agg;
+
+  // PPM 계산: 불량수량 ÷ 투입수량 × 1,000,000
+  agg.forEach(function (s) {
+    s.ppm = s.input > 0 ? Math.round(s.bad / s.input * 1000000) : 0;
+  });
+
+  renderTable(agg, year);
+
+  var qtyArr  = agg.map(function (s) { return s.hasData ? s.input : null; });
+  var timeArr = agg.map(function (s) { return s.hasData ? Math.round(s.opTime * 10) / 10 : null; });
+  renderChart(qtyArr, timeArr, year);
+
+  // 차트/테이블 타이틀 업데이트
+  var hasMonths = agg.filter(function (s) { return s.hasData; });
+  if (hasMonths.length > 0) {
+    var firstM = hasMonths[0].month;
+    var lastM  = hasMonths[hasMonths.length - 1].month;
+    document.getElementById('chartTitle').textContent = '월별 투입수량 및 가동시간 (H)';
+    document.getElementById('tableTitle').textContent =
+      '생산 실적 월별 통합 요약 (' + year + '년 ' + firstM + '월 ~ ' + lastM + '월)';
+  }
+}
+
+// ── 테이블 렌더링 ──
+function renderTable(agg, year) {
+  var tbody = document.getElementById('tbody');
+  if (!agg || agg.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:30px;color:var(--text-sub);font-size:13px;">조회된 데이터가 없습니다.</td></tr>';
+    return;
+  }
+
+  var totJob = 0, totInput = 0, totGood = 0, totBad = 0, totRework = 0, totOp = 0, totNon = 0;
+  agg.forEach(function (s) {
+    if (!s.hasData) return;
+    totJob    += s.jobCount;
+    totInput  += s.input;
+    totGood   += s.good;
+    totBad    += s.bad;
+    totRework += s.rework;
+    totOp     += s.opTime;
+    totNon    += s.nonOpTime;
+  });
+  var totPpm = totInput > 0 ? Math.round(totBad / totInput * 1000000) : 0;
+
+  var rows = agg.map(function (s) {
+    if (!s.hasData) {
+      return '<tr>'
+        + '<td class="td-empty">' + year + '</td>'
+        + '<td class="td-month">' + s.month + '</td>'
+        + '<td class="td-empty"></td><td class="td-empty"></td><td class="td-empty"></td>'
+        + '<td class="td-empty"></td><td class="td-empty"></td><td class="td-empty"></td>'
+        + '<td class="td-empty"></td><td class="td-empty"></td><td class="td-empty"></td>'
+        + '</tr>';
+    }
+    return '<tr>'
+      + '<td>' + year + '</td>'
+      + '<td class="td-month">' + s.month + '</td>'
+      + '<td>' + s.jobCount.toLocaleString() + '</td>'
+      + '<td>' + s.input.toLocaleString() + '</td>'
+      + '<td>' + s.good.toLocaleString() + '</td>'
+      + '<td>' + s.bad.toLocaleString() + '</td>'
+      + '<td>' + s.rework.toLocaleString() + '</td>'
+      + '<td>' + (Math.round(s.opTime * 10) / 10).toFixed(1) + '</td>'
+      + '<td>' + (Math.round(s.nonOpTime * 10) / 10).toFixed(1) + '</td>'
+      + '<td>' + s.ppm.toLocaleString() + '</td>'
+      + '<td></td>'
+      + '</tr>';
+  });
+
+  // 합계 행
+  rows.push(
+    '<tr>'
+    + '<td class="td-total-label" colspan="2">전체 합계</td>'
+    + '<td class="td-total">' + totJob.toLocaleString() + '</td>'
+    + '<td class="td-total">' + totInput.toLocaleString() + '</td>'
+    + '<td class="td-total">' + totGood.toLocaleString() + '</td>'
+    + '<td class="td-total">' + totBad.toLocaleString() + '</td>'
+    + '<td class="td-total">' + totRework.toLocaleString() + '</td>'
+    + '<td class="td-total">' + (Math.round(totOp * 10) / 10).toFixed(1) + '</td>'
+    + '<td class="td-total">' + (Math.round(totNon * 10) / 10).toFixed(1) + '</td>'
+    + '<td class="td-total">' + totPpm.toLocaleString() + '</td>'
+    + '<td class="td-total"></td>'
+    + '</tr>'
+  );
+
+  tbody.innerHTML = rows.join('');
+}
+
+// ── 차트 렌더링 ──
+function renderChart(qtyArr, timeArr, year) {
+  if (yearlyChart) {
+    yearlyChart.destroy();
+    yearlyChart = null;
+  }
+
+  var maxQty  = Math.max.apply(null, qtyArr.filter(function(v){return v!==null;}).concat([1000]));
+  var maxTime = Math.max.apply(null, timeArr.filter(function(v){return v!==null;}).concat([10]));
+  var qtyMax  = Math.ceil(maxQty  * 1.25 / 1000) * 1000;
+  var timeMax = Math.ceil(maxTime * 1.25 / 10)   * 10;
+
+  yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+    type: 'bar',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: [
+        {
+          label: '가동시간(H)',
+          type: 'line',
+          data: timeArr,
+          borderColor: '#E24B4A',
+          backgroundColor: '#E24B4A',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#E24B4A',
+          pointBorderWidth: 2,
+          tension: 0.3,
+          yAxisID: 'y',
+          spanGaps: false,
+          order: 1
+        },
+        {
+          label: '투입수량',
+          type: 'bar',
+          data: qtyArr,
+          backgroundColor: 'rgba(55,138,221,0.75)',
+          borderColor: '#185FA5',
+          borderWidth: 1,
+          yAxisID: 'y2',
+          order: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      clip: false,
+      layout: { padding: { top: 28, left: 4, right: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        y: {
+          position: 'right',
+          title: { display: true, text: '가동시간 (H)', font: { size: 10 }, color: '#E24B4A' },
+          min: 0,
+          max: timeMax,
+          grid: { color: 'rgba(128,128,128,0.08)' },
+          ticks: { font: { size: 10 }, color: '#E24B4A' }
+        },
+        y2: {
+          position: 'left',
+          title: { display: true, text: '투입수량 (EA)', font: { size: 10 }, color: '#185FA5' },
+          min: 0,
+          max: qtyMax,
+          grid: { display: false },
+          ticks: { font: { size: 10 }, color: '#185FA5', callback: function (v) { return v.toLocaleString(); } }
+        },
+        x: {
+          ticks: { font: { size: 11 }, autoSkip: false, maxRotation: 0 },
+          grid: { display: false }
+        }
+      }
+    },
+    plugins: [{
+      id: 'lbl',
+      afterDatasetsDraw: function (chart) {
+        var ctx = chart.ctx;
+        ctx.save();
+        chart.data.datasets.forEach(function (ds, di) {
+          var meta = chart.getDatasetMeta(di);
+          meta.data.forEach(function (pt, i) {
+            var v = ds.data[i];
+            if (v === null || v === undefined) return;
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            if (di === 1) {
+              // 막대 위 투입수량
+              ctx.fillStyle = '#185FA5';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(Number(v).toLocaleString(), pt.x, pt.y - 3);
+            } else {
+              // 꺾은선 위 가동시간
+              ctx.fillStyle = '#A32D2D';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(Number(v).toFixed(1), pt.x, pt.y - 9);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+// ── CSV 내보내기 ──
+function exportCSV() {
+  if (!monthlyData || monthlyData.length === 0) {
+    showToast('내보낼 데이터가 없습니다.');
+    return;
+  }
+  var year = parseInt(document.getElementById('selYear').value);
+  var headers = ['연도','월','작업건수','투입수량','양품수량','불량수량','재작업수량','가동시간(H)','비가동시간(H)','불량률(PPM)','비고'];
+  var lines = ['\uFEFF' + headers.join(',')];
+
+  monthlyData.forEach(function (s) {
+    if (!s.hasData) {
+      lines.push([year, s.month, '', '', '', '', '', '', '', '', ''].join(','));
+    } else {
+      lines.push([
+        year, s.month, s.jobCount, s.input, s.good, s.bad, s.rework,
+        (Math.round(s.opTime * 10) / 10).toFixed(1),
+        (Math.round(s.nonOpTime * 10) / 10).toFixed(1),
+        s.ppm, ''
+      ].join(','));
+    }
+  });
+
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = 'Yearly_Production_' + year + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV 내보내기 완료 (' + year + '년)');
+}
+
+// ── 공통 유틸 ──
+function toNum(v) {
+  var n = Number(String(v || '').replace(/,/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+function setStatus(type, msg) {
+  var dot  = document.getElementById('sDot');
+  var text = document.getElementById('sText');
+  dot.className = 'status-dot ' + (type === 'loading' ? 'dot-loading' : type === 'error' ? 'dot-error' : 'dot-ok');
+  text.textContent = msg;
+}
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 3000);
+}
+</script>
 </body>
 </html>
