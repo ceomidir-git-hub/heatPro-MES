@@ -798,8 +798,8 @@ function updateKPI(rows) {
   var outRows  = rows.filter(function (r) { return r.출고일; });
   var outCount = outRows.length;
   var outQty   = outRows.reduce(function (s, r) { return s + (Number(r.출고수량) || 0); }, 0);
-  var chkRows  = rows.filter(function (r) { return r.검사결과 && r.검사결과 !== '대기'; });
-  var passOk   = chkRows.filter(function (r) { return r.검사결과 === '합격'; }).length;
+  var chkRows  = rows.filter(function (r) { return r.검사결과 === '양호' || r.검사결과 === '불량'; });
+  var passOk   = chkRows.filter(function (r) { return r.검사결과 === '양호'; }).length;
   var rate     = chkRows.length > 0 ? (passOk / chkRows.length * 100).toFixed(1) : '—';
 
   document.getElementById('kInCount').innerHTML  = inCount + '<span class="s-unit">건</span>';
