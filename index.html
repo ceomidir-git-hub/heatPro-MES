@@ -7,14 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#15181D; --panel:#1F242C; --panel-2:#262C36; --line:#323A46;
-    --text:#EAF0F6; --muted:#8A99AC; --accent:#FF6B35;
-    --accent-glow:rgba(255,107,53,0.35); --good:#43D17A; --bad:#FF5C5C; --info:#4FA8FF;
-    --font-display:'Space Grotesk','Noto Sans KR',sans-serif;
-    --font-body:'Noto Sans KR',sans-serif;
-    --font-mono:'IBM Plex Mono',monospace;
-  }
+  :root{--bg:#15181D;--panel:#1F242C;--panel-2:#262C36;--line:#323A46;--text:#EAF0F6;--muted:#8A99AC;--accent:#FF6B35;--accent-glow:rgba(255,107,53,0.35);--good:#43D17A;--bad:#FF5C5C;--info:#4FA8FF;--font-display:'Space Grotesk','Noto Sans KR',sans-serif;--font-body:'Noto Sans KR',sans-serif;--font-mono:'IBM Plex Mono',monospace;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;min-height:100vh;}
   .app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:64px 1fr;min-height:100vh;}
@@ -66,42 +59,11 @@
   .panel h3 .tag{font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);font-weight:500;background:var(--panel-2);border:1px solid var(--line);padding:3px 9px;border-radius:999px;}
   .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
-
-  /* ── 막대 그래프 ── */
-  .bars{
-    display:flex;
-    align-items:flex-end;
-    gap:4px;
-    height:140px;        /* 고정 높이 명시 */
-    padding-top:24px;
-    position:relative;   /* bar-label 절대 위치 기준 */
-    overflow:visible;
-  }
-  .bars .bar{
-    flex:1;
-    background:linear-gradient(180deg,#FF8A5C 0%,var(--accent) 100%);
-    border-radius:3px 3px 0 0;
-    min-height:4px;
-    position:relative;
-    transition:height 0.4s ease;
-  }
-  .bars .bar .bar-label{
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
-    bottom:calc(100% + 3px);
-    text-align:center;
-    font-family:var(--font-mono);
-    font-size:0.62rem;
-    font-weight:600;
-    color:var(--text);
-    white-space:nowrap;
-    line-height:1.2;
-    pointer-events:none;
-  }
+  .bars{display:flex;align-items:flex-end;gap:4px;height:140px;padding-top:24px;position:relative;overflow:visible;}
+  .bars .bar{flex:1;background:linear-gradient(180deg,#FF8A5C 0%,var(--accent) 100%);border-radius:3px 3px 0 0;min-height:4px;position:relative;transition:height 0.4s ease;}
+  .bars .bar .bar-label{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 3px);text-align:center;font-family:var(--font-mono);font-size:0.62rem;font-weight:600;color:var(--text);white-space:nowrap;line-height:1.2;pointer-events:none;}
   .bars.muted .bar{background:linear-gradient(180deg,#5B86C9 0%,#3D6BB0 100%);}
   .bars.acc .bar{background:linear-gradient(180deg,#61E39B 0%,var(--good) 100%);}
-
   .chart-axis{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.62rem;color:#5C6878;margin-top:6px;}
   .chart-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-family:var(--font-mono);font-size:0.74rem;color:var(--muted);}
   .chart-foot .big{font-size:1.1rem;color:var(--text);font-weight:600;}
@@ -112,13 +74,13 @@
   .status-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
   .doc-section h3{font-family:var(--font-display);font-size:1rem;font-weight:600;margin-bottom:4px;}
   .doc-sub{font-size:0.78rem;color:var(--muted);margin-bottom:14px;font-family:var(--font-mono);}
-  .doc-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;flex:1;}
-  .doc-card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 12px 10px;cursor:pointer;transition:border-color 0.15s,transform 0.15s;display:flex;flex-direction:column;gap:8px;}
+  .doc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1;}
+  .doc-card{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:10px 10px 8px;cursor:pointer;transition:border-color 0.15s,transform 0.15s;display:flex;flex-direction:column;gap:6px;}
   .doc-card:hover{border-color:var(--accent);transform:translateY(-2px);}
-  .doc-card .doc-icon{width:30px;height:30px;border-radius:7px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.95rem;color:var(--accent);}
-  .doc-card .doc-title{font-size:0.8rem;font-weight:600;color:var(--text);line-height:1.3;}
-  .doc-card .doc-meta{font-family:var(--font-mono);font-size:0.66rem;color:#5C6878;}
-  .doc-card .doc-preview{height:36px;border-radius:6px;background:repeating-linear-gradient(to bottom,var(--bg) 0px,var(--bg) 4px,transparent 4px,transparent 9px);border:1px solid var(--line);}
+  .doc-card .doc-icon{width:26px;height:26px;border-radius:6px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.82rem;color:var(--accent);}
+  .doc-card .doc-title{font-size:0.72rem;font-weight:600;color:var(--text);line-height:1.3;}
+  .doc-card .doc-meta{font-family:var(--font-mono);font-size:0.6rem;color:#5C6878;}
+  .doc-card .doc-preview{height:28px;border-radius:5px;background:repeating-linear-gradient(to bottom,var(--bg) 0px,var(--bg) 3px,transparent 3px,transparent 7px);border:1px solid var(--line);}
   .modules{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
   .module-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
   .module-card .module-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
@@ -134,13 +96,12 @@
   .date-nav button:disabled{opacity:0.4;cursor:default;}
   .date-nav .date-label{font-family:var(--font-mono);font-size:0.9rem;font-weight:600;padding:5px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);min-width:128px;text-align:center;}
   body.light-theme{--bg:#F5F7FA;--panel:#FFFFFF;--panel-2:#EEF2F6;--line:#D5DCE5;--text:#1F242C;--muted:#5E6B7A;--accent:#2F6BFF;--accent-glow:rgba(47,107,255,0.25);color-scheme:light;}
-  @media(max-width:1180px){.grid{grid-template-columns:1fr;}.kpi-row{grid-template-columns:repeat(2,1fr);}.chart-grid-3{grid-template-columns:1fr 1fr;}.modules{grid-template-columns:repeat(2,1fr);}.doc-grid{grid-template-columns:1fr 1fr;}}
-  @media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:64px auto 1fr;}.sidebar{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;}.nav-group-label,.nav-divider{display:none;}.nav-item{white-space:nowrap;}.kpi-row{grid-template-columns:1fr 1fr;}.chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}.doc-grid{grid-template-columns:1fr 1fr;}.modules{grid-template-columns:1fr;}.topbar-right .date-chip{display:none;}}
+  @media(max-width:1180px){.grid{grid-template-columns:1fr;}.kpi-row{grid-template-columns:repeat(2,1fr);}.chart-grid-3{grid-template-columns:1fr 1fr;}.modules{grid-template-columns:repeat(2,1fr);}.doc-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:64px auto 1fr;}.sidebar{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;}.nav-group-label,.nav-divider{display:none;}.nav-item{white-space:nowrap;}.kpi-row{grid-template-columns:1fr 1fr;}.chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}.doc-grid{grid-template-columns:repeat(2,1fr);}.modules{grid-template-columns:1fr;}.topbar-right .date-chip{display:none;}}
 </style>
 </head>
 <body>
 <div class="app">
-
   <header class="topbar">
     <div class="brand">
       <div class="mark">🔥</div>
@@ -155,7 +116,6 @@
       <div class="user-chip"><div class="avatar">👤</div>관리자</div>
     </div>
   </header>
-
   <nav class="sidebar">
     <a class="nav-item active"><span class="icon">⬛</span> 대시보드</a>
     <div class="nav-group-label">현장 관리</div>
@@ -173,7 +133,6 @@
     <div class="nav-divider"></div>
     <a class="nav-item"><span class="icon">🛠️</span> SYSTEM설정</a>
   </nav>
-
   <main class="main">
     <div class="page-head">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -186,11 +145,8 @@
       </div>
       <div class="crumb">HOME / 대시보드 · 날짜 : <span id="crumbDate"></span></div>
     </div>
-
     <div class="grid">
       <div style="display:flex;flex-direction:column;gap:20px;">
-
-        <!-- KPI -->
         <section class="kpi-row">
           <div class="kpi accent">
             <div class="kpi-label"><span class="ico">📋</span> 오늘 작업건수</div>
@@ -213,46 +169,15 @@
             <div class="kpi-foot">DB DATA 2026 기준</div>
           </div>
         </section>
-
-        <!-- 월 생산실적 / 월 가동률 -->
         <div class="chart-grid-2">
-          <div class="panel">
-            <h3>월 생산실적 <span class="tag">개</span></h3>
-            <div class="bars" id="bar-prod"></div>
-            <div class="chart-axis" id="axis-prod"></div>
-          </div>
-          <div class="panel">
-            <h3>월 가동률 <span class="tag">%</span></h3>
-            <div class="bars muted" id="bar-rate"></div>
-            <div class="chart-axis" id="axis-rate"></div>
-          </div>
+          <div class="panel"><h3>월 생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
+          <div class="panel"><h3>월 가동률 <span class="tag">%</span></h3><div class="bars muted" id="bar-rate"></div><div class="chart-axis" id="axis-rate"></div></div>
         </div>
-
-        <!-- 누적 -->
         <div class="chart-grid-3">
-          <div class="panel">
-            <h3>누적 생산실적</h3>
-            <div class="bars" id="bar-cumprod"></div>
-            <div class="chart-axis" id="axis-cumprod"></div>
-            <div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div>
-          </div>
-          <div class="panel">
-            <h3>누적 가동률</h3>
-            <div class="bars acc" id="bar-cumrate"></div>
-            <div class="chart-axis" id="axis-cumrate"></div>
-            <div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div>
-          </div>
-          <div class="panel">
-            <h3>누적 불량율 <span class="tag">%</span></h3>
-            <svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none">
-              <g id="line-defect"></g>
-            </svg>
-            <div class="chart-axis" id="axis-cumdefect"></div>
-            <div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div>
-          </div>
+          <div class="panel"><h3>누적 생산실적</h3><div class="bars" id="bar-cumprod"></div><div class="chart-axis" id="axis-cumprod"></div><div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div></div>
+          <div class="panel"><h3>누적 가동률</h3><div class="bars acc" id="bar-cumrate"></div><div class="chart-axis" id="axis-cumrate"></div><div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div></div>
+          <div class="panel"><h3>누적 불량율 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-defect"></g></svg><div class="chart-axis" id="axis-cumdefect"></div><div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div></div>
         </div>
-
-        <!-- 주요 모듈 -->
         <section>
           <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:14px;">주요 모듈 구성</h3>
           <div class="modules">
@@ -263,8 +188,6 @@
           </div>
         </section>
       </div>
-
-      <!-- RIGHT RAIL -->
       <div style="display:flex;flex-direction:column;gap:20px;height:100%;">
         <div class="flow-card">
           <h3>생산 흐름도</h3>
@@ -287,7 +210,6 @@
             <div class="flow-step"><div class="node">🚚</div><div class="label">출하</div></div>
           </div>
         </div>
-
         <div class="panel doc-section" style="flex:1;display:flex;flex-direction:column;">
           <h3>문서 자동 생성 예시</h3>
           <div class="doc-sub">AUTO-GENERATED DOCUMENTS · ISO 9001</div>
@@ -297,204 +219,38 @@
             <a class="doc-card" href="Drawing_Inventory_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📐</div><div class="doc-preview"></div><div class="doc-title">도면관리대장</div><div class="doc-meta">DRAWING LOG</div></a>
             <a class="doc-card" href="Coil_Inventory_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔗</div><div class="doc-preview"></div><div class="doc-title">코일관리대장</div><div class="doc-meta">COIL LOG</div></a>
             <a class="doc-card" href="Yearly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📅</div><div class="doc-preview"></div><div class="doc-title">년생산실적</div><div class="doc-meta">YEARLY OUTPUT</div></a>
-            <a class="doc-card" href="Monthly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🗓️</div><div class="doc-preview"></div><div class="doc-title">월생산달성율</div><div class="doc-meta">MONTHLY ACHIEVEMENT</div></a>
+            <a class="doc-card" href="Monthly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🗓️</div><div class="doc-preview"></div><div class="doc-title">월생산실적(달성율)</div><div class="doc-meta">MONTHLY ACHIEVEMENT</div></a>
             <a class="doc-card" href="Defect_Rate.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📉</div><div class="doc-preview"></div><div class="doc-title">불량률</div><div class="doc-meta">DEFECT RATE</div></a>
             <a class="doc-card" href="Operating_Rate.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">⏱️</div><div class="doc-preview"></div><div class="doc-title">가동율</div><div class="doc-meta">UPTIME</div></a>
             <a class="doc-card" href="Machine_Repair_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔧</div><div class="doc-preview"></div><div class="doc-title">설비수리현황</div><div class="doc-meta">REPAIR STATUS</div></a>
             <a class="doc-card" href="Inspection_Tool_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🧰</div><div class="doc-preview"></div><div class="doc-title">검사장비현황</div><div class="doc-meta">EQUIP. STATUS</div></a>
+            <a class="doc-card" href="Machine_operation_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🏭</div><div class="doc-preview"></div><div class="doc-title">설비운영관리대장</div><div class="doc-meta">MACHINE OP. LOG</div></a>
+            <a class="doc-card" href="InOut_Inspection_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔍</div><div class="doc-preview"></div><div class="doc-title">입출고검사현황</div><div class="doc-meta">I/O INSPECTION</div></a>
+            <a class="doc-card" href="Only_InspectionSheet_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📋</div><div class="doc-preview"></div><div class="doc-title">검사성적서관리현황</div><div class="doc-meta">INSPECTION SHEET</div></a>
+            <a class="doc-card" href="Customer_Managerment_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🤝</div><div class="doc-preview"></div><div class="doc-title">고객관리대장</div><div class="doc-meta">CUSTOMER LOG</div></a>
           </div>
         </div>
       </div>
     </div>
   </main>
 </div>
-
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
-let selectedDate = new Date();
-
-function formatDateYMD(d){
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function formatDateLabel(d){
-  var days=['일','월','화','수','목','금','토'];
-  return formatDateYMD(d)+'('+days[d.getDay()]+')';
-}
-function getSystemTodayDateOnly(){
-  var t=new Date();
-  return new Date(t.getFullYear(),t.getMonth(),t.getDate());
-}
-function updateDateDisplay(){
-  var dateStr=formatDateYMD(selectedDate);
-  var labelEl=document.getElementById('selectedDateLabel');
-  var crumbEl=document.getElementById('crumbDate');
-  var kpiDateEl=document.getElementById('kpiDate');
-  var nextBtn=document.getElementById('nextDateBtn');
-  if(labelEl) labelEl.textContent=formatDateLabel(selectedDate);
-  if(crumbEl) crumbEl.textContent=dateStr;
-  if(kpiDateEl) kpiDateEl.textContent=dateStr;
-  if(nextBtn){
-    var today=getSystemTodayDateOnly();
-    var sel=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());
-    var isToday=sel.getTime()>=today.getTime();
-    nextBtn.disabled=isToday;
-  }
-}
-function changeDate(offsetDays){
-  var candidate=new Date(selectedDate);
-  candidate.setDate(candidate.getDate()+offsetDays);
-  var today=getSystemTodayDateOnly();
-  var candOnly=new Date(candidate.getFullYear(),candidate.getMonth(),candidate.getDate());
-  if(candOnly.getTime()>today.getTime()) return;
-  selectedDate=candidate;
-  updateDateDisplay();
-  loadDashboard();
-}
-
-// ── 막대 그래프 렌더링 (height 계산 수정) ──
-function makeBars(containerId, values, max, formatter){
-  var el=document.getElementById(containerId);
-  if(!el) return;
-  el.innerHTML='';
-  var safeMax=(max&&max>0)?max:1;
-  var fmt=formatter||function(v){return Number(v).toLocaleString();};
-  if(!values||values.length===0) return;
-  values.forEach(function(v){
-    var bar=document.createElement('div');
-    bar.className='bar';
-    var pct=Math.max(2, Math.min(100,(v/safeMax)*100));  // 최소 2% 보장
-    bar.style.height=pct+'%';
-    bar.title=fmt(v);
-    var label=document.createElement('span');
-    label.className='bar-label';
-    label.textContent=fmt(v);
-    bar.appendChild(label);
-    el.appendChild(bar);
-  });
-}
-
-function setAxisLabels(elId, months){
-  var el=document.getElementById(elId);
-  if(!el||!months||months.length===0) return;
-  var fmt=function(m){return Number(m.substring(5,7))+'월';};
-  var first=months[0];
-  var last=months[months.length-1];
-  var mid=months[Math.floor((months.length-1)/2)];
-  el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';
-}
-
-function renderLineChart(elId, values){
-  var el=document.getElementById(elId);
-  if(!el) return;
-  if(!values||values.length===0){el.innerHTML='';return;}
-  var w=240,h=140,pad=12;
-  var max=Math.max.apply(null,values.concat([0.0001]));
-  var n=values.length;
-  var xStep=n>1?(w-pad*2)/(n-1):0;
-  var pts=values.map(function(v,i){
-    return{x:pad+i*xStep, y:h-pad-(v/max)*(h-pad*2)};
-  });
-  var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
-  var circlesStr=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('');
-  var labelsStr=pts.map(function(p,i){
-    var ty=Math.max(9,p.y-8);
-    return '<text x="'+p.x.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">'+Number(values[i]).toFixed(2)+'%</text>';
-  }).join('');
-  el.innerHTML='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="#FF5C5C">'+circlesStr+'</g><g>'+labelsStr+'</g>';
-}
-
+const API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+let selectedDate=new Date();
+function formatDateYMD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function formatDateLabel(d){var days=['일','월','화','수','목','금','토'];return formatDateYMD(d)+'('+days[d.getDay()]+')';}
+function getSystemTodayDateOnly(){var t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());}
+function updateDateDisplay(){var dateStr=formatDateYMD(selectedDate);var labelEl=document.getElementById('selectedDateLabel');var crumbEl=document.getElementById('crumbDate');var kpiDateEl=document.getElementById('kpiDate');var nextBtn=document.getElementById('nextDateBtn');if(labelEl)labelEl.textContent=formatDateLabel(selectedDate);if(crumbEl)crumbEl.textContent=dateStr;if(kpiDateEl)kpiDateEl.textContent=dateStr;if(nextBtn){var today=getSystemTodayDateOnly();var sel=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());nextBtn.disabled=sel.getTime()>=today.getTime();}}
+function changeDate(offsetDays){var candidate=new Date(selectedDate);candidate.setDate(candidate.getDate()+offsetDays);var today=getSystemTodayDateOnly();var candOnly=new Date(candidate.getFullYear(),candidate.getMonth(),candidate.getDate());if(candOnly.getTime()>today.getTime())return;selectedDate=candidate;updateDateDisplay();loadDashboard();}
+function makeBars(containerId,values,max,formatter){var el=document.getElementById(containerId);if(!el)return;el.innerHTML='';var safeMax=(max&&max>0)?max:1;var fmt=formatter||function(v){return Number(v).toLocaleString();};if(!values||values.length===0)return;values.forEach(function(v){var bar=document.createElement('div');bar.className='bar';var pct=Math.max(2,Math.min(100,(v/safeMax)*100));bar.style.height=pct+'%';bar.title=fmt(v);var label=document.createElement('span');label.className='bar-label';label.textContent=fmt(v);bar.appendChild(label);el.appendChild(bar);});}
+function setAxisLabels(elId,months){var el=document.getElementById(elId);if(!el||!months||months.length===0)return;var fmt=function(m){return Number(m.substring(5,7))+'월';};var first=months[0];var last=months[months.length-1];var mid=months[Math.floor((months.length-1)/2)];el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';}
+function renderLineChart(elId,values){var el=document.getElementById(elId);if(!el)return;if(!values||values.length===0){el.innerHTML='';return;}var w=240,h=140,pad=12;var max=Math.max.apply(null,values.concat([0.0001]));var n=values.length;var xStep=n>1?(w-pad*2)/(n-1):0;var pts=values.map(function(v,i){return{x:pad+i*xStep,y:h-pad-(v/max)*(h-pad*2)};});var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var circlesStr=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('');var labelsStr=pts.map(function(p,i){var ty=Math.max(9,p.y-8);return '<text x="'+p.x.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">'+Number(values[i]).toFixed(2)+'%</text>';}).join('');el.innerHTML='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="#FF5C5C">'+circlesStr+'</g><g>'+labelsStr+'</g>';}
 var dashboardRequestId=0;
-
-async function loadDashboard(){
-  var requestId=++dashboardRequestId;
-  try{
-    var dateParam=formatDateYMD(selectedDate);
-    var res=await fetch(API_URL+'?date='+dateParam);
-    var data=await res.json();
-    if(requestId!==dashboardRequestId) return;
-    if(data.error){console.error('대시보드 오류:',data.error);return;}
-    var d=data.dashboard;
-    if(!d) return;
-
-    // KPI
-    var jobEl=document.getElementById('kpi-job-count');
-    var prodEl=document.getElementById('kpi-production');
-    var shipEl=document.getElementById('kpi-shipment');
-    if(jobEl)  jobEl.textContent=(d.todayJobCount||0).toLocaleString();
-    if(prodEl) prodEl.textContent=(d.todayProduction||0).toLocaleString();
-    if(shipEl) shipEl.textContent=(d.todayShipment||0).toLocaleString();
-
-    var eqEl=document.getElementById('kpi-equipment');
-    var statusEl=document.getElementById('kpi-equipment-status');
-    if(eqEl&&statusEl){
-      if(d.todayEquipment&&d.todayEquipment.length>0){
-        eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');
-        statusEl.className='status-pill run';
-        statusEl.innerHTML='<span class="dot"></span> RUNNING';
-      }else{
-        eqEl.textContent='가동 설비 없음';
-        statusEl.className='status-pill';
-        statusEl.innerHTML='<span class="dot"></span> IDLE';
-      }
-    }
-
-    // 월 생산실적 / 가동률
-    var mp=d.monthlyProduction||[];
-    var mr=d.monthlyRate||[];
-    var months=mp.map(function(x){return x.month;});
-    makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});
-    setAxisLabels('axis-prod',months);
-    makeBars('bar-rate',mr.map(function(x){return x.value;}),Math.max.apply(null,mr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});
-    setAxisLabels('axis-rate',months.length?months:mr.map(function(x){return x.month;}));
-
-    // 누적
-    var cp=d.cumulativeProduction||[];
-    makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});
-    setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));
-    var footProd=document.getElementById('foot-cumprod');
-    if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}
-
-    var cr=d.cumulativeRate||[];
-    makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});
-    setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));
-    var footRate=document.getElementById('foot-cumrate');
-    if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}
-
-    var cd=d.cumulativeDefectRate||[];
-    renderLineChart('line-defect',cd.map(function(x){return x.value;}));
-    setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));
-    var footDefect=document.getElementById('foot-cumdefect');
-    if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}
-
-  }catch(err){
-    console.error('대시보드 로딩 실패:',err);
-  }
-}
-
-function updateSystemDate(){
-  var today=new Date();
-  var a=document.getElementById('systemDate');
-  if(a) a.textContent=formatDateYMD(today);
-}
-
-function toggleTheme(){
-  document.body.classList.toggle('light-theme');
-  var btn=document.getElementById('themeBtn');
-  var isLight=document.body.classList.contains('light-theme');
-  btn.textContent=isLight?'🌙 다크모드':'☀️ 라이트모드';
-  localStorage.setItem('theme',isLight?'light':'dark');
-}
-
-window.addEventListener('load',function(){
-  var savedTheme=localStorage.getItem('theme');
-  var btn=document.getElementById('themeBtn');
-  if(savedTheme==='light'){document.body.classList.add('light-theme');if(btn)btn.textContent='🌙 다크모드';}
-  else{if(btn)btn.textContent='☀️ 라이트모드';}
-});
-
-updateSystemDate();
-updateDateDisplay();
-loadDashboard();
+async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam);var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);makeBars('bar-rate',mr.map(function(x){return x.value;}),Math.max.apply(null,mr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-rate',months.length?months:mr.map(function(x){return x.month;}));var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderLineChart('line-defect',cd.map(function(x){return x.value;}));setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
+function updateSystemDate(){var today=new Date();var a=document.getElementById('systemDate');if(a)a.textContent=formatDateYMD(today);}
+function toggleTheme(){document.body.classList.toggle('light-theme');var btn=document.getElementById('themeBtn');var isLight=document.body.classList.contains('light-theme');btn.textContent=isLight?'🌙 다크모드':'☀️ 라이트모드';localStorage.setItem('theme',isLight?'light':'dark');}
+window.addEventListener('load',function(){var savedTheme=localStorage.getItem('theme');var btn=document.getElementById('themeBtn');if(savedTheme==='light'){document.body.classList.add('light-theme');if(btn)btn.textContent='🌙 다크모드';}else{if(btn)btn.textContent='☀️ 라이트모드';}});
+updateSystemDate();updateDateDisplay();loadDashboard();
 </script>
 </body>
 </html>
