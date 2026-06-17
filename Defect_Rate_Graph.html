@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>불량률(G) — HeatPro MES</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#15181D; --panel:#1F242C; --line:#323A46;
+    --text:#EAF0F6; --muted:#8A99AC; --accent:#FF6B35;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Noto Sans KR', sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px;
+  }
+  .icon { font-size:3rem; }
+  .title { font-size:2rem; font-weight:700; letter-spacing:0.04em; }
+  .sub {
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.9rem; color:var(--muted); letter-spacing:0.1em;
+  }
+  .badge {
+    margin-top:8px;
+    padding:6px 20px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem; color:var(--muted);
+  }
+  .back {
+    margin-top:32px;
+    padding:10px 28px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; color:var(--muted);
+    text-decoration:none; font-size:0.9rem;
+    transition:color 0.15s, border-color 0.15s;
+  }
+  .back:hover { color:var(--accent); border-color:var(--accent); }
+</style>
+</head>
+<body>
+  <div class="icon">📉</div>
+  <div class="title">불량률(G)</div>
+  <div class="sub">DEFECT RATE GRAPH · HeatPro MES</div>
+  <div class="badge">🚧 준비 중</div>
+  <a class="back" href="index.html">← 대시보드로 돌아가기</a>
+</body>
+</html>
