@@ -277,7 +277,7 @@ function renderTable(from,to,eq){
     var idx=rowIdx++;
     var dbOp=toN(r.가동시간),dbNon=toN(r.비가동시간),dbCnt=toN(r._cnt)||0;
     var 조업=toN(r.조업시간)||((isHol||isSat||isSun)?0:480);
-    return '<tr data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'">'
+    return '<tr data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'" data-dbcnt="'+dbCnt+'">'
       +'<td class="'+dateClass+'" style="font-size:11px;white-space:nowrap;">'+(isHol?'★ ':'')+ds+'</td>'
       +'<td class="'+dateClass+'">'+DAYS[dow]+'</td>'
       +'<td class="td-db">'+dbCnt+'</td>'
@@ -351,6 +351,7 @@ function saveRow(idx){
   var payload={
     action:'saveOperatingRate',
     작업일:tr.dataset.date,설비명:tr.dataset.eq,설비번호:tr.dataset.eqno,
+    건수:toN(tr.dataset.dbcnt),
     조업시간:gF('조업시간'),가동시간:toN(tr.dataset.dbop),비가동시간:toN(tr.dataset.dbnon),
     교육:gF('교육'),공사:gF('공사'),개발:gF('개발'),방문:gF('방문'),기타1:gF('기타1'),
     전기:gF('전기'),냉각:gF('냉각'),코일:gF('코일'),기타2:gF('기타2'),
