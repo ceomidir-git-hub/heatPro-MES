@@ -3,51 +3,532 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>도면관리대장 — HeatPro MES</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>도면관리대장 | HeatPro MES</title>
 <style>
-  :root {
-    --bg:#15181D; --panel:#1F242C; --line:#323A46;
-    --text:#EAF0F6; --muted:#8A99AC; --accent:#FF6B35;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background:var(--bg); color:var(--text);
-    font-family:'Noto Sans KR', sans-serif;
-    min-height:100vh;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:16px;
-  }
-  .icon { font-size:3rem; }
-  .title { font-size:2rem; font-weight:700; letter-spacing:0.04em; }
-  .sub {
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.9rem; color:var(--muted); letter-spacing:0.1em;
-  }
-  .badge {
-    margin-top:8px;
-    padding:6px 20px;
-    border:1px solid var(--line);
-    border-radius:999px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.8rem; color:var(--muted);
-  }
-  .back {
-    margin-top:32px;
-    padding:10px 28px;
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:8px; color:var(--muted);
-    text-decoration:none; font-size:0.9rem;
-    transition:color 0.15s, border-color 0.15s;
-  }
-  .back:hover { color:var(--accent); border-color:var(--accent); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+
+.top-bar { background: #1a3a5c; color: #fff; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.top-bar h1 { font-size: clamp(14px,2vw,19px); font-weight: 700; letter-spacing: 1px; }
+.top-bar .sub { font-size: clamp(10px,1.1vw,12px); opacity: 0.70; }
+
+.toolbar { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 0 24px; }
+.search-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; padding: 10px 0 8px; }
+.sg { display: flex; flex-direction: column; gap: 3px; }
+.sg label { font-size: 11px; font-weight: 600; color: #1a3a5c; white-space: nowrap; }
+.sg select, .sg input[type="date"] { height: 30px; padding: 0 8px; border: 1px solid #b0b8c8; border-radius: 4px; font-size: 12px; font-family: inherit; color: #222; background: #fff; }
+.date-range { display: flex; align-items: center; gap: 4px; }
+.date-range span { font-size: 12px; color: #666; }
+.btn-group { display: flex; gap: 5px; align-self: flex-end; }
+.btn { height: 30px; padding: 0 14px; border-radius: 4px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: #1a3a5c; color: #fff; border: none; font-weight: 700; }
+.btn-primary:hover { background: #254f7a; }
+.btn-today { background: #e8f0fb; color: #1a3a5c; border: 1px solid #b0c4de; font-weight: 600; }
+.btn-today:hover { background: #d0e0f5; }
+.btn-reset { background: #fff; color: #555; border: 1px solid #bbb; }
+.btn-reset:hover { background: #f5f5f5; }
+.btn-print { background: #fff; color: #555; border: 1px solid #bbb; }
+.btn-print:hover { background: #f5f5f5; }
+
+.hint-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 8px; border-top: 1px solid #e8ecf3; font-size: 11px; }
+.hint-row .hl { color: #888; font-weight: 600; margin-right: 2px; }
+.chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 8px; border-radius: 99px; border: 1px solid #b8ddb8; background: #f1f8ec; font-size: 10px; color: #2e7d32; }
+.chip::before { content: '✓'; font-size: 9px; }
+
+.container { max-width: 1280px; margin: 0 auto; padding: 14px 16px; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px; }
+.kpi { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 16px; }
+.kpi .kl { font-size: 11px; color: #888; margin-bottom: 4px; }
+.kpi .kv { font-size: 22px; font-weight: 700; color: #1a3a5c; }
+.kpi.k-done .kv { color: #2e7d32; }
+.kpi.k-wait .kv { color: #e65100; }
+
+.card { background: #fff; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+.card-hd { background: #1a3a5c; color: #fff; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; font-weight: 700; }
+.btn-csv { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.45); height: 26px; padding: 0 12px; border-radius: 4px; font-size: 11px; font-family: inherit; cursor: pointer; }
+.btn-csv:hover { background: rgba(255,255,255,0.15); }
+
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(11px,1.1vw,13px); min-width: 920px; }
+th, td { border: 1px solid #ccc; padding: 5px 6px; text-align: center; vertical-align: middle; white-space: nowrap; }
+thead tr:first-child th { background: #1a3a5c; color: #fff; font-weight: 700; font-size: 12px; }
+thead tr:last-child th  { background: #2a4f7c; color: #dce8f8; font-size: 11px; }
+tbody tr:hover td { background: #f0f5fc; }
+.td-l { text-align: left; }
+
+.stamp { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #b71c1c; color: #b71c1c; line-height: 1.3; }
+.stamp .sn { font-size: 11px; font-weight: 700; }
+.stamp .sd { font-size: 9px; }
+.empty-sign { display: inline-block; width: 46px; height: 46px; border-radius: 50%; border: 1.5px dashed #bbb; }
+.stamp.default-mark { border-style: dashed; opacity: 0.85; }
+
+.edit-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.edit-input {
+  width: 70px; height: 22px; padding: 0 4px;
+  border: 1px solid #b0b8c8; border-radius: 3px;
+  font-size: 10px; font-family: inherit; text-align: center;
+  background: #fffde7;
+}
+.edit-input:focus { outline: none; border-color: #1a3a5c; background: #fff; }
+.edit-date {
+  width: 100px; height: 22px; padding: 0 3px;
+  border: 1px solid #b0b8c8; border-radius: 3px;
+  font-size: 10px; font-family: inherit;
+  background: #fffde7;
+}
+.edit-date:focus { outline: none; border-color: #1a3a5c; background: #fff; }
+.btn-save-row {
+  height: 19px; padding: 0 8px; font-size: 10px;
+  background: #1a3a5c; color: #fff; border: none; border-radius: 3px;
+  cursor: pointer; font-family: inherit;
+}
+.btn-save-row:hover { background: #254f7a; }
+.saved-ok { color: #2e7d32; font-size: 10px; }
+.default-tag { font-size: 9px; color: #999; }
+
+.bdone { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 10px; background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+.bwait { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 10px; background: #fff3e0; color: #e65100; font-weight: 600; }
+
+.status-bar { padding: 5px 14px; font-size: 11px; color: #888; background: #fafafa; border-top: 1px solid #eee; display: flex; align-items: center; gap: 5px; }
+.sdot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+
+.status-box { text-align: center; padding: 40px; color: #888; font-size: 13px; }
+.status-box.err { color: #c00; }
+.spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #ddd; border-top-color: #1a3a5c; border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .top-bar .sub, .toolbar, .kpi-row, .card-hd .btn-csv, .btn-save-row, .edit-input, .edit-date, .status-bar { display: none !important; }
+  body { background: #fff; }
+  .container { padding: 0; max-width: 100%; }
+  .print-header { display: block !important; }
+  .card { border: none; border-radius: 0; }
+  .card-hd { background: #1a3a5c !important; font-size: 14px; padding: 8px 12px; }
+  table { font-size: 10px; min-width: unset; width: 100%; }
+  th, td { padding: 4px 5px; }
+  thead tr:first-child th { background: #1a3a5c !important; }
+  thead tr:last-child  th { background: #2a4f7c !important; }
+  .stamp { width: 34px; height: 34px; border-width: 1.5px; }
+  .stamp .sn { font-size: 9px; }
+  .stamp .sd { font-size: 7px; }
+  .empty-sign { width: 34px; height: 34px; }
+  .print-footer { display: flex !important; }
+}
+.print-header { display: none; }
+.print-footer { display: none; }
+.print-header { padding: 0 0 10px; border-bottom: 1px solid #ccc; margin-bottom: 10px; }
+.print-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.print-header-title { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+.print-header-meta { font-size: 10px; color: #555; text-align: right; line-height: 1.8; }
+.print-kpi { display: flex; gap: 20px; font-size: 11px; }
+.print-kpi span { display: flex; gap: 4px; }
+.print-footer { margin-top: 12px; padding-top: 6px; border-top: 1px solid #ccc; justify-content: space-between; font-size: 9px; color: #999; }
 </style>
 </head>
 <body>
-  <div class="icon">📐</div>
-  <div class="title">도면관리대장</div>
-  <div class="sub">DRAWING INVENTORY LOG · HeatPro MES</div>
-  <div class="badge">🚧 준비 중</div>
-  <a class="back" href="index.html">← 대시보드로 돌아가기</a>
+
+<div class="top-bar">
+  <h1>📋 도면관리대장 (Drawing Inventory Log)</h1>
+  <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
+</div>
+
+<div class="toolbar">
+  <div class="search-row">
+    <div class="sg">
+      <label>기간 (입고일 기준)</label>
+      <div class="date-range">
+        <input type="date" id="f-from">
+        <span>~</span>
+        <input type="date" id="f-to">
+      </div>
+    </div>
+    <div class="sg">
+      <label>고객사</label>
+      <select id="f-customer" style="width:110px" onchange="onCustomerChange()">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div class="sg">
+      <label>품명</label>
+      <select id="f-name" style="width:100px" onchange="onNameChange()">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div class="sg">
+      <label>품번</label>
+      <select id="f-code" style="width:130px">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div class="sg">
+      <label>반납현황</label>
+      <select id="f-status" style="width:90px">
+        <option value="">전체</option>
+        <option value="done">반납완료</option>
+        <option value="wait">반납대기</option>
+      </select>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-today"   onclick="setToday()">오늘</button>
+      <button class="btn btn-primary" onclick="applyFilter()">조 회</button>
+      <button class="btn btn-reset"   onclick="resetFilter()">초기화</button>
+      <button class="btn btn-print"   onclick="doPrint()">🖨 인쇄</button>
+    </div>
+  </div>
+  <div class="hint-row">
+    <span class="hl">AND 조합 :</span>
+    <span class="chip">기간만</span>
+    <span class="chip">고객사만</span>
+    <span class="chip">고객사 + 품명</span>
+    <span class="chip">고객사 + 품명 + 품번</span>
+    <span class="chip">기간 + 고객사</span>
+    <span class="chip">기간 + 고객사 + 품명</span>
+    <span class="chip">전체 조합</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="print-header" id="printHeader">
+    <div class="print-header-top">
+      <div>
+        <div class="print-header-title">도 면 관 리 대 장</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">Drawing Inventory Log · HeatPro MES · ISO 9001</div>
+      </div>
+      <div class="print-header-meta" id="printMeta"></div>
+    </div>
+    <div class="print-kpi" id="printKpi"></div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi">       <div class="kl">전체 건수</div><div class="kv" id="k-total">-</div></div>
+    <div class="kpi k-done"><div class="kl">반납완료</div> <div class="kv" id="k-done">-</div></div>
+    <div class="kpi k-wait"><div class="kl">반납대기</div> <div class="kv" id="k-wait">-</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <span id="tableTitle">도면 접수 / 반납 현황</span>
+      <button class="btn-csv" onclick="downloadCSV()">⬇ CSV 저장</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:40px">순번</th>
+            <th rowspan="2" style="width:74px">입고일</th>
+            <th rowspan="2" style="width:74px">작업일</th>
+            <th rowspan="2" style="width:84px">고객사</th>
+            <th rowspan="2" class="td-l" style="width:100px;padding-left:8px">품명</th>
+            <th rowspan="2" style="width:130px">품번</th>
+            <th rowspan="2" style="width:140px">접수현황 (일자+확인) ✎</th>
+            <th rowspan="2" style="width:140px">반납현황 (일자+확인) ✎</th>
+            <th rowspan="2" style="width:60px">비고</th>
+          </tr>
+          <tr></tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="9" class="status-box">
+            <div class="spinner"></div><br>조회 버튼을 눌러 데이터를 불러오세요.
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="status-bar" id="statusBar">
+      <span class="sdot" style="background:#bbb"></span>
+      대기 중 · 조회 조건을 선택 후 [조 회] 버튼을 누르세요.
+    </div>
+  </div>
+
+  <div class="print-footer" id="printFooter">
+    <span>※ 이 문서는 HeatPro MES에서 자동 생성되었습니다.</span>
+    <span id="printPage">1 / 1 page</span>
+  </div>
+
+</div>
+
+<script>
+var API_URL  = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var allRows  = [];
+var filtered = [];
+
+function toYmd(d) {
+  var m = d.getMonth()+1, day = d.getDate();
+  return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;
+}
+function monthFirst(d) { return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+'-01'; }
+function monthLast(d)  { return toYmd(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+function fmtDisp(s) {
+  if (!s) return '';
+  var p = s.split('-');
+  return p.length<3 ? s : parseInt(p[1])+'/'+parseInt(p[2]);
+}
+function nowStr() {
+  var d=new Date(), h=d.getHours(), min=d.getMinutes();
+  return toYmd(d)+' '+(h<10?'0':'')+h+':'+(min<10?'0':'')+min;
+}
+
+window.addEventListener('load', function() {
+  var now = new Date();
+  document.getElementById('f-from').value = monthFirst(now);
+  document.getElementById('f-to').value   = monthLast(now);
+  fetchMaster();
+});
+
+function setToday() {
+  var t = toYmd(new Date());
+  document.getElementById('f-from').value = t;
+  document.getElementById('f-to').value   = t;
+}
+
+function fetchMaster() {
+  var old = document.getElementById('_gs_m');
+  if (old) old.parentNode.removeChild(old);
+  window._cbM = function(json) {
+    if (json.customers) fillSel('f-customer', json.customers.map(function(c){ return c.name||c; }));
+  };
+  var s = document.createElement('script');
+  s.id  = '_gs_m';
+  s.src = API_URL+'?callback=_cbM';
+  document.body.appendChild(s);
+}
+function fillSel(id, vals) {
+  var sel = document.getElementById(id);
+  while (sel.options.length > 1) sel.remove(1);
+  vals.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+}
+function onCustomerChange() { document.getElementById('f-name').selectedIndex=0; document.getElementById('f-code').selectedIndex=0; }
+function onNameChange()     { document.getElementById('f-code').selectedIndex=0; }
+
+function applyFilter() {
+  var from     = document.getElementById('f-from').value;
+  var to       = document.getElementById('f-to').value;
+  var customer = document.getElementById('f-customer').value;
+  var name     = document.getElementById('f-name').value;
+  var code     = document.getElementById('f-code').value;
+  var status   = document.getElementById('f-status').value;
+  setLoading('데이터를 불러오는 중...');
+  var old = document.getElementById('_gs_d');
+  if (old) old.parentNode.removeChild(old);
+  window._cbD = function(json) {
+    if (json.error) { showError(json.error); return; }
+    allRows = json.rows || [];
+    updateDropdowns(allRows);
+    filtered = allRows.filter(function(r) {
+      if (status==='done' && !r['반납확인자']) return false;
+      if (status==='wait' &&  r['반납확인자']) return false;
+      return true;
+    });
+    render(filtered, from, to, customer);
+  };
+  var s = document.createElement('script');
+  s.id  = '_gs_d';
+  s.src = API_URL
+    +'?action=drawing'
+    +'&from='+encodeURIComponent(from)
+    +'&to='+encodeURIComponent(to)
+    +'&customer='+encodeURIComponent(customer)
+    +'&product='+encodeURIComponent(name)
+    +'&partNo='+encodeURIComponent(code)
+    +'&callback=_cbD';
+  s.onerror = function(){ showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
+  document.body.appendChild(s);
+}
+
+function updateDropdowns(rows) {
+  var names=[], codes=[];
+  rows.forEach(function(r) {
+    var n=r['품명']||'', c=r['품번']||'';
+    if (n && names.indexOf(n)<0) names.push(n);
+    if (c && codes.indexOf(c)<0) codes.push(c);
+  });
+  fillSel('f-name', names.sort());
+  fillSel('f-code', codes.sort());
+}
+
+function resetFilter() {
+  var now = new Date();
+  document.getElementById('f-from').value             = monthFirst(now);
+  document.getElementById('f-to').value               = monthLast(now);
+  ['f-customer','f-name','f-code','f-status'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
+  allRows=[]; filtered=[];
+  document.getElementById('tbody').innerHTML='<tr><td colspan="9" class="status-box">조회 버튼을 눌러 데이터를 불러오세요.</td></tr>';
+  setStatusBar('#bbb','대기 중 · 조회 조건을 선택 후 [조 회] 버튼을 누르세요.');
+  ['k-total','k-done','k-wait'].forEach(function(id){ document.getElementById(id).textContent='-'; });
+  document.getElementById('tableTitle').textContent='도면 접수 / 반납 현황';
+}
+
+/* 도장 — 기본값(부서 자동매핑)인 경우 점선 테두리로 구분 표시 */
+function makeStamp(name, dateStr, isDefault) {
+  if (!name || !dateStr) return '<div class="empty-sign"></div>';
+  var cls = isDefault ? 'stamp default-mark' : 'stamp';
+  return '<div class="'+cls+'"><span class="sn">'+name+'</span><span class="sd">26.'+fmtDisp(dateStr)+'</span></div>';
+}
+
+/* 확인자 + 날짜 동시 편집 셀 */
+function makeEditCell(rowIdx, field, name, dateStr, isDefault) {
+  var stampHtml = makeStamp(name, dateStr, isDefault);
+  var tagHtml = isDefault ? '<span class="default-tag">(기본담당)</span>' : '';
+  return '<div class="edit-cell">'
+    + '<div id="stamp_'+field+'_'+rowIdx+'">'+stampHtml+'</div>'
+    + '<input class="edit-input" type="text" placeholder="이름" value="'+(name||'')+'" '
+      + 'id="inp_'+field+'_'+rowIdx+'" '
+      + 'oninput="onConfirmChange('+rowIdx+',\''+field+'\')" />'
+    + '<input class="edit-date" type="date" value="'+(dateStr||'')+'" '
+      + 'id="date_'+field+'_'+rowIdx+'" '
+      + 'onchange="onConfirmChange('+rowIdx+',\''+field+'\')" />'
+    + '<button class="btn-save-row" onclick="saveConfirm('+rowIdx+',\''+field+'\')">저장</button>'
+    + '<div id="savemsg_'+field+'_'+rowIdx+'">'+tagHtml+'</div>'
+    + '</div>';
+}
+
+function onConfirmChange(rowIdx, field) {
+  var name = document.getElementById('inp_'+field+'_'+rowIdx).value.trim();
+  var date = document.getElementById('date_'+field+'_'+rowIdx).value;
+  document.getElementById('stamp_'+field+'_'+rowIdx).innerHTML = makeStamp(name, date, false);
+  document.getElementById('savemsg_'+field+'_'+rowIdx).innerHTML = '';
+}
+
+function saveConfirm(rowIdx, field) {
+  var name   = document.getElementById('inp_'+field+'_'+rowIdx).value.trim();
+  var date   = document.getElementById('date_'+field+'_'+rowIdx).value;
+  var msgEl  = document.getElementById('savemsg_'+field+'_'+rowIdx);
+  var r      = filtered[rowIdx];
+
+  if (!name) { msgEl.innerHTML='<span style="color:#c00;font-size:10px">이름 필요</span>'; return; }
+  if (!date) { msgEl.innerHTML='<span style="color:#c00;font-size:10px">날짜 필요</span>'; return; }
+
+  msgEl.innerHTML='<span style="color:#888;font-size:10px">저장중...</span>';
+
+  var payload = {
+    action      : 'saveDrawingConfirm',
+    workDate    : r['작업일'] || '',
+    customer    : r['고객사'] || '',
+    partName    : r['품명']   || '',
+    partNo      : r['품번']   || '',
+    field       : field,
+    confirmName : name,
+    confirmDate : date
+  };
+
+  fetch(API_URL, { method:'POST', body: JSON.stringify(payload) })
+    .then(function(res){ return res.json(); })
+    .then(function(json) {
+      if (json.result === 'ok') {
+        if (field==='rec') { r['접수확인자']=name; r['접수일자']=date; }
+        else                { r['반납확인자']=name; r['반납일자']=date; }
+        msgEl.innerHTML='<span class="saved-ok">✓ 저장됨</span>';
+        setTimeout(function(){ msgEl.innerHTML=''; }, 2000);
+      } else {
+        msgEl.innerHTML='<span style="color:#c00;font-size:10px">저장 실패</span>';
+      }
+    })
+    .catch(function() {
+      msgEl.innerHTML='<span style="color:#c00;font-size:10px">오류</span>';
+    });
+}
+
+function render(rows, from, to, customer) {
+  var done = rows.filter(function(r){ return r['반납확인자']; }).length;
+  var wait = rows.length - done;
+  document.getElementById('k-total').textContent = rows.length;
+  document.getElementById('k-done').textContent  = done;
+  document.getElementById('k-wait').textContent  = wait;
+
+  var parts=[];
+  if (from||to) parts.push((from||'?')+' ~ '+(to||'?'));
+  if (customer) parts.push(customer);
+  document.getElementById('tableTitle').textContent =
+    '도면 접수 / 반납 현황'+(parts.length?'  [ '+parts.join(' · ')+' ]':'');
+
+  document.getElementById('printMeta').innerHTML =
+    '조회기간 : '+(from||'전체')+' ~ '+(to||'전체')+'<br>'
+    +'고객사 : '+(customer||'전체')+'<br>'
+    +'출력일시 : '+nowStr();
+  document.getElementById('printKpi').innerHTML =
+    '<span><b>전체 :</b> '+rows.length+'건</span>'
+    +'<span><b>반납완료 :</b> <b style="color:#2e7d32">'+done+'건</b></span>'
+    +'<span><b>반납대기 :</b> <b style="color:#e65100">'+wait+'건</b></span>';
+
+  if (!rows.length) {
+    document.getElementById('tbody').innerHTML='<tr><td colspan="9" class="status-box">조회된 데이터가 없습니다.</td></tr>';
+    setStatusBar('#f57f17','조회 완료 · 0건');
+    return;
+  }
+
+  var html = rows.map(function(r, i) {
+    var recDate = r['접수일자'] || r['작업일'] || '';
+    var retDate = r['반납일자'] || recDate;
+
+    var badge = r['반납확인자']
+      ? '<span class="bdone">반납완료</span>'
+      : '<span class="bwait">반납대기</span>';
+    var note = r['비고'] || '';
+
+    return '<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td>'+fmtDisp(r['입고일']||r['작업일']||'')+'</td>'
+      +'<td>'+fmtDisp(r['작업일']||'')+'</td>'
+      +'<td>'+(r['고객사']||'')+'</td>'
+      +'<td class="td-l">'+(r['품명']||'')+'</td>'
+      +'<td>'+(r['품번']||'')+'</td>'
+      +'<td style="padding:3px">'+makeEditCell(i,'rec',r['접수확인자'],recDate,!!r['_recDefault'])+'</td>'
+      +'<td style="padding:3px">'+makeEditCell(i,'ret',r['반납확인자'],retDate,!!r['_retDefault'])+'</td>'
+      +'<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+note+'</span>':'')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  document.getElementById('tbody').innerHTML = html;
+  setStatusBar('#4caf50','조회 완료 · '+rows.length+'건  (반납완료 '+done+'건 / 반납대기 '+wait+'건) · ✎ 확인자/날짜 수정 후 [저장] 클릭');
+}
+
+function doPrint() {
+  if (!filtered.length) { alert('먼저 데이터를 조회하세요.'); return; }
+  window.print();
+}
+
+function setLoading(msg) {
+  document.getElementById('tbody').innerHTML='<tr><td colspan="9" class="status-box"><div class="spinner"></div><br>'+msg+'</td></tr>';
+  setStatusBar('#1a3a5c', msg);
+}
+function setStatusBar(color, msg) {
+  document.getElementById('statusBar').innerHTML='<span class="sdot" style="background:'+color+'"></span> '+msg;
+}
+function showError(msg) {
+  document.getElementById('tbody').innerHTML='<tr><td colspan="9" class="status-box err">⚠️ '+msg+'</td></tr>';
+  setStatusBar('#c00','오류 발생');
+}
+
+function downloadCSV() {
+  if (!filtered.length) { alert('조회된 데이터가 없습니다.'); return; }
+  var hdr = ['순번','입고일','작업일','고객사','품명','품번','접수일자','접수확인','반납일자','반납확인','비고'];
+  var rows = [hdr];
+  filtered.forEach(function(r,i) {
+    var recDate = r['접수일자']||r['작업일']||'';
+    var retDate = r['반납일자']||recDate;
+    rows.push([
+      i+1,
+      fmtDisp(r['입고일']||r['작업일']||''),
+      fmtDisp(r['작업일']||''),
+      r['고객사']||'', r['품명']||'', r['품번']||'',
+      recDate,
+      r['접수확인자'] ? r['접수확인자']+' / 26.'+fmtDisp(recDate) : '',
+      retDate,
+      r['반납확인자'] ? r['반납확인자']+' / 26.'+fmtDisp(retDate) : '',
+      r['반납확인자'] ? '반납완료' : '반납대기'
+    ]);
+  });
+  var csv = rows.map(function(row){ return row.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\r\n');
+  var from = document.getElementById('f-from').value.replace(/-/g,'');
+  var to   = document.getElementById('f-to').value.replace(/-/g,'');
+  var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '도면관리대장_'+from+'_'+to+'.csv';
+  a.click();
+}
+</script>
 </body>
 </html>
