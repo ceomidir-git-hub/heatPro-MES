@@ -57,31 +57,31 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media print {
-  @page { size: A4 landscape; margin: 6mm 8mm; }
+  @page { size: A4 landscape; margin: 5mm 7mm; }
   html, body { background: #fff; height: auto; }
   .search-panel, .btn-pdf { display: none !important; }
 
-  .top-bar { padding: 5px 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .top-bar h1 { font-size: 13px; }
-  .top-bar .sub { font-size: 9px; }
+  .top-bar { padding: 4px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .top-bar h1 { font-size: 12px; }
+  .top-bar .sub { font-size: 8px; }
 
   .container { padding: 0; max-width: 100%; }
 
-  .card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 6px; page-break-inside: avoid; break-inside: avoid; }
-  .card-title { padding: 4px 10px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .card-body { padding: 5px 8px; }
+  .card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 4px; page-break-inside: avoid; break-inside: avoid; }
+  .card-title { padding: 3px 8px; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card-body { padding: 4px 6px; }
 
-  /* 차트 높이를 인쇄 전용으로 축소 (반응형 clamp 무시) */
-  .chart-wrap { height: 130px !important; }
+  /* 차트 높이를 인쇄 전용으로 확대 (테이블을 더 압축해서 공간 확보) */
+  .chart-wrap { height: 260px !important; }
   /* 인쇄 시: canvas 숨기고 정적 이미지로 대체 (body.is-printing 클래스 기준) */
   body.is-printing #myChart { display: none !important; }
   body.is-printing #chartPrintImg { display: block !important; }
 
-  /* 테이블 인쇄용 축소 폰트 */
-  table { font-size: 7.5px !important; min-width: 0 !important; width: 100% !important; }
-  th, td { padding: 2px 1px !important; }
-  .legend { font-size: 8px; margin-bottom: 3px; }
-  .legend-dot { width: 9px; height: 9px; }
+  /* 테이블 인쇄용 초축소 폰트 */
+  table { font-size: 6.8px !important; min-width: 0 !important; width: 100% !important; }
+  th, td { padding: 1px 1px !important; line-height: 1.2; }
+  .legend { font-size: 7px; margin-bottom: 2px; }
+  .legend-dot { width: 8px; height: 8px; }
   .tbl-wrap { overflow: visible !important; }
 
   thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
