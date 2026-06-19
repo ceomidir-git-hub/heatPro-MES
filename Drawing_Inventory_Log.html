@@ -284,6 +284,7 @@ function toYmd(d) {
 }
 function monthFirst(d) { return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+'-01'; }
 function monthLast(d)  { return toYmd(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+function esc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmtDisp(s) {
   if (!s) return '';
   var p = s.split('-');
@@ -391,7 +392,7 @@ function makeStamp(name, dateStr, isDefault, rowIdx, field) {
     return '<div class="empty-sign empty-sign-clickable"'+toggleAttr+'></div>';
   }
   var cls = isDefault ? 'stamp default-mark stamp-clickable' : 'stamp stamp-clickable';
-  return '<div class="'+cls+'"'+toggleAttr+'><span class="sn">'+name+'</span><span class="sd">26.'+fmtDisp(dateStr)+'</span></div>';
+  return '<div class="'+cls+'"'+toggleAttr+'><span class="sn">'+esc(name)+'</span><span class="sd">26.'+fmtDisp(dateStr)+'</span></div>';
 }
 
 /* 확인자 + 날짜 — 평소엔 도장만, 클릭하면 편집 패널 펼침 */
@@ -401,9 +402,9 @@ function makeEditCell(rowIdx, field, name, dateStr, isDefault) {
     + '<div id="stamp_'+field+'_'+rowIdx+'">'+stampHtml+'</div>'
     + '<div id="tag_'+field+'_'+rowIdx+'"></div>'
     + '<div class="edit-panel" id="panel_'+field+'_'+rowIdx+'">'
-      + '<input class="edit-input" type="text" placeholder="이름" value="'+(name||'')+'" '
+      + '<input class="edit-input" type="text" placeholder="이름" value="'+esc(name)+'" '
         + 'id="inp_'+field+'_'+rowIdx+'" />'
-      + '<input class="edit-date" type="date" value="'+(dateStr||'')+'" '
+      + '<input class="edit-date" type="date" value="'+esc(dateStr)+'" '
         + 'id="date_'+field+'_'+rowIdx+'" />'
       + '<div class="btn-row-actions">'
         + '<button class="btn-save-row" onclick="saveConfirm('+rowIdx+',\''+field+'\')">저장</button>'
@@ -512,12 +513,12 @@ function render(rows, from, to, customer) {
       +'<td>'+(i+1)+'</td>'
       +'<td>'+fmtDisp(r['입고일']||r['작업일']||'')+'</td>'
       +'<td>'+fmtDisp(r['작업일']||'')+'</td>'
-      +'<td>'+(r['고객사']||'')+'</td>'
-      +'<td class="td-l">'+(r['품명']||'')+'</td>'
-      +'<td>'+(r['품번']==='품번확인' ? '<span style="color:#e65100;font-weight:600">품번확인</span>' : (r['품번']||''))+'</td>'
+      +'<td>'+esc(r['고객사']||'')+'</td>'
+      +'<td class="td-l">'+esc(r['품명']||'')+'</td>'
+      +'<td>'+(r['품번']==='품번확인' ? '<span style="color:#e65100;font-weight:600">품번확인</span>' : esc(r['품번']||''))+'</td>'
       +'<td style="padding:3px">'+makeEditCell(i,'rec',r['접수확인자'],recDate,!!r['_recDefault'])+'</td>'
       +'<td style="padding:3px">'+makeEditCell(i,'ret',r['반납확인자'],retDate,!!r['_retDefault'])+'</td>'
-      +'<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+note+'</span>':'')+'</td>'
+      +'<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+esc(note)+'</span>':'')+'</td>'
       +'</tr>';
   }).join('');
 
