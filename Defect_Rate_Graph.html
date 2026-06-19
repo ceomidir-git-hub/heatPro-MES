@@ -56,16 +56,35 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media print {
-  @page { size: A4 landscape; margin: 8mm 10mm; }
-  body { background: #fff; }
+  @page { size: A4 landscape; margin: 6mm 8mm; }
+  html, body { background: #fff; height: auto; }
   .search-panel, .btn-pdf { display: none !important; }
-  .top-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
-  .card-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .top-bar { padding: 5px 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .top-bar h1 { font-size: 13px; }
+  .top-bar .sub { font-size: 9px; }
+
+  .container { padding: 0; max-width: 100%; }
+
+  .card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 6px; page-break-inside: avoid; break-inside: avoid; }
+  .card-title { padding: 4px 10px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card-body { padding: 5px 8px; }
+
+  /* 차트 높이를 인쇄 전용으로 축소 (반응형 clamp 무시) */
+  .chart-wrap { height: 130px !important; }
+
+  /* 테이블 인쇄용 축소 폰트 */
+  table { font-size: 7.5px !important; }
+  th, td { padding: 2px 2px !important; }
+  .legend { font-size: 8px; margin-bottom: 3px; }
+  .legend-dot { width: 9px; height: 9px; }
+
   thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   td.col-group, td.col-label, td.col-sub, td.total-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .td-holiday, .td-none, .td-bad { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .container { padding: 0; max-width: 100%; }
+
+  /* 페이지 넘침 방지: 전체를 한 장 안에 강제 압축 */
+  .container, .card, .card-body, .tbl-wrap, table { page-break-after: avoid; }
 }
 </style>
 </head>
@@ -204,10 +223,10 @@ function showError(msg) {
 function processData(rows, month, equip) {
   var actualDays = getDaysInMonth(YEAR, month);
 
-  // 일별 집계 배열 초기화
+  // 일별 집계 배열 초기화 (hasData: 해당 일자에 실제 행이 존재했는지)
   var dayData = [];
   for (var i = 0; i < MAX_DAYS; i++) {
-    dayData.push({ input: 0, good: 0, bad: 0, out: 0, cont: 0, scratch: 0, drop: 0, hard: 0, deform: 0 });
+    dayData.push({ input: 0, good: 0, bad: 0, out: 0, cont: 0, scratch: 0, drop: 0, hard: 0, deform: 0, hasData: false });
   }
 
   rows.forEach(function (r) {
@@ -226,6 +245,7 @@ function processData(rows, month, equip) {
     dayData[idx].drop    += Number(r['탈락']     || 0);
     dayData[idx].hard    += Number(r['경도']     || 0);
     dayData[idx].deform  += Number(r['변형']     || 0);
+    dayData[idx].hasData = true;
   });
 
   buildChart(dayData, month, actualDays);
@@ -238,7 +258,8 @@ function buildChart(dayData, month, actualDays) {
     labels.push(d <= actualDays ? String(d) : '');
     if (d <= actualDays) {
       var dd = dayData[d - 1];
-      ppmArr.push(dd.input > 0 ? Math.round(dd.bad / dd.input * 1000000) : 0);
+      // 해당 일자에 실제 데이터가 없으면 null (선이 끊기고 빈 칸으로 표시됨)
+      ppmArr.push(dd.hasData ? (dd.input > 0 ? Math.round(dd.bad / dd.input * 1000000) : 0) : null);
     } else {
       ppmArr.push(null);
     }
@@ -262,12 +283,28 @@ function buildChart(dayData, month, actualDays) {
           borderColor: '#cc0000',
           backgroundColor: 'rgba(204,0,0,0.07)',
           borderWidth: 2,
-          pointRadius: 4,
+          pointRadius: function(ctx) {
+            return ctx.parsed && ctx.parsed.y !== null ? 4 : 0;
+          },
           pointBackgroundColor: '#cc0000',
           pointBorderColor: '#fff',
           pointBorderWidth: 1.5,
           tension: 0,
-          spanGaps: false
+          spanGaps: true,
+          segment: {
+            borderDash: function(ctx) {
+              // 양쪽 끝 중 하나라도 null이었던 구간(보간 구간)은 점선으로 표시
+              var p0 = ctx.p0.parsed, p1 = ctx.p1.parsed;
+              var raw0 = ppmArr[ctx.p0DataIndex];
+              var raw1 = ppmArr[ctx.p1DataIndex];
+              return (raw0 === null || raw1 === null) ? [4, 4] : undefined;
+            },
+            borderColor: function(ctx) {
+              var raw0 = ppmArr[ctx.p0DataIndex];
+              var raw1 = ppmArr[ctx.p1DataIndex];
+              return (raw0 === null || raw1 === null) ? '#bbb' : '#cc0000';
+            }
+          }
         },
         {
           label: '목표(0PPM)',
@@ -324,7 +361,7 @@ function buildChart(dayData, month, actualDays) {
         c2.textAlign = 'center';
         meta.data.forEach(function (pt, i) {
           var v = ds.data[i];
-          if (v === null || v === 0) return;
+          if (v === null || v === undefined || v === 0) return;
           c2.fillText(v.toLocaleString(), pt.x, pt.y - 10);
         });
         c2.restore();
@@ -400,7 +437,7 @@ function buildTable(dayData, month, actualDays) {
       var dd3     = dayData[d3 - 1];
       var v       = getVal(dd3, f.key);
       var holiday = isHoliday(YEAR, month, d3);
-      var hasData = dd3.input > 0;
+      var hasData = dd3.hasData;
       var isBad   = hasData && ((f.ppm && v > 0) || ((f.key === 'bad' || f.key === 'badsum') && v > 0));
       var cls = [];
       if (holiday) cls.push('td-holiday');
