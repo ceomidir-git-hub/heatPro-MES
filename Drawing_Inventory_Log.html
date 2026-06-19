@@ -63,7 +63,18 @@ tbody tr:hover td { background: #f0f5fc; }
 .empty-sign { display: inline-block; width: 46px; height: 46px; border-radius: 50%; border: 1.5px dashed #bbb; }
 .stamp.default-mark { border-style: dashed; opacity: 0.85; }
 
-.edit-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.edit-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; }
+.stamp-clickable { cursor: pointer; transition: opacity .15s, transform .15s; }
+.stamp-clickable:hover { opacity: 0.7; transform: scale(1.05); }
+.empty-sign-clickable { cursor: pointer; transition: opacity .15s, transform .15s; }
+.empty-sign-clickable:hover { opacity: 0.55; transform: scale(1.05); }
+.edit-panel {
+  display: none;
+  flex-direction: column; align-items: center; gap: 3px;
+  margin-top: 5px; padding-top: 5px;
+  border-top: 1px dashed #ccc;
+}
+.edit-panel.open { display: flex; }
 .edit-input {
   width: 70px; height: 22px; padding: 0 4px;
   border: 1px solid #b0b8c8; border-radius: 3px;
@@ -78,12 +89,19 @@ tbody tr:hover td { background: #f0f5fc; }
   background: #fffde7;
 }
 .edit-date:focus { outline: none; border-color: #1a3a5c; background: #fff; }
+.btn-row-actions { display: flex; gap: 3px; }
 .btn-save-row {
   height: 19px; padding: 0 8px; font-size: 10px;
   background: #1a3a5c; color: #fff; border: none; border-radius: 3px;
   cursor: pointer; font-family: inherit;
 }
 .btn-save-row:hover { background: #254f7a; }
+.btn-cancel-row {
+  height: 19px; padding: 0 8px; font-size: 10px;
+  background: #fff; color: #888; border: 1px solid #ccc; border-radius: 3px;
+  cursor: pointer; font-family: inherit;
+}
+.btn-cancel-row:hover { background: #f5f5f5; }
 .saved-ok { color: #2e7d32; font-size: 10px; }
 .default-tag { font-size: 9px; color: #999; }
 
@@ -100,7 +118,7 @@ tbody tr:hover td { background: #f0f5fc; }
 
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .top-bar .sub, .toolbar, .kpi-row, .card-hd .btn-csv, .btn-save-row, .edit-input, .edit-date, .status-bar { display: none !important; }
+  .top-bar .sub, .toolbar, .kpi-row, .card-hd .btn-csv, .btn-save-row, .btn-cancel-row, .edit-input, .edit-date, .edit-panel, .status-bar { display: none !important; }
   body { background: #fff; }
   .container { padding: 0; max-width: 100%; }
   .print-header { display: block !important; }
@@ -223,8 +241,8 @@ tbody tr:hover td { background: #f0f5fc; }
             <th rowspan="2" style="width:84px">고객사</th>
             <th rowspan="2" class="td-l" style="width:100px;padding-left:8px">품명</th>
             <th rowspan="2" style="width:130px">품번</th>
-            <th rowspan="2" style="width:140px">접수현황 (일자+확인) ✎</th>
-            <th rowspan="2" style="width:140px">반납현황 (일자+확인) ✎</th>
+            <th rowspan="2" style="width:120px">접수현황</th>
+            <th rowspan="2" style="width:120px">반납현황</th>
             <th rowspan="2" style="width:60px">비고</th>
           </tr>
           <tr></tr>
@@ -360,35 +378,46 @@ function resetFilter() {
   document.getElementById('tableTitle').textContent='도면 접수 / 반납 현황';
 }
 
-/* 도장 — 기본값(부서 자동매핑)인 경우 점선 테두리로 구분 표시 */
-function makeStamp(name, dateStr, isDefault) {
-  if (!name || !dateStr) return '<div class="empty-sign"></div>';
-  var cls = isDefault ? 'stamp default-mark' : 'stamp';
-  return '<div class="'+cls+'"><span class="sn">'+name+'</span><span class="sd">26.'+fmtDisp(dateStr)+'</span></div>';
+/* 도장 — 클릭하면 편집 패널이 펼쳐짐. 기본값(부서 자동매핑)인 경우 점선 테두리로 구분 표시 */
+function makeStamp(name, dateStr, isDefault, rowIdx, field) {
+  var toggleAttr = ' onclick="toggleEdit('+rowIdx+',\''+field+'\')"';
+  if (!name || !dateStr) {
+    return '<div class="empty-sign empty-sign-clickable"'+toggleAttr+'></div>';
+  }
+  var cls = isDefault ? 'stamp default-mark stamp-clickable' : 'stamp stamp-clickable';
+  return '<div class="'+cls+'"'+toggleAttr+'><span class="sn">'+name+'</span><span class="sd">26.'+fmtDisp(dateStr)+'</span></div>';
 }
 
-/* 확인자 + 날짜 동시 편집 셀 */
+/* 확인자 + 날짜 — 평소엔 도장만, 클릭하면 편집 패널 펼침 */
 function makeEditCell(rowIdx, field, name, dateStr, isDefault) {
-  var stampHtml = makeStamp(name, dateStr, isDefault);
+  var stampHtml = makeStamp(name, dateStr, isDefault, rowIdx, field);
   var tagHtml = isDefault ? '<span class="default-tag">(기본담당)</span>' : '';
   return '<div class="edit-cell">'
     + '<div id="stamp_'+field+'_'+rowIdx+'">'+stampHtml+'</div>'
-    + '<input class="edit-input" type="text" placeholder="이름" value="'+(name||'')+'" '
-      + 'id="inp_'+field+'_'+rowIdx+'" '
-      + 'oninput="onConfirmChange('+rowIdx+',\''+field+'\')" />'
-    + '<input class="edit-date" type="date" value="'+(dateStr||'')+'" '
-      + 'id="date_'+field+'_'+rowIdx+'" '
-      + 'onchange="onConfirmChange('+rowIdx+',\''+field+'\')" />'
-    + '<button class="btn-save-row" onclick="saveConfirm('+rowIdx+',\''+field+'\')">저장</button>'
-    + '<div id="savemsg_'+field+'_'+rowIdx+'">'+tagHtml+'</div>'
+    + '<div id="tag_'+field+'_'+rowIdx+'">'+tagHtml+'</div>'
+    + '<div class="edit-panel" id="panel_'+field+'_'+rowIdx+'">'
+      + '<input class="edit-input" type="text" placeholder="이름" value="'+(name||'')+'" '
+        + 'id="inp_'+field+'_'+rowIdx+'" />'
+      + '<input class="edit-date" type="date" value="'+(dateStr||'')+'" '
+        + 'id="date_'+field+'_'+rowIdx+'" />'
+      + '<div class="btn-row-actions">'
+        + '<button class="btn-save-row" onclick="saveConfirm('+rowIdx+',\''+field+'\')">저장</button>'
+        + '<button class="btn-cancel-row" onclick="toggleEdit('+rowIdx+',\''+field+'\')">닫기</button>'
+      + '</div>'
+      + '<div id="savemsg_'+field+'_'+rowIdx+'"></div>'
+    + '</div>'
     + '</div>';
 }
 
-function onConfirmChange(rowIdx, field) {
-  var name = document.getElementById('inp_'+field+'_'+rowIdx).value.trim();
-  var date = document.getElementById('date_'+field+'_'+rowIdx).value;
-  document.getElementById('stamp_'+field+'_'+rowIdx).innerHTML = makeStamp(name, date, false);
-  document.getElementById('savemsg_'+field+'_'+rowIdx).innerHTML = '';
+/* 도장 클릭 시 편집 패널 펼침/접힘 토글 */
+function toggleEdit(rowIdx, field) {
+  var panel = document.getElementById('panel_'+field+'_'+rowIdx);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    var inp = document.getElementById('inp_'+field+'_'+rowIdx);
+    if (inp) inp.focus();
+  }
 }
 
 function saveConfirm(rowIdx, field) {
@@ -419,8 +448,15 @@ function saveConfirm(rowIdx, field) {
       if (json.result === 'ok') {
         if (field==='rec') { r['접수확인자']=name; r['접수일자']=date; }
         else                { r['반납확인자']=name; r['반납일자']=date; }
+        /* 도장을 새 값으로 갱신하고, 기본담당 표시는 제거 */
+        document.getElementById('stamp_'+field+'_'+rowIdx).innerHTML = makeStamp(name, date, false, rowIdx, field);
+        document.getElementById('tag_'+field+'_'+rowIdx).innerHTML = '';
         msgEl.innerHTML='<span class="saved-ok">✓ 저장됨</span>';
-        setTimeout(function(){ msgEl.innerHTML=''; }, 2000);
+        setTimeout(function(){
+          msgEl.innerHTML='';
+          var panel = document.getElementById('panel_'+field+'_'+rowIdx);
+          if (panel) panel.classList.remove('open');
+        }, 1200);
       } else {
         msgEl.innerHTML='<span style="color:#c00;font-size:10px">저장 실패</span>';
       }
@@ -481,7 +517,7 @@ function render(rows, from, to, customer) {
   }).join('');
 
   document.getElementById('tbody').innerHTML = html;
-  setStatusBar('#4caf50','조회 완료 · '+rows.length+'건  (반납완료 '+done+'건 / 반납대기 '+wait+'건) · ✎ 확인자/날짜 수정 후 [저장] 클릭');
+  setStatusBar('#4caf50','조회 완료 · '+rows.length+'건  (반납완료 '+done+'건 / 반납대기 '+wait+'건) · 도장을 클릭하면 확인자/날짜 수정 가능');
 }
 
 function doPrint() {
