@@ -30,8 +30,8 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .chart-wrap { position: relative; width: 100%; height: clamp(200px,28vw,300px); }
 
 .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1000px; }
-th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1100px; table-layout: fixed; }
+th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
 .th-none    { background: #cccccc !important; color: #999 !important; }
@@ -74,10 +74,11 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
   .chart-wrap { height: 130px !important; }
 
   /* 테이블 인쇄용 축소 폰트 */
-  table { font-size: 7.5px !important; }
-  th, td { padding: 2px 2px !important; }
+  table { font-size: 7.5px !important; min-width: 0 !important; width: 100% !important; }
+  th, td { padding: 2px 1px !important; }
   .legend { font-size: 8px; margin-bottom: 3px; }
   .legend-dot { width: 9px; height: 9px; }
+  .tbl-wrap { overflow: visible !important; }
 
   thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   td.col-group, td.col-label, td.col-sub, td.total-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -107,7 +108,7 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
   <label>설비명 :</label>
   <select id="selEquip"><option value="">전체</option></select>
   <button class="btn-search" onclick="loadData()">조 회</button>
-  <button class="btn-pdf" onclick="window.print()">🖨️ PDF 저장</button>
+  <button class="btn-pdf" onclick="printWithChartFix()">🖨️ PDF 저장</button>
 </div>
 
 <div class="container">
@@ -156,6 +157,30 @@ function isHoliday(y, m, d) {
   return HOLIDAYS.indexOf(k) >= 0;
 }
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+/* ── 인쇄 시 Chart.js 캔버스가 빈 화면으로 찍히는 문제 방지 ──
+   원인: window.print() 호출 시점에 @media print 레이아웃으로
+   전환되기 전 캔버스가 기존 화면 크기로 고정되어 있어,
+   인쇄 렌더러가 차트를 제대로 캡처하지 못하는 경우가 있음.
+   해결: print 직전/직후 차트를 강제로 resize. */
+function printWithChartFix() {
+  if (myChart) {
+    myChart.resize();
+    setTimeout(function () {
+      myChart.resize();
+      window.print();
+    }, 150);
+  } else {
+    window.print();
+  }
+}
+
+window.addEventListener('beforeprint', function () {
+  if (myChart) myChart.resize();
+});
+window.addEventListener('afterprint', function () {
+  if (myChart) myChart.resize();
+});
 
 window.onload = function () {
   var sel = document.getElementById('selMonth');
@@ -320,6 +345,7 @@ function buildChart(dayData, month, actualDays) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 0,
       clip: false,
       layout: { padding: { top: 24 } },
       scales: {
@@ -371,6 +397,16 @@ function buildChart(dayData, month, actualDays) {
 }
 
 function buildTable(dayData, month, actualDays) {
+  // 열 너비 고정: 구분(2칸 분량), 합계, 날짜 31개
+  var colgroup = '<colgroup>'
+    + '<col style="width:34px">'   // 구분(불량 그룹)
+    + '<col style="width:62px">'   // 구분(소항목/라벨)
+    + '<col style="width:54px">';  // 합계
+  for (var ci = 1; ci <= MAX_DAYS; ci++) {
+    colgroup += '<col style="width:32px">';
+  }
+  colgroup += '</colgroup>';
+
   // 헤더 행
   var thRow = '<tr><th colspan="2">구분</th><th>합계</th>';
   for (var d = 1; d <= MAX_DAYS; d++) {
@@ -400,7 +436,7 @@ function buildTable(dayData, month, actualDays) {
   ];
 
   var SUB_COUNT = 6;
-  var html = '<table><thead>' + thRow + '</thead><tbody>';
+  var html = '<table>' + colgroup + '<thead>' + thRow + '</thead><tbody>';
 
   ROWS.forEach(function (f, fi) {
     var isFirstSub = f.sub && (fi === 0 || !ROWS[fi - 1].sub);
