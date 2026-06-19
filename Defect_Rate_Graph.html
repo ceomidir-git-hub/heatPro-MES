@@ -38,6 +38,7 @@ thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .td-holiday { background: #fff5f5 !important; }
 .td-none    { background: #eeeeee !important; color: #bbb !important; }
 td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; text-align: left; padding-left: 5px; }
+td.col-label + td.col-label { border-left: none; }
 td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; }
 td.col-sub   { background: #f5f7fa; color: #1a3a5c; text-align: left; padding-left: 12px; }
 td.total-col { background: #fff8e1 !important; font-weight: 700; }
@@ -72,6 +73,9 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 
   /* 차트 높이를 인쇄 전용으로 축소 (반응형 clamp 무시) */
   .chart-wrap { height: 130px !important; }
+  /* 인쇄 시: canvas 숨기고 정적 이미지로 대체 (body.is-printing 클래스 기준) */
+  body.is-printing #myChart { display: none !important; }
+  body.is-printing #chartPrintImg { display: block !important; }
 
   /* 테이블 인쇄용 축소 폰트 */
   table { font-size: 7.5px !important; min-width: 0 !important; width: 100% !important; }
@@ -118,7 +122,10 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
       <span class="target">[목표 : 0 PPM]</span>
     </div>
     <div class="card-body">
-      <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+      <div class="chart-wrap">
+        <canvas id="myChart"></canvas>
+        <img id="chartPrintImg" alt="불량률 차트" style="display:none; width:100%; height:100%; object-fit:contain;">
+      </div>
     </div>
   </div>
 
@@ -159,27 +166,34 @@ function isHoliday(y, m, d) {
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
 /* ── 인쇄 시 Chart.js 캔버스가 빈 화면으로 찍히는 문제 방지 ──
-   원인: window.print() 호출 시점에 @media print 레이아웃으로
-   전환되기 전 캔버스가 기존 화면 크기로 고정되어 있어,
-   인쇄 렌더러가 차트를 제대로 캡처하지 못하는 경우가 있음.
-   해결: print 직전/직후 차트를 강제로 resize. */
+   원인: 인쇄 레이아웃 전환 시점에 캔버스가 비워지거나 크기가
+   재계산되며 인쇄 렌더러가 차트를 제대로 캡처하지 못함.
+   해결: 인쇄 직전 차트를 PNG(base64) 이미지로 캡처해서
+   <img> 태그로 바꿔치기하고, 인쇄가 끝나면 다시 canvas로 복원. */
 function printWithChartFix() {
-  if (myChart) {
-    myChart.resize();
-    setTimeout(function () {
-      myChart.resize();
-      window.print();
-    }, 150);
-  } else {
-    window.print();
+  if (!myChart) { window.print(); return; }
+  try {
+    var dataUrl = myChart.toBase64Image('image/png', 1.0);
+    var img = document.getElementById('chartPrintImg');
+    img.src = dataUrl;
+    document.body.classList.add('is-printing');
+  } catch (e) {
+    // 캡처 실패해도 인쇄는 진행
   }
+  setTimeout(function () { window.print(); }, 60);
 }
 
 window.addEventListener('beforeprint', function () {
-  if (myChart) myChart.resize();
+  if (!myChart) return;
+  // Ctrl+P 등 버튼을 거치지 않고 직접 호출된 경우 대비
+  var img = document.getElementById('chartPrintImg');
+  if (img && !img.src) {
+    try { img.src = myChart.toBase64Image('image/png', 1.0); } catch (e) {}
+  }
+  document.body.classList.add('is-printing');
 });
 window.addEventListener('afterprint', function () {
-  if (myChart) myChart.resize();
+  document.body.classList.remove('is-printing');
 });
 
 window.onload = function () {
@@ -299,6 +313,7 @@ function buildChart(dayData, month, actualDays) {
 
   myChart = new Chart(ctx, {
     type: 'line',
+    devicePixelRatio: 2,
     data: {
       labels: labels,
       datasets: [
@@ -407,8 +422,8 @@ function buildTable(dayData, month, actualDays) {
   }
   colgroup += '</colgroup>';
 
-  // 헤더 행
-  var thRow = '<tr><th colspan="2">구분</th><th>합계</th>';
+  // 헤더 행 — 바디와 동일하게 "구분" 영역을 2개의 th로 분리 (colspan 미사용 → 컬럼 매핑 어긋남 방지)
+  var thRow = '<tr><th>구분</th><th></th><th>합계</th>';
   for (var d = 1; d <= MAX_DAYS; d++) {
     if (d > actualDays) {
       thRow += '<th class="th-none">' + d + '</th>';
@@ -449,7 +464,7 @@ function buildTable(dayData, month, actualDays) {
 
     html += '<tr' + (f.ppm ? ' class="row-ppm"' : '') + '>';
 
-    // 구분열
+    // 구분열 — 항상 2개의 td로 구성 (colspan 미사용)
     if (isFirstSub) {
       html += '<td class="col-group" rowspan="' + SUB_COUNT + '">불&nbsp;량</td>';
       html += '<td class="col-sub">' + f.label + '</td>';
@@ -457,7 +472,7 @@ function buildTable(dayData, month, actualDays) {
       html += '<td class="col-sub">' + f.label + '</td>';
     } else {
       var labelStyle = f.ppm ? ' style="color:#cc0000;"' : '';
-      html += '<td colspan="2" class="col-label"' + labelStyle + '>' + f.label + '</td>';
+      html += '<td class="col-label"' + labelStyle + '>' + f.label + '</td><td class="col-label"' + labelStyle + '></td>';
     }
 
     // 합계열
