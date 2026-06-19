@@ -30,7 +30,7 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .chart-wrap { position: relative; width: 100%; height: clamp(200px,28vw,300px); }
 
 .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1100px; table-layout: fixed; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1170px; table-layout: fixed; }
 th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
@@ -38,7 +38,6 @@ thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .td-holiday { background: #fff5f5 !important; }
 .td-none    { background: #eeeeee !important; color: #bbb !important; }
 td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; text-align: left; padding-left: 5px; }
-td.col-label + td.col-label { border-left: none; }
 td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; }
 td.col-sub   { background: #f5f7fa; color: #1a3a5c; text-align: left; padding-left: 12px; }
 td.total-col { background: #fff8e1 !important; font-weight: 700; }
@@ -414,16 +413,16 @@ function buildChart(dayData, month, actualDays) {
 function buildTable(dayData, month, actualDays) {
   // 열 너비 고정: 구분(2칸 분량), 합계, 날짜 31개
   var colgroup = '<colgroup>'
-    + '<col style="width:34px">'   // 구분(불량 그룹)
-    + '<col style="width:62px">'   // 구분(소항목/라벨)
-    + '<col style="width:54px">';  // 합계
+    + '<col style="width:44px">'   // 구분(불량 그룹)
+    + '<col style="width:80px">'   // 구분(소항목/라벨) — 잘림 방지로 확대
+    + '<col style="width:54px">';  // 합계(그대로 유지)
   for (var ci = 1; ci <= MAX_DAYS; ci++) {
     colgroup += '<col style="width:32px">';
   }
   colgroup += '</colgroup>';
 
-  // 헤더 행 — 바디와 동일하게 "구분" 영역을 2개의 th로 분리 (colspan 미사용 → 컬럼 매핑 어긋남 방지)
-  var thRow = '<tr><th>구분</th><th></th><th>합계</th>';
+  // 헤더 행 — "구분"을 colspan=2로 병합 (바디 일반행과 동일 구조)
+  var thRow = '<tr><th colspan="2">구분</th><th>합계</th>';
   for (var d = 1; d <= MAX_DAYS; d++) {
     if (d > actualDays) {
       thRow += '<th class="th-none">' + d + '</th>';
@@ -464,7 +463,7 @@ function buildTable(dayData, month, actualDays) {
 
     html += '<tr' + (f.ppm ? ' class="row-ppm"' : '') + '>';
 
-    // 구분열 — 항상 2개의 td로 구성 (colspan 미사용)
+    // 구분열 — 일반 행은 colspan=2로 병합(라벨 잘림 방지), 불량 소항목 행만 분리 유지
     if (isFirstSub) {
       html += '<td class="col-group" rowspan="' + SUB_COUNT + '">불&nbsp;량</td>';
       html += '<td class="col-sub">' + f.label + '</td>';
@@ -472,7 +471,7 @@ function buildTable(dayData, month, actualDays) {
       html += '<td class="col-sub">' + f.label + '</td>';
     } else {
       var labelStyle = f.ppm ? ' style="color:#cc0000;"' : '';
-      html += '<td class="col-label"' + labelStyle + '>' + f.label + '</td><td class="col-label"' + labelStyle + '></td>';
+      html += '<td colspan="2" class="col-label"' + labelStyle + '>' + f.label + '</td>';
     }
 
     // 합계열
