@@ -413,11 +413,11 @@ function buildChart(dayData, month, actualDays) {
 function buildTable(dayData, month, actualDays) {
   // 열 너비 고정: 구분(2칸 분량), 합계, 날짜 31개
   var colgroup = '<colgroup>'
-    + '<col style="width:44px">'   // 구분(불량 그룹)
-    + '<col style="width:80px">'   // 구분(소항목/라벨) — 잘림 방지로 확대
-    + '<col style="width:54px">';  // 합계(그대로 유지)
+    + '<col style="width:3.76%">'   // 구분(불량 그룹)
+    + '<col style="width:6.84%">'   // 구분(소항목/라벨)
+    + '<col style="width:4.62%">';  // 합계
   for (var ci = 1; ci <= MAX_DAYS; ci++) {
-    colgroup += '<col style="width:32px">';
+    colgroup += '<col style="width:2.735%">';  // 날짜 31개 (합계 약 84.8%)
   }
   colgroup += '</colgroup>';
 
@@ -522,4 +522,3 @@ function getVal(dd, key) {
 }
 </script>
 </body>
-</html>
