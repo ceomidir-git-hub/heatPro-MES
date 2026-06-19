@@ -3,51 +3,436 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>불량률(G) — HeatPro MES</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>불량률 현황 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  :root {
-    --bg:#15181D; --panel:#1F242C; --line:#323A46;
-    --text:#EAF0F6; --muted:#8A99AC; --accent:#FF6B35;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background:var(--bg); color:var(--text);
-    font-family:'Noto Sans KR', sans-serif;
-    min-height:100vh;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:16px;
-  }
-  .icon { font-size:3rem; }
-  .title { font-size:2rem; font-weight:700; letter-spacing:0.04em; }
-  .sub {
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.9rem; color:var(--muted); letter-spacing:0.1em;
-  }
-  .badge {
-    margin-top:8px;
-    padding:6px 20px;
-    border:1px solid var(--line);
-    border-radius:999px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.8rem; color:var(--muted);
-  }
-  .back {
-    margin-top:32px;
-    padding:10px 28px;
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:8px; color:var(--muted);
-    text-decoration:none; font-size:0.9rem;
-    transition:color 0.15s, border-color 0.15s;
-  }
-  .back:hover { color:var(--accent); border-color:var(--accent); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+
+.top-bar { background: #1a3a5c; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.top-bar h1 { font-size: clamp(13px,1.8vw,18px); font-weight: 700; letter-spacing: 1px; }
+.top-bar .sub { font-size: clamp(10px,1.1vw,12px); opacity: 0.75; }
+
+.search-panel { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 9px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.search-panel label { font-size: 13px; font-weight: 600; color: #1a3a5c; white-space: nowrap; }
+.search-panel select { padding: 5px 10px; border: 1px solid #aaa; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.sep { color: #ccc; font-size: 18px; }
+.btn-search { background: #1a3a5c; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-search:hover { background: #2a5a8c; }
+.btn-pdf { background: #fff; color: #1a3a5c; border: 1.5px solid #1a3a5c; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; margin-left: auto; }
+.btn-pdf:hover { background: #e8ecf5; }
+
+.container { padding: 16px; max-width: 1400px; margin: 0 auto; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+.card-title { background: #1a3a5c; color: #fff; padding: 8px 16px; font-size: clamp(12px,1.4vw,14px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.card-title .target { font-size: 12px; font-weight: 400; opacity: 0.85; }
+.card-body { padding: 12px; }
+.chart-wrap { position: relative; width: 100%; height: clamp(200px,28vw,300px); }
+
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1000px; }
+th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; }
+thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
+.th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
+.th-none    { background: #cccccc !important; color: #999 !important; }
+.td-holiday { background: #fff5f5 !important; }
+.td-none    { background: #eeeeee !important; color: #bbb !important; }
+td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; text-align: left; padding-left: 5px; }
+td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; }
+td.col-sub   { background: #f5f7fa; color: #1a3a5c; text-align: left; padding-left: 12px; }
+td.total-col { background: #fff8e1 !important; font-weight: 700; }
+tr.row-ppm td { color: #cc0000; font-weight: 700; }
+td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weight: 700 !important; }
+
+.legend { display: flex; gap: 16px; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend-dot.holiday { background: #ff2222; }
+.legend-dot.none    { background: #cccccc; }
+
+.status-box { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+.status-box.error { color: #c00; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: #1a3a5c; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media print {
+  @page { size: A4 landscape; margin: 8mm 10mm; }
+  body { background: #fff; }
+  .search-panel, .btn-pdf { display: none !important; }
+  .top-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+  .card-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  td.col-group, td.col-label, td.col-sub, td.total-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .td-holiday, .td-none, .td-bad { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .container { padding: 0; max-width: 100%; }
+}
 </style>
 </head>
 <body>
-  <div class="icon">📉</div>
-  <div class="title">불량률(G)</div>
-  <div class="sub">DEFECT RATE GRAPH · HeatPro MES</div>
-  <div class="badge">🚧 준비 중</div>
-  <a class="back" href="index.html">← 대시보드로 돌아가기</a>
+
+<div class="top-bar">
+  <h1>📉 불량률 현황 (Defect Rate Graph)</h1>
+  <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
+</div>
+
+<div class="search-panel">
+  <label>조회 월 :</label>
+  <select id="selMonth">
+    <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+    <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+    <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+    <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+  </select>
+  <span class="sep">|</span>
+  <label>설비명 :</label>
+  <select id="selEquip"><option value="">전체</option></select>
+  <button class="btn-search" onclick="loadData()">조 회</button>
+  <button class="btn-pdf" onclick="window.print()">🖨️ PDF 저장</button>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">
+      <span id="chartTitle">불량률 현황</span>
+      <span class="target">[목표 : 0 PPM]</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">일별 불량 현황 상세</div>
+    <div class="card-body">
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot holiday"></span><span>토요일 · 일요일 · 공휴일</span></div>
+        <div class="legend-item"><span class="legend-dot none"></span><span>해당 월 없는 날짜</span></div>
+      </div>
+      <div id="tableArea" class="tbl-wrap">
+        <div class="status-box">조회 월과 설비명을 선택 후 조회하세요.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var YEAR     = 2026;
+var MAX_DAYS = 31;
+var myChart  = null;
+
+var HOLIDAYS = [
+  '2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01',
+  '2026-05-05','2026-05-25','2026-06-06','2026-08-15',
+  '2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'
+];
+
+function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function getDow(y, m, d)      { return new Date(y, m - 1, d).getDay(); }
+function isHoliday(y, m, d) {
+  var dow = getDow(y, m, d);
+  if (dow === 0 || dow === 6) return true;
+  var k = y + '-' + (m < 10 ? '0' + m : '' + m) + '-' + (d < 10 ? '0' + d : '' + d);
+  return HOLIDAYS.indexOf(k) >= 0;
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+window.onload = function () {
+  var sel = document.getElementById('selMonth');
+  sel.value = new Date().getMonth() + 1;
+  loadMeta();
+};
+
+function loadMeta() {
+  var cb = 'cbMeta_' + Date.now();
+  var sc = document.createElement('script');
+  sc.src = API_URL + '?callback=' + cb;
+  window[cb] = function (data) {
+    document.head.removeChild(sc); delete window[cb];
+    var eqSel = document.getElementById('selEquip');
+    var eqArr = data.equipment || [];
+    eqArr.forEach(function (e) {
+      var name = typeof e === 'object' ? (e.name || e) : e;
+      if (name) eqSel.add(new Option(name, name));
+    });
+  };
+  sc.onerror = function () { document.head.removeChild(sc); delete window[cb]; };
+  document.head.appendChild(sc);
+}
+
+function loadData() {
+  var month = parseInt(document.getElementById('selMonth').value);
+  var equip = document.getElementById('selEquip').value;
+  var eqLabel = equip || '전체';
+
+  document.getElementById('chartTitle').textContent =
+    '불량률 현황 ( ' + month + '월 ) — ' + eqLabel;
+  document.getElementById('tableArea').innerHTML =
+    '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
+
+  var old = document.getElementById('_gs_def');
+  if (old) old.parentNode.removeChild(old);
+
+  // from/to 로 해당 월 전체 범위 전달 (기존 getDefectRateRows 활용)
+  var from = YEAR + '-' + pad2(month) + '-01';
+  var days = getDaysInMonth(YEAR, month);
+  var to   = YEAR + '-' + pad2(month) + '-' + pad2(days);
+
+  var cbName = '_cbDef_' + Date.now();
+  window[cbName] = function (json) {
+    if (json.error) { showError(json.error); return; }
+    processData(json.rows || [], month, equip);
+  };
+
+  var sc = document.createElement('script');
+  sc.id  = '_gs_def';
+  sc.src = API_URL + '?action=defectRate'
+         + '&from='  + from
+         + '&to='    + to
+         + (equip ? '&equipment=' + encodeURIComponent(equip) : '')
+         + '&callback=' + cbName;
+  sc.onerror = function () { showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
+  document.body.appendChild(sc);
+}
+
+function showError(msg) {
+  document.getElementById('tableArea').innerHTML =
+    '<div class="status-box error">⚠️ ' + msg + '</div>';
+}
+
+function processData(rows, month, equip) {
+  var actualDays = getDaysInMonth(YEAR, month);
+
+  // 일별 집계 배열 초기화
+  var dayData = [];
+  for (var i = 0; i < MAX_DAYS; i++) {
+    dayData.push({ input: 0, good: 0, bad: 0, out: 0, cont: 0, scratch: 0, drop: 0, hard: 0, deform: 0 });
+  }
+
+  rows.forEach(function (r) {
+    var ds = String(r['작업일'] || '');
+    var parts = ds.split('-');
+    if (parts.length < 3) return;
+    var d = parseInt(parts[2]);
+    if (d < 1 || d > MAX_DAYS) return;
+    var idx = d - 1;
+    dayData[idx].input   += Number(r['투입수량'] || 0);
+    dayData[idx].good    += Number(r['양품수량'] || 0);
+    dayData[idx].bad     += Number(r['불량수량'] || 0);
+    dayData[idx].out     += Number(r['외관']     || 0);
+    dayData[idx].cont    += Number(r['오염']     || 0);
+    dayData[idx].scratch += Number(r['찍힘']     || 0);
+    dayData[idx].drop    += Number(r['탈락']     || 0);
+    dayData[idx].hard    += Number(r['경도']     || 0);
+    dayData[idx].deform  += Number(r['변형']     || 0);
+  });
+
+  buildChart(dayData, month, actualDays);
+  buildTable(dayData, month, actualDays);
+}
+
+function buildChart(dayData, month, actualDays) {
+  var labels = [], ppmArr = [];
+  for (var d = 1; d <= MAX_DAYS; d++) {
+    labels.push(d <= actualDays ? String(d) : '');
+    if (d <= actualDays) {
+      var dd = dayData[d - 1];
+      ppmArr.push(dd.input > 0 ? Math.round(dd.bad / dd.input * 1000000) : 0);
+    } else {
+      ppmArr.push(null);
+    }
+  }
+
+  if (myChart) { myChart.destroy(); myChart = null; }
+  var ctx = document.getElementById('myChart').getContext('2d');
+
+  var maxPpm = Math.max.apply(null, ppmArr.filter(function(v){ return v !== null; }).concat([0]));
+  var yMax   = Math.max(30000, Math.ceil(maxPpm * 1.3 / 5000) * 5000);
+  var yMin   = -Math.round(yMax * 0.08);
+
+  myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '불량률(PPM)',
+          data: ppmArr,
+          borderColor: '#cc0000',
+          backgroundColor: 'rgba(204,0,0,0.07)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#cc0000',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          tension: 0,
+          spanGaps: false
+        },
+        {
+          label: '목표(0PPM)',
+          data: Array(MAX_DAYS).fill(0),
+          borderColor: '#1a3a5c',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      clip: false,
+      layout: { padding: { top: 24 } },
+      scales: {
+        x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
+        y: {
+          min: yMin,
+          max: yMax,
+          grid: { color: '#f0f0f0' },
+          ticks: {
+            font: { size: 10 },
+            callback: function (v) {
+              if (v < 0) return '';
+              return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+            }
+          }
+        }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return ctx.dataset.label + ': ' +
+                (ctx.parsed.y !== null ? ctx.parsed.y.toLocaleString() + ' PPM' : '—');
+            }
+          }
+        }
+      }
+    },
+    plugins: [{
+      id: 'ppmLabel',
+      afterDatasetsDraw: function (chart) {
+        var ds   = chart.data.datasets[0];
+        var meta = chart.getDatasetMeta(0);
+        var c2   = chart.ctx;
+        c2.save();
+        c2.font      = 'bold 9px Malgun Gothic, sans-serif';
+        c2.fillStyle = '#cc0000';
+        c2.textAlign = 'center';
+        meta.data.forEach(function (pt, i) {
+          var v = ds.data[i];
+          if (v === null || v === 0) return;
+          c2.fillText(v.toLocaleString(), pt.x, pt.y - 10);
+        });
+        c2.restore();
+      }
+    }]
+  });
+}
+
+function buildTable(dayData, month, actualDays) {
+  // 헤더 행
+  var thRow = '<tr><th colspan="2">구분</th><th>합계</th>';
+  for (var d = 1; d <= MAX_DAYS; d++) {
+    if (d > actualDays) {
+      thRow += '<th class="th-none">' + d + '</th>';
+    } else if (isHoliday(YEAR, month, d)) {
+      thRow += '<th class="th-holiday">' + d + '</th>';
+    } else {
+      thRow += '<th>' + d + '</th>';
+    }
+  }
+  thRow += '</tr>';
+
+  var ROWS = [
+    { key: 'input',   label: '생산수량',    sub: false, ppm: false },
+    { key: 'good',    label: '양품수량',    sub: false, ppm: false },
+    { key: 'bad',     label: '불량수량',    sub: false, ppm: false },
+    { key: 'ppm',     label: '불량률(PPM)', sub: false, ppm: true  },
+    { key: 'out',     label: '외관',        sub: true,  ppm: false },
+    { key: 'cont',    label: '오염',        sub: true,  ppm: false },
+    { key: 'scratch', label: '찍힘',        sub: true,  ppm: false },
+    { key: 'drop',    label: '탈락',        sub: true,  ppm: false },
+    { key: 'hard',    label: '경도',        sub: true,  ppm: false },
+    { key: 'deform',  label: '변형',        sub: true,  ppm: false },
+    { key: 'badsum',  label: '불량합계',    sub: false, ppm: false },
+    { key: 'ppm2',    label: '불량률(PPM)', sub: false, ppm: true  }
+  ];
+
+  var SUB_COUNT = 6;
+  var html = '<table><thead>' + thRow + '</thead><tbody>';
+
+  ROWS.forEach(function (f, fi) {
+    var isFirstSub = f.sub && (fi === 0 || !ROWS[fi - 1].sub);
+
+    // 합계
+    var total = 0;
+    for (var d2 = 1; d2 <= actualDays; d2++) {
+      total += getVal(dayData[d2 - 1], f.key);
+    }
+
+    html += '<tr' + (f.ppm ? ' class="row-ppm"' : '') + '>';
+
+    // 구분열
+    if (isFirstSub) {
+      html += '<td class="col-group" rowspan="' + SUB_COUNT + '">불&nbsp;량</td>';
+      html += '<td class="col-sub">' + f.label + '</td>';
+    } else if (f.sub) {
+      html += '<td class="col-sub">' + f.label + '</td>';
+    } else {
+      var labelStyle = f.ppm ? ' style="color:#cc0000;"' : '';
+      html += '<td colspan="2" class="col-label"' + labelStyle + '>' + f.label + '</td>';
+    }
+
+    // 합계열
+    var totBad = f.ppm ? total > 0 : (f.key === 'bad' || f.key === 'badsum') && total > 0;
+    html += '<td class="total-col' + (totBad ? ' td-bad' : '') + '">' + total.toLocaleString() + '</td>';
+
+    // 일별 셀
+    for (var d3 = 1; d3 <= MAX_DAYS; d3++) {
+      if (d3 > actualDays) {
+        html += '<td class="td-none">—</td>';
+        continue;
+      }
+      var dd3     = dayData[d3 - 1];
+      var v       = getVal(dd3, f.key);
+      var holiday = isHoliday(YEAR, month, d3);
+      var hasData = dd3.input > 0;
+      var isBad   = hasData && ((f.ppm && v > 0) || ((f.key === 'bad' || f.key === 'badsum') && v > 0));
+      var cls = [];
+      if (holiday) cls.push('td-holiday');
+      if (isBad)   cls.push('td-bad');
+      html += '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + '>';
+      html += hasData ? v.toLocaleString() : '—';
+      html += '</td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableArea').innerHTML = html;
+}
+
+function getVal(dd, key) {
+  switch (key) {
+    case 'input':   return dd.input;
+    case 'good':    return dd.good;
+    case 'bad':     return dd.bad;
+    case 'ppm':
+    case 'ppm2':    return dd.input > 0 ? Math.round(dd.bad / dd.input * 1000000) : 0;
+    case 'out':     return dd.out;
+    case 'cont':    return dd.cont;
+    case 'scratch': return dd.scratch;
+    case 'drop':    return dd.drop;
+    case 'hard':    return dd.hard;
+    case 'deform':  return dd.deform;
+    case 'badsum':  return dd.out + dd.cont + dd.scratch + dd.drop + dd.hard + dd.deform;
+    default:        return 0;
+  }
+}
+</script>
 </body>
 </html>
