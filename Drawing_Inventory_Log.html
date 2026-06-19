@@ -565,4 +565,11 @@ function downloadCSV() {
   var from = document.getElementById('f-from').value.replace(/-/g,'');
   var to   = document.getElementById('f-to').value.replace(/-/g,'');
   var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  var a = document.createElem
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '도면관리대장_'+from+'_'+to+'.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
