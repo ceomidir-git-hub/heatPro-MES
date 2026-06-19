@@ -8,11 +8,13 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
 
-.top-bar { background: #1a3a5c; color: #fff; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.top-bar { background: #1a3a5c; color: #fff; padding: 0; }
+.top-bar-inner { max-width: 1280px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .top-bar h1 { font-size: clamp(14px,2vw,19px); font-weight: 700; letter-spacing: 1px; }
 .top-bar .sub { font-size: clamp(10px,1.1vw,12px); opacity: 0.70; }
 
-.toolbar { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 0 24px; }
+.toolbar { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 0; }
+.toolbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .search-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; padding: 10px 0 8px; }
 .sg { display: flex; flex-direction: column; gap: 3px; }
 .sg label { font-size: 11px; font-weight: 600; color: #1a3a5c; white-space: nowrap; }
@@ -148,11 +150,14 @@ tbody tr:hover td { background: #f0f5fc; }
 <body>
 
 <div class="top-bar">
+<div class="top-bar-inner">
   <h1>📋 도면관리대장 (Drawing Inventory Log)</h1>
   <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
 </div>
+</div>
 
 <div class="toolbar">
+<div class="toolbar-inner">
   <div class="search-row">
     <div class="sg">
       <label>기간 (입고일 기준)</label>
@@ -205,6 +210,7 @@ tbody tr:hover td { background: #f0f5fc; }
     <span class="chip">기간 + 고객사 + 품명</span>
     <span class="chip">전체 조합</span>
   </div>
+</div>
 </div>
 
 <div class="container">
@@ -360,7 +366,7 @@ function updateDropdowns(rows) {
   rows.forEach(function(r) {
     var n=r['품명']||'', c=r['품번']||'';
     if (n && names.indexOf(n)<0) names.push(n);
-    if (c && codes.indexOf(c)<0) codes.push(c);
+    if (c && c!=='품번확인' && codes.indexOf(c)<0) codes.push(c);
   });
   fillSel('f-name', names.sort());
   fillSel('f-code', codes.sort());
@@ -391,10 +397,9 @@ function makeStamp(name, dateStr, isDefault, rowIdx, field) {
 /* 확인자 + 날짜 — 평소엔 도장만, 클릭하면 편집 패널 펼침 */
 function makeEditCell(rowIdx, field, name, dateStr, isDefault) {
   var stampHtml = makeStamp(name, dateStr, isDefault, rowIdx, field);
-  var tagHtml = isDefault ? '<span class="default-tag">(기본담당)</span>' : '';
   return '<div class="edit-cell">'
     + '<div id="stamp_'+field+'_'+rowIdx+'">'+stampHtml+'</div>'
-    + '<div id="tag_'+field+'_'+rowIdx+'">'+tagHtml+'</div>'
+    + '<div id="tag_'+field+'_'+rowIdx+'"></div>'
     + '<div class="edit-panel" id="panel_'+field+'_'+rowIdx+'">'
       + '<input class="edit-input" type="text" placeholder="이름" value="'+(name||'')+'" '
         + 'id="inp_'+field+'_'+rowIdx+'" />'
@@ -509,7 +514,7 @@ function render(rows, from, to, customer) {
       +'<td>'+fmtDisp(r['작업일']||'')+'</td>'
       +'<td>'+(r['고객사']||'')+'</td>'
       +'<td class="td-l">'+(r['품명']||'')+'</td>'
-      +'<td>'+(r['품번']||'')+'</td>'
+      +'<td>'+(r['품번']==='품번확인' ? '<span style="color:#e65100;font-weight:600">품번확인</span>' : (r['품번']||''))+'</td>'
       +'<td style="padding:3px">'+makeEditCell(i,'rec',r['접수확인자'],recDate,!!r['_recDefault'])+'</td>'
       +'<td style="padding:3px">'+makeEditCell(i,'ret',r['반납확인자'],retDate,!!r['_retDefault'])+'</td>'
       +'<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+note+'</span>':'')+'</td>'
@@ -550,9 +555,9 @@ function downloadCSV() {
       fmtDisp(r['작업일']||''),
       r['고객사']||'', r['품명']||'', r['품번']||'',
       recDate,
-      r['접수확인자'] ? r['접수확인자']+' / 26.'+fmtDisp(recDate) : '',
+      r['접수확인자'] || '',
       retDate,
-      r['반납확인자'] ? r['반납확인자']+' / 26.'+fmtDisp(retDate) : '',
+      r['반납확인자'] || '',
       r['반납확인자'] ? '반납완료' : '반납대기'
     ]);
   });
@@ -560,11 +565,4 @@ function downloadCSV() {
   var from = document.getElementById('f-from').value.replace(/-/g,'');
   var to   = document.getElementById('f-to').value.replace(/-/g,'');
   var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '도면관리대장_'+from+'_'+to+'.csv';
-  a.click();
-}
-</script>
-</body>
-</html>
+  var a = document.createElem
