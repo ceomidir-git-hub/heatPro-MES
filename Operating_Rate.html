@@ -208,6 +208,7 @@ tbody tr:hover td{background:#FAFAF8;}
 <div class="toast" id="toast"></div>
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
 var HOLIDAYS=['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01','2026-05-05','2026-05-25','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'];
 var DAYS=['일','월','화','수','목','금','토'];
 var queryRowMap={};var allDates=[];var rowIdx=0;
@@ -228,7 +229,7 @@ function setToday(){var t=fmtDate(new Date());document.getElementById('fFrom').v
 function resetFilter(){document.getElementById('fFrom').value='';document.getElementById('fTo').value='';}
 function loadEquipList(){
   var cb='cbEq_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?callback='+cb;
+  sc.src=API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){
     document.head.removeChild(sc);delete window[cb];
     var sel=document.getElementById('selEquip');
@@ -247,7 +248,7 @@ function doQuery(){
   if(!from||!to||!eq){showToast('⚠️ 설비와 기간을 모두 선택하세요.');return;}
   setStatus('loading','데이터 불러오는 중...');
   var cb='cbOp_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&equipment='+encodeURIComponent(eq)+'&callback='+cb;
+  sc.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&equipment='+encodeURIComponent(eq)+'&key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){
     document.head.removeChild(sc);delete window[cb];
     var rows=(data&&data.rows)?data.rows:[];
@@ -349,7 +350,7 @@ function saveRow(idx){
   if(!tr||!btn)return;
   function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
   var payload={
-    action:'saveOperatingRate',
+    action:'saveOperatingRate', key:API_KEY,
     작업일:tr.dataset.date,설비명:tr.dataset.eq,설비번호:tr.dataset.eqno,
     건수:toN(tr.dataset.dbcnt),
     조업시간:gF('조업시간'),가동시간:toN(tr.dataset.dbop),비가동시간:toN(tr.dataset.dbnon),
