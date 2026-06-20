@@ -16,6 +16,17 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .search-panel select { padding: 5px 10px; border: 1px solid #aaa; border-radius: 4px; font-size: 13px; font-family: inherit; }
 .btn-search { background: #1a3a5c; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
 .btn-search:hover { background: #2a5a8c; }
+.btn-csv { background: #1d7a3c; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
+.btn-csv:hover { background: #259a4c; }
+.btn-pdf { background: #b3261e; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
+.btn-pdf:hover { background: #d83a30; }
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .top-bar, .search-panel { display: none !important; }
+  .container { padding: 0; }
+  .card { border: none; box-shadow: none; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
 .container { padding: 16px; }
 .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
 .card-title { background: #1a3a5c; color: #fff; padding: 8px 16px; font-size: clamp(13px,1.5vw,15px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
@@ -63,6 +74,8 @@ tr.row-rate td { color: #cc0000; font-weight: 700; }
     <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
   </select>
   <button class="btn-search" onclick="loadData()">조 회</button>
+  <button class="btn-csv" onclick="exportCSV()">⬇ CSV</button>
+  <button class="btn-pdf" onclick="exportPDF()">🖨 PDF</button>
 </div>
 
 <div class="container">
@@ -97,6 +110,7 @@ var TARGET   = 90;
 var MAX_DAYS = 31;
 var myChart  = null;
 var currentMonth = 6;
+var lastData = null; // CSV 내보내기용 마지막 조회 데이터 저장
 
 var HOLIDAYS = ['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01',
   '2026-05-05','2026-05-25','2026-06-06','2026-08-15',
@@ -163,6 +177,12 @@ function processData(rows,month){
     diffArr.push(i<actualDays&&inputArr[i]>0?inputArr[i]-resultArr[i]:null);
     rateArr.push(i<actualDays&&inputArr[i]>0?Math.round(resultArr[i]/inputArr[i]*1000)/10:null);
   }
+
+  lastData = {
+    month:month, actualDays:actualDays,
+    planArr:planArr, inputArr:inputArr, resultArr:resultArr, diffArr:diffArr, rateArr:rateArr,
+    totalPlan:totalPlan, totalInput:totalInput, totalResult:totalResult, totalDiff:totalDiff, totalRate:totalRate
+  };
 
   renderChart(actualDays,month,rateArr,resultArr);
   renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr,
@@ -395,6 +415,80 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
   html+='</tbody></table>';
 
   document.getElementById('tableArea').innerHTML=html;
+}
+
+// ── CSV 다운로드 (표 데이터만, 차트 제외) ──
+function exportCSV(){
+  if(!lastData){ alert('먼저 조회를 진행해 주세요.'); return; }
+  var d=lastData;
+  var fmt=function(v){return(v===null||v===undefined||v===0)?'':String(v);};
+  var fmtR=function(v){return(v===null||v===undefined)?'':String(v);};
+
+  var rows=[];
+  var hdr=['구분','합계'];
+  for(var i=1;i<=MAX_DAYS;i++) hdr.push(i+'일');
+  rows.push(hdr);
+
+  function buildRow(label,arr,total,isRate){
+    var r=[label, isRate?fmtR(total):fmt(total)];
+    for(var i=0;i<MAX_DAYS;i++){
+      if(i<d.actualDays) r.push(isRate?fmtR(arr[i]):fmt(arr[i]));
+      else r.push(''); // 해당 월 없는 날짜는 빈 값
+    }
+    return r;
+  }
+
+  rows.push(buildRow('월간생산계획',d.planArr,d.totalPlan,false));
+  rows.push(buildRow('생산계획',d.inputArr,d.totalInput,false));
+  rows.push(buildRow('생산실적',d.resultArr,d.totalResult,false));
+  rows.push(buildRow('차이',d.diffArr,d.totalDiff,false));
+  rows.push(buildRow('달성율(%)',d.rateArr,d.totalRate,true));
+
+  var csv=rows.map(function(r){
+    return r.map(function(cell){
+      cell=String(cell);
+      if(cell.indexOf(',')>=0||cell.indexOf('"')>=0){
+        cell='"'+cell.replace(/"/g,'""')+'"';
+      }
+      return cell;
+    }).join(',');
+  }).join('\r\n');
+
+  var bom='\uFEFF'; // 엑셀 한글 깨짐 방지 (UTF-8 BOM)
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='월생산달성율_'+YEAR+'년_'+d.month+'월.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── PDF 출력 (브라우저 인쇄 → PDF로 저장, 컬러 유지) ──
+function exportPDF(){
+  if(!lastData||!myChart){ alert('먼저 조회를 진행해 주세요.'); return; }
+
+  var canvas=document.getElementById('myChart');
+  var chartImg=document.createElement('img');
+  chartImg.src=myChart.toBase64Image();
+  chartImg.style.width='100%';
+  chartImg.style.height=canvas.style.height||'100%';
+  chartImg.id='_chartPrintImg';
+
+  canvas.style.display='none';
+  canvas.parentNode.insertBefore(chartImg,canvas);
+
+  function restore(){
+    var img=document.getElementById('_chartPrintImg');
+    if(img) img.parentNode.removeChild(img);
+    canvas.style.display='';
+    window.removeEventListener('afterprint',restore);
+  }
+  window.addEventListener('afterprint',restore);
+
+  window.print();
 }
 
 window.onload=function(){loadData();};
