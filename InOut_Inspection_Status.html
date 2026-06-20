@@ -152,6 +152,7 @@ tbody tr:hover td{background:#FAFAF8;}
 <div class="toast" id="toast"></div>
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
 var allRows=[],filteredRows=[];
 var QT_OPTS=['양호','미실시','불량'];
 var RES_OPTS=['양호','불량','대기'];
@@ -159,13 +160,13 @@ var RES_OPTS=['양호','불량','대기'];
 window.onload=function(){setDefaultDates();loadDropdowns();loadData();};
 function setDefaultDates(){var t=new Date(),y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0');document.getElementById('fFrom').value=y+'-'+m+'-01';document.getElementById('fTo').value=y+'-'+m+'-'+d;}
 function loadDropdowns(){
-  var cb='cbD_'+Date.now(),sc=document.createElement('script');sc.src=API_URL+'?callback='+cb;
+  var cb='cbD_'+Date.now(),sc=document.createElement('script');sc.src=API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){document.head.removeChild(sc);delete window[cb];if(!data)return;var sel=document.getElementById('fCompany');(data.customers||[]).forEach(function(c){var n=typeof c==='string'?c:(c.name||c[0]||'');if(n)sel.add(new Option(n,n));});};
   sc.onerror=function(){document.head.removeChild(sc);delete window[cb];};document.head.appendChild(sc);
 }
 function loadData(){
   setStatus('loading','데이터 불러오는 중...');
-  var cb='cbData_'+Date.now(),sc=document.createElement('script');sc.src=API_URL+'?action=inout&callback='+cb;
+  var cb='cbData_'+Date.now(),sc=document.createElement('script');sc.src=API_URL+'?action=inout&key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){document.head.removeChild(sc);delete window[cb];allRows=(data&&data.rows)?data.rows:[];applyFilter();setStatus('ok','로드 완료 · 총 '+allRows.length+'건');};
   sc.onerror=function(){document.head.removeChild(sc);delete window[cb];allRows=[];renderTable([]);setStatus('error','API 연결 실패');};
   document.head.appendChild(sc);
@@ -224,7 +225,7 @@ function updateKPI(rows){
 }
 function saveRow(idx){
   var tr=document.querySelector('tr[data-idx="'+idx+'"]'),btn=document.getElementById('sbtn-'+idx),row=filteredRows[idx];
-  var payload={action:'updateInOut',rowIndex:row._rowIndex};
+  var payload={action:'updateInOut',key:API_KEY,rowIndex:row._rowIndex};
   tr.querySelectorAll('[data-field]').forEach(function(el){payload[el.dataset.field]=el.value;});
   btn.textContent='저장중';
   fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
