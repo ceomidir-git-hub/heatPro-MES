@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>월생산달성율 | HeatPro MES</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
@@ -20,13 +22,7 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .btn-csv:hover { background: #259a4c; }
 .btn-pdf { background: #b3261e; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
 .btn-pdf:hover { background: #d83a30; }
-@media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .top-bar, .search-panel { display: none !important; }
-  .container { padding: 0; }
-  .card { border: none; box-shadow: none; }
-  @page { size: A4 landscape; margin: 10mm; }
-}
+.btn-pdf:disabled { background: #999; cursor: default; }
 .container { padding: 16px; }
 .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
 .card-title { background: #1a3a5c; color: #fff; padding: 8px 16px; font-size: clamp(13px,1.5vw,15px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
@@ -75,7 +71,7 @@ tr.row-rate td { color: #cc0000; font-weight: 700; }
   </select>
   <button class="btn-search" onclick="loadData()">조 회</button>
   <button class="btn-csv" onclick="exportCSV()">⬇ CSV</button>
-  <button class="btn-pdf" onclick="exportPDF()">🖨 PDF</button>
+  <button class="btn-pdf" onclick="exportPDF()">⬇ PDF</button>
 </div>
 
 <div class="container">
@@ -466,37 +462,47 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
-// ── PDF 출력 (브라우저 인쇄 → PDF로 저장, 컬러 유지) ──
+// ── PDF 다운로드 (.container 영역을 캡처해서 PDF 파일로 자동 저장) ──
 function exportPDF(){
-  if(!lastData||!myChart){ alert('먼저 조회를 진행해 주세요.'); return; }
+  if(!lastData){ alert('먼저 조회를 진행해 주세요.'); return; }
 
-  var canvas=document.getElementById('myChart');
-  var chartImg=document.createElement('img');
-  chartImg.style.width='100%';
-  chartImg.style.height=canvas.style.height||'100%';
-  chartImg.id='_chartPrintImg';
+  var btn=document.querySelector('.btn-pdf');
+  var origText=btn.textContent;
+  btn.textContent='생성 중...';
+  btn.disabled=true;
 
-  function restore(){
-    var img=document.getElementById('_chartPrintImg');
-    if(img) img.parentNode.removeChild(img);
-    canvas.style.display='';
-    window.removeEventListener('afterprint',restore);
-  }
+  var target=document.querySelector('.container');
 
-  // 이미지가 완전히 로드(디코딩)된 후에 인쇄를 호출해야
-  // 인쇄 미리보기에서 차트가 빈 박스로 나오지 않음
-  chartImg.onload=function(){
-    window.addEventListener('afterprint',restore);
-    window.print();
-  };
-  chartImg.onerror=function(){
-    alert('차트 이미지를 생성하지 못했습니다.');
-    restore();
-  };
+  html2canvas(target,{
+    scale:2,                 // 고해상도 캡처
+    backgroundColor:'#ffffff',
+    useCORS:true
+  }).then(function(canvas){
+    var imgData=canvas.toDataURL('image/png');
+    var jsPDFCtor=window.jspdf.jsPDF;
+    var pdf=new jsPDFCtor({orientation:'landscape',unit:'mm',format:'a4'});
 
-  canvas.style.display='none';
-  canvas.parentNode.insertBefore(chartImg,canvas);
-  chartImg.src=myChart.toBase64Image(); // src 지정은 onload 핸들러 등록 이후에
+    var pageW=pdf.internal.pageSize.getWidth();
+    var pageH=pdf.internal.pageSize.getHeight();
+    var margin=8;
+    var maxW=pageW-margin*2;
+    var maxH=pageH-margin*2;
+
+    // 캡처된 이미지를 A4 가로 페이지 안에 비율 유지하며 맞춤(축소)
+    var ratio=Math.min(maxW/canvas.width,maxH/canvas.height);
+    var renderW=canvas.width*ratio;
+    var renderH=canvas.height*ratio;
+    var x=(pageW-renderW)/2;
+    var y=margin;
+
+    pdf.addImage(imgData,'PNG',x,y,renderW,renderH);
+    pdf.save('월생산달성율_'+YEAR+'년_'+lastData.month+'월.pdf');
+  }).catch(function(err){
+    alert('PDF 생성 중 오류가 발생했습니다: '+err.message);
+  }).finally(function(){
+    btn.textContent=origText;
+    btn.disabled=false;
+  });
 }
 
 window.onload=function(){loadData();};
