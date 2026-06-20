@@ -626,6 +626,7 @@
 // ══════════════════════════════════════════════════
 // ▼▼▼ Google Apps Script 웹 앱 배포 URL을 여기에 입력하세요 ▼▼▼
 const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY = '@qgis2026';
 // ▲▲▲ ─────────────────────────────────────────── ▲▲▲
 
 let EMPLOYEES    = [];
@@ -653,7 +654,7 @@ async function loadRawDataFromSheet() {
   btn.disabled = true;
 
   try {
-    const res = await fetch(API_URL, { method: 'GET' });
+    const res = await fetch(API_URL + '?key=' + encodeURIComponent(API_KEY), { method: 'GET' });
     const data = await res.json();
 
     if (data.error) throw new Error(data.error);
@@ -1280,7 +1281,7 @@ async function saveToDbSheet() {
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // CORS 단순요청(preflight 회피)
-      body: JSON.stringify({ action: 'save', record: fieldMap })
+      body: JSON.stringify({ action: 'save', key: API_KEY, record: fieldMap })
     });
     const data = await res.json();
 
@@ -1344,7 +1345,7 @@ async function queryByDate() {
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'query', date: dateVal })
+      body: JSON.stringify({ action: 'query', key: API_KEY, date: dateVal })
     });
     const data = await res.json();
     if (data.result === 'error') throw new Error(data.message || '알 수 없는 오류');
