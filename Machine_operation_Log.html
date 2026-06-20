@@ -144,6 +144,7 @@ tbody tr:hover td{background:#FAFAF8;}
 <div class="toast" id="toast"></div>
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
 var allRows=[],filteredRows=[];
 var EQ_OPTS=['정상','점검중','고장'];
 
@@ -156,7 +157,7 @@ function setDefaultDates(){
 }
 function loadDropdowns(){
   var cb='cbD_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?callback='+cb;
+  sc.src=API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){document.head.removeChild(sc);delete window[cb];if(!data)return;var sel=document.getElementById('fEq');(data.equipment||[]).forEach(function(e){var n=e.name||'';if(n)sel.add(new Option(n,n));});};
   sc.onerror=function(){document.head.removeChild(sc);delete window[cb];};
   document.head.appendChild(sc);
@@ -164,7 +165,7 @@ function loadDropdowns(){
 function loadData(){
   setStatus('loading','데이터 불러오는 중...');
   var cb='cbData_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?action=machineOp&callback='+cb;
+  sc.src=API_URL+'?action=machineOp&key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){document.head.removeChild(sc);delete window[cb];allRows=(data&&data.rows)?data.rows:[];applyFilter();setStatus('ok','로드 완료 · 총 '+allRows.length+'건');};
   sc.onerror=function(){document.head.removeChild(sc);delete window[cb];allRows=[];renderTable([]);setStatus('error','API 연결 실패 — Code.gs에 action=machineOp 분기를 추가하세요.');};
   document.head.appendChild(sc);
@@ -214,7 +215,7 @@ function updateKPI(rows){
 }
 function saveRow(idx){
   var tr=document.querySelector('tr[data-idx="'+idx+'"]'),btn=document.getElementById('sbtn-'+idx),row=filteredRows[idx];
-  var payload={action:'updateMachineOp',rowIndex:row._rowIndex};
+  var payload={action:'updateMachineOp',key:API_KEY,rowIndex:row._rowIndex};
   tr.querySelectorAll('[data-field]').forEach(function(el){payload[el.dataset.field]=el.value;});
   btn.textContent='저장중';
   fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
