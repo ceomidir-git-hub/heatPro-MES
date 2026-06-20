@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>불량률 현황 | HeatPro MES</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
@@ -19,8 +21,12 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .sep { color: #ccc; font-size: 18px; }
 .btn-search { background: #1a3a5c; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .btn-search:hover { background: #2a5a8c; }
-.btn-pdf { background: #fff; color: #1a3a5c; border: 1.5px solid #1a3a5c; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; margin-left: auto; }
+.btn-pdf { background: #fff; color: #1a3a5c; border: 1.5px solid #1a3a5c; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .btn-pdf:hover { background: #e8ecf5; }
+.btn-pdf:disabled { background: #eee; color: #999; border-color: #ccc; cursor: default; }
+.btn-csv { background: #1d7a3c; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; margin-left: auto; }
+.btn-csv:hover { background: #259a4c; }
+.btn-csv:disabled { background: #999; cursor: default; }
 
 .container { padding: 16px; max-width: 1400px; margin: 0 auto; }
 .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
@@ -54,42 +60,6 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 .status-box.error { color: #c00; }
 .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: #1a3a5c; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-@media print {
-  @page { size: A4 landscape; margin: 5mm 7mm; }
-  html, body { background: #fff; height: auto; }
-  .search-panel, .btn-pdf { display: none !important; }
-
-  .top-bar { padding: 4px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .top-bar h1 { font-size: 12px; }
-  .top-bar .sub { font-size: 8px; }
-
-  .container { padding: 0; max-width: 100%; }
-
-  .card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 4px; page-break-inside: avoid; break-inside: avoid; }
-  .card-title { padding: 3px 8px; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .card-body { padding: 4px 6px; }
-
-  /* 차트 높이를 인쇄 전용으로 확대 (테이블을 더 압축해서 공간 확보) */
-  .chart-wrap { height: 260px !important; }
-  /* 인쇄 시: canvas 숨기고 정적 이미지로 대체 (body.is-printing 클래스 기준) */
-  body.is-printing #myChart { display: none !important; }
-  body.is-printing #chartPrintImg { display: block !important; }
-
-  /* 테이블 인쇄용 초축소 폰트 */
-  table { font-size: 6.8px !important; min-width: 0 !important; width: 100% !important; }
-  th, td { padding: 1px 1px !important; line-height: 1.2; }
-  .legend { font-size: 7px; margin-bottom: 2px; }
-  .legend-dot { width: 8px; height: 8px; }
-  .tbl-wrap { overflow: visible !important; }
-
-  thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  td.col-group, td.col-label, td.col-sub, td.total-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .td-holiday, .td-none, .td-bad { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-  /* 페이지 넘침 방지: 전체를 한 장 안에 강제 압축 */
-  .container, .card, .card-body, .tbl-wrap, table { page-break-after: avoid; }
-}
 </style>
 </head>
 <body>
@@ -111,7 +81,8 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
   <label>설비명 :</label>
   <select id="selEquip"><option value="">전체</option></select>
   <button class="btn-search" onclick="loadData()">조 회</button>
-  <button class="btn-pdf" onclick="printWithChartFix()">🖨️ PDF 저장</button>
+  <button class="btn-csv" id="btnCsv" onclick="exportCSV()">⬇ CSV</button>
+  <button class="btn-pdf" id="btnPdf" onclick="exportPDF()">⬇ PDF 다운로드</button>
 </div>
 
 <div class="container">
@@ -123,7 +94,6 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
     <div class="card-body">
       <div class="chart-wrap">
         <canvas id="myChart"></canvas>
-        <img id="chartPrintImg" alt="불량률 차트" style="display:none; width:100%; height:100%; object-fit:contain;">
       </div>
     </div>
   </div>
@@ -148,6 +118,11 @@ var API_KEY = '@qgis2026';
 var YEAR     = 2026;
 var MAX_DAYS = 31;
 var myChart  = null;
+var hasData  = false;   // PDF/CSV 다운로드 가능 여부
+var lastMonth = null;   // 파일명용 마지막 조회 월
+var lastDayData = null; // CSV용 마지막 조회 일별 데이터
+var lastActualDays = 0;
+var lastEquipLabel = '전체';
 
 var HOLIDAYS = [
   '2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01',
@@ -165,36 +140,107 @@ function isHoliday(y, m, d) {
 }
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
-/* ── 인쇄 시 Chart.js 캔버스가 빈 화면으로 찍히는 문제 방지 ──
-   원인: 인쇄 레이아웃 전환 시점에 캔버스가 비워지거나 크기가
-   재계산되며 인쇄 렌더러가 차트를 제대로 캡처하지 못함.
-   해결: 인쇄 직전 차트를 PNG(base64) 이미지로 캡처해서
-   <img> 태그로 바꿔치기하고, 인쇄가 끝나면 다시 canvas로 복원. */
-function printWithChartFix() {
-  if (!myChart) { window.print(); return; }
-  try {
-    var dataUrl = myChart.toBase64Image('image/png', 1.0);
-    var img = document.getElementById('chartPrintImg');
-    img.src = dataUrl;
-    document.body.classList.add('is-printing');
-  } catch (e) {
-    // 캡처 실패해도 인쇄는 진행
-  }
-  setTimeout(function () { window.print(); }, 60);
+/* ── CSV 다운로드 (표 데이터만, 차트 제외) ── */
+function exportCSV() {
+  if (!hasData || !lastDayData) { alert('먼저 조회를 진행해 주세요.'); return; }
+
+  var ROWS = [
+    { key: 'input',   label: '생산수량' },
+    { key: 'good',    label: '양품수량' },
+    { key: 'bad',     label: '불량수량' },
+    { key: 'ppm',     label: '불량률(PPM)' },
+    { key: 'out',     label: '외관' },
+    { key: 'cont',    label: '오염' },
+    { key: 'scratch', label: '찍힘' },
+    { key: 'drop',    label: '탈락' },
+    { key: 'hard',    label: '경도' },
+    { key: 'deform',  label: '변형' },
+    { key: 'badsum',  label: '불량합계' },
+    { key: 'ppm2',    label: '불량률(PPM)' }
+  ];
+
+  var hdr = ['구분', '합계'];
+  for (var d = 1; d <= MAX_DAYS; d++) hdr.push(d + '일');
+
+  var rowsCsv = [hdr];
+
+  ROWS.forEach(function (f) {
+    var total = 0;
+    for (var d2 = 1; d2 <= lastActualDays; d2++) {
+      total += getVal(lastDayData[d2 - 1], f.key);
+    }
+    var row = [f.label, total];
+    for (var d3 = 1; d3 <= MAX_DAYS; d3++) {
+      if (d3 > lastActualDays) { row.push(''); continue; } // 해당 월 없는 날짜는 빈 값
+      var dd = lastDayData[d3 - 1];
+      row.push(dd.hasData ? getVal(dd, f.key) : '');
+    }
+    rowsCsv.push(row);
+  });
+
+  var csv = rowsCsv.map(function (r) {
+    return r.map(function (cell) {
+      cell = String(cell);
+      if (cell.indexOf(',') >= 0 || cell.indexOf('"') >= 0) {
+        cell = '"' + cell.replace(/"/g, '""') + '"';
+      }
+      return cell;
+    }).join(',');
+  }).join('\r\n');
+
+  var bom = '\uFEFF'; // 엑셀 한글 깨짐 방지
+  var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '불량률현황_' + YEAR + '년_' + lastMonth + '월_' + lastEquipLabel + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
-window.addEventListener('beforeprint', function () {
-  if (!myChart) return;
-  // Ctrl+P 등 버튼을 거치지 않고 직접 호출된 경우 대비
-  var img = document.getElementById('chartPrintImg');
-  if (img && !img.src) {
-    try { img.src = myChart.toBase64Image('image/png', 1.0); } catch (e) {}
-  }
-  document.body.classList.add('is-printing');
-});
-window.addEventListener('afterprint', function () {
-  document.body.classList.remove('is-printing');
-});
+/* ── PDF 다운로드 (.container 영역을 캡처해서 PDF 파일로 자동 저장, 가로 / 컬러 유지) ── */
+function exportPDF() {
+  if (!hasData) { alert('먼저 조회를 진행해 주세요.'); return; }
+
+  var btn = document.getElementById('btnPdf');
+  var origText = btn.textContent;
+  btn.textContent = '생성 중...';
+  btn.disabled = true;
+
+  var target = document.querySelector('.container');
+
+  html2canvas(target, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true
+  }).then(function (canvas) {
+    var imgData = canvas.toDataURL('image/png');
+    var jsPDFCtor = window.jspdf.jsPDF;
+    var pdf = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    var pageW = pdf.internal.pageSize.getWidth();
+    var pageH = pdf.internal.pageSize.getHeight();
+    var margin = 8;
+    var maxW = pageW - margin * 2;
+    var maxH = pageH - margin * 2;
+
+    var ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+    var renderW = canvas.width * ratio;
+    var renderH = canvas.height * ratio;
+    var x = (pageW - renderW) / 2;
+    var y = margin;
+
+    pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+    pdf.save('불량률현황_' + YEAR + '년_' + lastMonth + '월.pdf');
+  }).catch(function (err) {
+    alert('PDF 생성 중 오류가 발생했습니다: ' + err.message);
+  }).finally(function () {
+    btn.textContent = origText;
+    btn.disabled = false;
+  });
+}
 
 window.onload = function () {
   var sel = document.getElementById('selMonth');
@@ -261,7 +307,11 @@ function showError(msg) {
 }
 
 function processData(rows, month, equip) {
+  hasData = true;
+  lastMonth = month;
+  lastEquipLabel = equip || '전체';
   var actualDays = getDaysInMonth(YEAR, month);
+  lastActualDays = actualDays;
 
   // 일별 집계 배열 초기화 (hasData: 해당 일자에 실제 행이 존재했는지)
   var dayData = [];
@@ -288,6 +338,7 @@ function processData(rows, month, equip) {
     dayData[idx].hasData = true;
   });
 
+  lastDayData = dayData;
   buildChart(dayData, month, actualDays);
   buildTable(dayData, month, actualDays);
 }
