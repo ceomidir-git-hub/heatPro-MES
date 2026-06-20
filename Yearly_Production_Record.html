@@ -203,6 +203,7 @@ tbody tr:hover td{background:#FAFAF8;}
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
 var yearlyChart = null;
 var monthlyData = [];  // 집계된 12개월 데이터
 
@@ -222,7 +223,7 @@ function loadData() {
 
   var cb = 'cbYearly_' + Date.now();
   var sc = document.createElement('script');
-  sc.src = API_URL + '?action=yearly&year=' + year + '&callback=' + cb;
+  sc.src = API_URL + '?action=yearly&year=' + year + '&key=' + encodeURIComponent(API_KEY) + '&callback=' + cb;
 
   window[cb] = function (data) {
     document.head.removeChild(sc);
