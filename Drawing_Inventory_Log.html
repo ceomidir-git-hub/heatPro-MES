@@ -275,6 +275,7 @@ tbody tr:hover td { background: #f0f5fc; }
 
 <script>
 var API_URL  = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
 var allRows  = [];
 var filtered = [];
 
@@ -316,7 +317,7 @@ function fetchMaster() {
   };
   var s = document.createElement('script');
   s.id  = '_gs_m';
-  s.src = API_URL+'?callback=_cbM';
+  s.src = API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback=_cbM';
   document.body.appendChild(s);
 }
 function fillSel(id, vals) {
@@ -357,6 +358,7 @@ function applyFilter() {
     +'&customer='+encodeURIComponent(customer)
     +'&product='+encodeURIComponent(name)
     +'&partNo='+encodeURIComponent(code)
+    +'&key='+encodeURIComponent(API_KEY)
     +'&callback=_cbD';
   s.onerror = function(){ showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
   document.body.appendChild(s);
@@ -439,6 +441,7 @@ function saveConfirm(rowIdx, field) {
 
   var payload = {
     action      : 'saveDrawingConfirm',
+    key         : API_KEY,
     workDate    : r['작업일'] || '',
     customer    : r['고객사'] || '',
     partName    : r['품명']   || '',
