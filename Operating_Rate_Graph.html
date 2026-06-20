@@ -44,7 +44,7 @@ thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
 .td-holiday { background: #fff5f5 !important; }
 .td-none    { background: #eeeeee !important; color: #bbb !important; }
 td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; text-align: left; padding-left: 5px; }
-td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; }
+td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; text-align: center; font-size: 10px; white-space: normal; line-height: 1.3; padding: 2px; }
 td.col-sub   { background: #f5f7fa; color: #1a3a5c; text-align: left; padding-left: 12px; }
 td.total-col { background: #fff8e1 !important; font-weight: 700; }
 tr.row-rate td { color: #185fa5; font-weight: 700; }
@@ -146,14 +146,14 @@ function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
 /* 행 정의 — buildTable / exportCSV / getVal 공통 사용 */
 var SUB_GROUPS = [
-  { groupLabel: '계획\n정지', rows: [
+  { groupLabel: '계획정지', rows: [
       { key:'edu',   label:'교육' },
       { key:'const', label:'공사' },
       { key:'dev',   label:'개발' },
       { key:'visit', label:'방문' },
       { key:'etc1',  label:'기타1' }
   ]},
-  { groupLabel: '설비\n정지', rows: [
+  { groupLabel: '설비정지', rows: [
       { key:'elec', label:'전기' },
       { key:'cool', label:'냉각' },
       { key:'coil', label:'코일' },
@@ -178,7 +178,7 @@ function exportCSV() {
     { key: 'opMin',     label: '조업시간' },
     { key: 'planStop',  label: '계획정지' },
     { key: 'loadMin',   label: '부하시간' },
-    { key: 'opTimeMin', label: '가동시간' },
+    { key: 'opTimeMin', label: '가동시간(분)' },
     { key: 'nonOpMin',  label: '비가동시간' },
     { key: 'rate',      label: '가동률(%)' }
   ];
@@ -332,7 +332,7 @@ function processData(rows, month, equip) {
   var dayData = [];
   for (var i = 0; i < MAX_DAYS; i++) {
     dayData.push({
-      opMin: 0, opTimeMin: 0, nonOpMin: 0,
+      opMin: 0, opTimeHr: 0, nonOpMin: 0,
       edu: 0, const: 0, dev: 0, visit: 0, etc1: 0,
       elec: 0, cool: 0, coil: 0, etc2: 0,
       cond: 0, spec: 0, etc3: 0,
@@ -341,7 +341,9 @@ function processData(rows, month, equip) {
   }
 
   /* 설비명을 '전체'로 조회한 경우, 같은 작업일에 여러 설비 행이 들어올 수 있으므로
-     날짜 기준으로 모두 합산한다 (가동시간 합계 ÷ 부하시간 합계 = 가중 평균 가동률). */
+     날짜 기준으로 모두 합산한다 (가동시간 합계 ÷ 부하시간 합계 = 가중 평균 가동률).
+     ⭐ 조업시간 = 가동data 시트의 '조업시간' (이미 분단위, 환산 불필요)
+     ⭐ 가동시간 = 가동data 시트의 '가동시간GD' (시간단위 원본값, 분 표기 시에만 ×60) */
   rows.forEach(function (r) {
     var ds = String(r['작업일'] || '');
     var parts = ds.split('-');
@@ -350,8 +352,8 @@ function processData(rows, month, equip) {
     if (d < 1 || d > MAX_DAYS) return;
     var idx = d - 1;
     var dd = dayData[idx];
-    dd.opMin     += Number(r['조업시간DB'] || 0);
-    dd.opTimeMin += Number(r['가동시간']   || 0);
+    dd.opMin     += Number(r['조업시간']   || 0);
+    dd.opTimeHr  += Number(r['가동시간GD'] || 0);
     dd.nonOpMin  += Number(r['비가동시간'] || 0);
     dd.edu   += Number(r['교육']  || 0); dd.const += Number(r['공사']  || 0);
     dd.dev   += Number(r['개발']  || 0); dd.visit += Number(r['방문']  || 0);
@@ -368,17 +370,18 @@ function processData(rows, month, equip) {
   buildTable(dayData, month, actualDays);
 }
 
-/* 파생값 계산 — 부하시간 = 조업시간 - 계획정지, 가동률(%) = 가동시간 / 부하시간 * 100 */
+/* 파생값 계산 — 부하시간 = 조업시간 - 계획정지, 가동률(%) = 가동시간(분) / 부하시간 * 100 */
 function getVal(dd, key) {
-  var planStop = dd.edu + dd.const + dd.dev + dd.visit + dd.etc1;
-  var loadMin  = dd.opMin - planStop;
+  var planStop  = dd.edu + dd.const + dd.dev + dd.visit + dd.etc1;
+  var loadMin   = dd.opMin - planStop;
+  var opTimeMin = Math.round(dd.opTimeHr * 60); // 가동시간(시간단위 원본) → 분 환산
   switch (key) {
     case 'opMin':     return dd.opMin;
     case 'planStop':  return planStop;
     case 'loadMin':   return loadMin;
-    case 'opTimeMin': return dd.opTimeMin;
+    case 'opTimeMin': return opTimeMin;
     case 'nonOpMin':  return dd.nonOpMin;
-    case 'rate':      return loadMin > 0 ? Math.round(dd.opTimeMin / loadMin * 1000) / 10 : 0;
+    case 'rate':      return loadMin > 0 ? Math.round(opTimeMin / loadMin * 1000) / 10 : 0;
     case 'edu': case 'const': case 'dev': case 'visit': case 'etc1':
     case 'elec': case 'cool': case 'coil': case 'etc2':
     case 'cond': case 'spec': case 'etc3':
@@ -560,12 +563,12 @@ function buildTable(dayData, month, actualDays) {
     html += '</tr>';
   }
 
-  mainRow('조업시간',   'opMin');
-  mainRow('계획정지',   'planStop');
-  mainRow('부하시간',   'loadMin');
-  mainRow('가동시간',   'opTimeMin');
-  mainRow('비가동시간', 'nonOpMin');
-  mainRow('가동률(%)',  'rate', { isRate: true });
+  mainRow('조업시간',     'opMin');
+  mainRow('계획정지',     'planStop');
+  mainRow('부하시간',     'loadMin');
+  mainRow('가동시간(분)', 'opTimeMin');
+  mainRow('비가동시간',   'nonOpMin');
+  mainRow('가동률(%)',    'rate', { isRate: true });
 
   SUB_GROUPS.forEach(function (g) {
     g.rows.forEach(function (f, fi) {
