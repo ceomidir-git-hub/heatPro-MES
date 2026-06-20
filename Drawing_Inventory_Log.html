@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>도면관리대장 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
@@ -31,6 +33,9 @@ body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f
 .btn-reset:hover { background: #f5f5f5; }
 .btn-print { background: #fff; color: #555; border: 1px solid #bbb; }
 .btn-print:hover { background: #f5f5f5; }
+.btn-pdf { background: #b3261e; color: #fff; border: none; font-weight: 600; }
+.btn-pdf:hover { background: #d83a30; }
+.btn-pdf:disabled { background: #999; cursor: default; }
 
 .hint-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 8px; border-top: 1px solid #e8ecf3; font-size: 11px; }
 .hint-row .hl { color: #888; font-weight: 600; margin-right: 2px; }
@@ -198,6 +203,7 @@ tbody tr:hover td { background: #f0f5fc; }
       <button class="btn btn-primary" onclick="applyFilter()">조 회</button>
       <button class="btn btn-reset"   onclick="resetFilter()">초기화</button>
       <button class="btn btn-print"   onclick="doPrint()">🖨 인쇄</button>
+      <button class="btn btn-pdf"     onclick="exportPDF()">⬇ PDF</button>
     </div>
   </div>
   <div class="hint-row">
@@ -506,11 +512,22 @@ function render(rows, from, to, customer) {
   var html = rows.map(function(r, i) {
     var recDate = r['접수일자'] || r['작업일'] || '';
     var retDate = r['반납일자'] || recDate;
+    var isMissing = (r['품번'] === '미접수'); /* 품번 미접수 → 접수/반납/비고 전부 빈칸 */
 
-    var badge = r['반납확인자']
-      ? '<span class="bdone">반납완료</span>'
-      : '<span class="bwait">반납대기</span>';
-    var note = r['비고'] || '';
+    var recCell, retCell, noteCell;
+    if (isMissing) {
+      recCell  = '<td></td>';
+      retCell  = '<td></td>';
+      noteCell = '<td></td>';
+    } else {
+      var badge = r['반납확인자']
+        ? '<span class="bdone">반납완료</span>'
+        : '<span class="bwait">반납대기</span>';
+      var note = r['비고'] || '';
+      recCell  = '<td style="padding:3px">'+makeEditCell(i,'rec',r['접수확인자'],recDate,!!r['_recDefault'])+'</td>';
+      retCell  = '<td style="padding:3px">'+makeEditCell(i,'ret',r['반납확인자'],retDate,!!r['_retDefault'])+'</td>';
+      noteCell = '<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+esc(note)+'</span>':'')+'</td>';
+    }
 
     return '<tr>'
       +'<td>'+(i+1)+'</td>'
@@ -519,9 +536,9 @@ function render(rows, from, to, customer) {
       +'<td>'+esc(r['고객사']||'')+'</td>'
       +'<td class="td-l">'+esc(r['품명']||'')+'</td>'
       +'<td>'+(r['품번']==='품번확인' ? '<span style="color:#e65100;font-weight:600">품번확인</span>' : esc(r['품번']||''))+'</td>'
-      +'<td style="padding:3px">'+makeEditCell(i,'rec',r['접수확인자'],recDate,!!r['_recDefault'])+'</td>'
-      +'<td style="padding:3px">'+makeEditCell(i,'ret',r['반납확인자'],retDate,!!r['_retDefault'])+'</td>'
-      +'<td>'+badge+(note?'<br><span style="font-size:10px;color:#888">'+esc(note)+'</span>':'')+'</td>'
+      +recCell
+      +retCell
+      +noteCell
       +'</tr>';
   }).join('');
 
@@ -532,6 +549,147 @@ function render(rows, from, to, customer) {
 function doPrint() {
   if (!filtered.length) { alert('먼저 데이터를 조회하세요.'); return; }
   window.print();
+}
+
+/* ── PDF 다운로드 (A4 가로, 행이 많으면 자동으로 여러 페이지로 분할) ── */
+function exportPDF() {
+  if (!filtered.length) { alert('먼저 데이터를 조회하세요.'); return; }
+
+  var btn = document.querySelector('.btn-pdf');
+  var origText = btn.textContent;
+  btn.textContent = '생성 중...';
+  btn.disabled = true;
+
+  var ROWS_PER_PAGE = 22; /* A4 가로 1페이지에 들어가는 데이터 행 수 (필요시 조정) */
+
+  var done = filtered.filter(function(r){ return r['반납확인자']; }).length;
+  var wait = filtered.length - done;
+
+  /* 인터랙션 요소(편집패널/버튼) 없이, 화면과 동일한 도장/배지 모양으로 행 HTML 생성 */
+  var rowsHtml = filtered.map(function(r, i) {
+    var recDate = r['접수일자'] || r['작업일'] || '';
+    var retDate = r['반납일자'] || recDate;
+    var isMissing = (r['품번'] === '미접수');
+
+    var recCell, retCell, noteCell;
+    if (isMissing) {
+      recCell = ''; retCell = ''; noteCell = '';
+    } else {
+      recCell = r['접수확인자']
+        ? '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid #b71c1c;color:#b71c1c;line-height:1.3">'
+          +'<span style="font-size:9px;font-weight:700">'+esc(r['접수확인자'])+'</span><span style="font-size:7px">26.'+fmtDisp(recDate)+'</span></div>'
+        : '';
+      retCell = r['반납확인자']
+        ? '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid #b71c1c;color:#b71c1c;line-height:1.3">'
+          +'<span style="font-size:9px;font-weight:700">'+esc(r['반납확인자'])+'</span><span style="font-size:7px">26.'+fmtDisp(retDate)+'</span></div>'
+        : '';
+      var badgeTxt = r['반납확인자']
+        ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;background:#e8f5e9;color:#2e7d32;font-weight:600">반납완료</span>'
+        : '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;background:#fff3e0;color:#e65100;font-weight:600">반납대기</span>';
+      var note = r['비고'] || '';
+      noteCell = badgeTxt + (note ? '<br><span style="font-size:9px;color:#888">'+esc(note)+'</span>' : '');
+    }
+
+    var partNoTxt = r['품번']==='품번확인'
+      ? '<span style="color:#e65100;font-weight:600">품번확인</span>'
+      : esc(r['품번']||'');
+
+    return '<tr>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+(i+1)+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+fmtDisp(r['입고일']||r['작업일']||'')+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+fmtDisp(r['작업일']||'')+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+esc(r['고객사']||'')+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:left;padding-left:8px">'+esc(r['품명']||'')+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+partNoTxt+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+recCell+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+retCell+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px 5px;text-align:center">'+noteCell+'</td>'
+      +'</tr>';
+  });
+
+  var totalPages = Math.ceil(rowsHtml.length / ROWS_PER_PAGE);
+  var pages = [];
+  for (var p = 0; p < totalPages; p++) {
+    pages.push(rowsHtml.slice(p*ROWS_PER_PAGE, (p+1)*ROWS_PER_PAGE).join(''));
+  }
+
+  var theadHtml =
+    '<thead><tr>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:36px">순번</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:70px">입고일</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:70px">작업일</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:90px">고객사</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:160px;text-align:left;padding-left:8px">품명</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:140px">품번</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:90px">접수현황</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:90px">반납현황</th>'
+    +'<th style="border:1px solid #ccc;padding:4px 5px;background:#1a3a5c;color:#fff;width:90px">비고</th>'
+    +'</tr></thead>';
+
+  function buildPageHtml(pageRowsHtml, pageIndex) {
+    return '<div style="width:1400px;padding:24px;background:#fff;box-sizing:border-box;font-family:'+getComputedStyle(document.body).fontFamily+'">'
+      +'<div style="padding:0 0 10px;border-bottom:1px solid #ccc;margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+          +'<div><div style="font-size:20px;font-weight:700;letter-spacing:2px">도 면 관 리 대 장</div>'
+          +'<div style="font-size:11px;color:#555;margin-top:2px">Drawing Inventory Log · HeatPro MES · ISO 9001</div></div>'
+          +'<div style="font-size:11px;color:#555;text-align:right;line-height:1.8">'+document.getElementById('printMeta').innerHTML+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:20px;font-size:12px">'
+          +'<span><b>전체 :</b> '+filtered.length+'건</span>'
+          +'<span><b>반납완료 :</b> <b style="color:#2e7d32">'+done+'건</b></span>'
+          +'<span><b>반납대기 :</b> <b style="color:#e65100">'+wait+'건</b></span>'
+        +'</div>'
+      +'</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px">'+theadHtml+'<tbody>'+pageRowsHtml+'</tbody></table>'
+      +'<div style="margin-top:12px;padding-top:6px;border-top:1px solid #ccc;display:flex;justify-content:space-between;font-size:10px;color:#999">'
+        +'<span>※ 이 문서는 HeatPro MES에서 자동 생성되었습니다.</span>'
+        +'<span>'+(pageIndex+1)+' / '+totalPages+' page</span>'
+      +'</div>'
+    +'</div>';
+  }
+
+  var capture = document.createElement('div');
+  capture.style.position = 'fixed';
+  capture.style.left = '-10000px';
+  capture.style.top = '0';
+  document.body.appendChild(capture);
+
+  var jsPDFCtor = window.jspdf.jsPDF;
+  var pdf = new jsPDFCtor({ orientation:'landscape', unit:'mm', format:'a4' });
+  var pageW = pdf.internal.pageSize.getWidth();
+  var pageH = pdf.internal.pageSize.getHeight();
+  var margin = 8;
+  var maxW = pageW - margin*2;
+  var maxH = pageH - margin*2;
+
+  function renderPage(idx) {
+    if (idx >= pages.length) {
+      document.body.removeChild(capture);
+      pdf.save('도면관리대장_'+nowStr().slice(0,10).replace(/-/g,'')+'.pdf');
+      btn.textContent = origText;
+      btn.disabled = false;
+      return;
+    }
+    capture.innerHTML = buildPageHtml(pages[idx], idx);
+    html2canvas(capture, { scale:2, backgroundColor:'#ffffff', useCORS:true }).then(function(canvas) {
+      var imgData = canvas.toDataURL('image/png');
+      var ratio = Math.min(maxW/canvas.width, maxH/canvas.height);
+      var renderW = canvas.width*ratio;
+      var renderH = canvas.height*ratio;
+      var x = (pageW-renderW)/2;
+      var y = margin;
+      if (idx > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+      renderPage(idx+1);
+    }).catch(function(err) {
+      alert('PDF 생성 중 오류가 발생했습니다: '+err.message);
+      document.body.removeChild(capture);
+      btn.textContent = origText;
+      btn.disabled = false;
+    });
+  }
+
+  renderPage(0);
 }
 
 function setLoading(msg) {
