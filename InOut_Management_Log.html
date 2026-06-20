@@ -561,6 +561,7 @@ tbody tr:hover td { background: #FAFAF8; }
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
 
 var allRows = [];
 var filteredRows = [];
@@ -585,7 +586,7 @@ function setDefaultDates() {
 function loadDropdowns() {
   var cb = 'cbDrop_' + Date.now();
   var sc = document.createElement('script');
-  sc.src = API_URL + '?callback=' + cb;
+  sc.src = API_URL + '?key=' + encodeURIComponent(API_KEY) + '&callback=' + cb;
   window[cb] = function (data) {
     document.head.removeChild(sc);
     delete window[cb];
@@ -606,7 +607,7 @@ function loadData() {
   setStatus('loading', '데이터 불러오는 중...');
   var cb = 'cbInOut_' + Date.now();
   var sc = document.createElement('script');
-  sc.src = API_URL + '?action=inout&callback=' + cb;
+  sc.src = API_URL + '?action=inout&key=' + encodeURIComponent(API_KEY) + '&callback=' + cb;
 
   window[cb] = function (data) {
     document.head.removeChild(sc);
@@ -753,7 +754,7 @@ function saveRow(idx) {
   var btn = document.getElementById('sbtn-' + idx);
   var row = filteredRows[idx];
 
-  var payload = { action: 'updateInOut', rowIndex: row._rowIndex };
+  var payload = { action: 'updateInOut', key: API_KEY, rowIndex: row._rowIndex };
   tr.querySelectorAll('[data-field]').forEach(function (el) {
     payload[el.dataset.field] = el.value;
   });
