@@ -472,13 +472,9 @@ function exportPDF(){
 
   var canvas=document.getElementById('myChart');
   var chartImg=document.createElement('img');
-  chartImg.src=myChart.toBase64Image();
   chartImg.style.width='100%';
   chartImg.style.height=canvas.style.height||'100%';
   chartImg.id='_chartPrintImg';
-
-  canvas.style.display='none';
-  canvas.parentNode.insertBefore(chartImg,canvas);
 
   function restore(){
     var img=document.getElementById('_chartPrintImg');
@@ -486,9 +482,21 @@ function exportPDF(){
     canvas.style.display='';
     window.removeEventListener('afterprint',restore);
   }
-  window.addEventListener('afterprint',restore);
 
-  window.print();
+  // 이미지가 완전히 로드(디코딩)된 후에 인쇄를 호출해야
+  // 인쇄 미리보기에서 차트가 빈 박스로 나오지 않음
+  chartImg.onload=function(){
+    window.addEventListener('afterprint',restore);
+    window.print();
+  };
+  chartImg.onerror=function(){
+    alert('차트 이미지를 생성하지 못했습니다.');
+    restore();
+  };
+
+  canvas.style.display='none';
+  canvas.parentNode.insertBefore(chartImg,canvas);
+  chartImg.src=myChart.toBase64Image(); // src 지정은 onload 핸들러 등록 이후에
 }
 
 window.onload=function(){loadData();};
