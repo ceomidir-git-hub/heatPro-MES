@@ -46,6 +46,7 @@ nav a.active{background:var(--blue-lt);color:var(--blue-dk);border-color:#B5D4F4
 .btn svg{width:14px;height:14px;flex-shrink:0;}
 .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
 .btn-primary:hover{background:var(--blue-dk);}
+.btn:disabled{opacity:.6;cursor:default;}
 
 /* ── 차트 카드 ── */
 .chart-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;padding:18px 18px 14px;margin-bottom:14px;}
@@ -141,6 +142,10 @@ tbody tr:hover td{background:#FAFAF8;}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           CSV 내보내기
         </button>
+        <button class="btn" id="btnPdf" onclick="exportPDF()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF 다운로드
+        </button>
       </div>
     </div>
   </div>
@@ -200,6 +205,9 @@ tbody tr:hover td{background:#FAFAF8;}
 
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- PDF 다운로드용 -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
@@ -513,6 +521,52 @@ function exportCSV() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('📥 CSV 내보내기 완료 (' + year + '년)');
+}
+
+// ── PDF 다운로드 (.container 영역을 캡처해서 PDF 파일로 자동 저장, 가로) ──
+function exportPDF() {
+  if (!monthlyData || monthlyData.length === 0) {
+    showToast('내보낼 데이터가 없습니다.');
+    return;
+  }
+  var year = parseInt(document.getElementById('selYear').value);
+  var btn = document.getElementById('btnPdf');
+  var origHTML = btn.innerHTML;
+  btn.textContent = '생성 중...';
+  btn.disabled = true;
+
+  var target = document.querySelector('.container');
+
+  html2canvas(target, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true
+  }).then(function (canvas) {
+    var imgData = canvas.toDataURL('image/png');
+    var jsPDFCtor = window.jspdf.jsPDF;
+    var pdf = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    var pageW = pdf.internal.pageSize.getWidth();
+    var pageH = pdf.internal.pageSize.getHeight();
+    var margin = 8;
+    var maxW = pageW - margin * 2;
+    var maxH = pageH - margin * 2;
+
+    var ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+    var renderW = canvas.width * ratio;
+    var renderH = canvas.height * ratio;
+    var x = (pageW - renderW) / 2;
+    var y = margin;
+
+    pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+    pdf.save('Yearly_Production_' + year + '.pdf');
+    showToast('📄 PDF 다운로드 완료 (' + year + '년)');
+  }).catch(function (err) {
+    showToast('PDF 생성 중 오류: ' + err.message);
+  }).finally(function () {
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+  });
 }
 
 // ── 공통 유틸 ──
