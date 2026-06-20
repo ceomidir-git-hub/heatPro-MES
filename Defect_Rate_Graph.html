@@ -144,6 +144,7 @@ td.td-bad { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
 var YEAR     = 2026;
 var MAX_DAYS = 31;
 var myChart  = null;
@@ -204,7 +205,7 @@ window.onload = function () {
 function loadMeta() {
   var cb = 'cbMeta_' + Date.now();
   var sc = document.createElement('script');
-  sc.src = API_URL + '?callback=' + cb;
+  sc.src = API_URL + '?key=' + encodeURIComponent(API_KEY) + '&callback=' + cb;
   window[cb] = function (data) {
     document.head.removeChild(sc); delete window[cb];
     var eqSel = document.getElementById('selEquip');
@@ -248,6 +249,7 @@ function loadData() {
          + '&from='  + from
          + '&to='    + to
          + (equip ? '&equipment=' + encodeURIComponent(equip) : '')
+         + '&key=' + encodeURIComponent(API_KEY)
          + '&callback=' + cbName;
   sc.onerror = function () { showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
   document.body.appendChild(sc);
