@@ -91,6 +91,7 @@ tr.row-rate td { color: #cc0000; font-weight: 700; }
 
 <script>
 var API_URL  = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
 var YEAR     = 2026;
 var TARGET   = 90;
 var MAX_DAYS = 31;
@@ -123,7 +124,7 @@ function loadData(){
   };
   var s=document.createElement('script');
   s.id='_gs';
-  s.src=API_URL+'?action=monthly&year='+YEAR+'&month='+currentMonth+'&callback=_cb';
+  s.src=API_URL+'?action=monthly&year='+YEAR+'&month='+currentMonth+'&key='+encodeURIComponent(API_KEY)+'&callback=_cb';
   s.onerror=function(){ showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
   document.body.appendChild(s);
 }
