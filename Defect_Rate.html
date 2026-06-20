@@ -231,6 +231,7 @@ tbody tr:hover td{background:#FAFAF8;}
 <div class="toast" id="toast"></div>
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
 var DAYS=['일','월','화','수','목','금','토'];
 var queryRows=[];
 var rowIdx=0;
@@ -264,7 +265,7 @@ function resetFilter(){
 
 function loadMeta(){
   var cb='cbMeta_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?callback='+cb;
+  sc.src=API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){
     document.head.removeChild(sc);delete window[cb];
     fillSel('selCust', data.customers||[]);
@@ -304,7 +305,7 @@ function doQuery(){
   }
   setStatus('loading','데이터 불러오는 중...');
 
-  var url=API_URL+'?action=defectRate&callback=cbDef_'+Date.now();
+  var url=API_URL+'?action=defectRate&key='+encodeURIComponent(API_KEY)+'&callback=cbDef_'+Date.now();
   if(from)url+='&from='+from;
   if(to)url+='&to='+to;
   if(cust)url+='&customer='+encodeURIComponent(cust);
@@ -431,7 +432,7 @@ function saveRow(idx){
   if(!tr||!btn)return;
   function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
   var payload={
-    action:'saveDefectRate',
+    action:'saveDefectRate', key:API_KEY,
     작업일:tr.dataset.date,   고객사:tr.dataset.cust,
     품명:tr.dataset.prod,     품번:tr.dataset.partno,
     설비명:tr.dataset.eq,     설비번호:tr.dataset.eqno,
