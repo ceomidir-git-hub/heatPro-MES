@@ -8,121 +8,169 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'맑은 고딕',sans-serif;font-size:13px;background:#f0f2f5;color:#222;min-height:100vh;}
-.topbar{background:#1a237e;padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;}
-.topbar-title{color:#fff;font-size:15px;font-weight:700;}
-.topbar-sub{color:rgba(255,255,255,.65);font-size:11px;margin-left:8px;}
-.topbar-btns{display:flex;gap:6px;align-items:center;}
-.topbar-back{color:rgba(255,255,255,.8);font-size:12px;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,.4);border-radius:4px;margin-right:6px;}
-.topbar-back:hover{background:rgba(255,255,255,.1);}
-.content{padding:16px 20px;}
+body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:#f0f2f5;color:#222;min-height:100vh;font-size:13px;}
 
-/* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
-.kpi-card{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e8e8e8;}
-.kpi-label{font-size:11px;color:#888;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
-.kpi-db{font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:9999px;font-weight:600;}
-.kpi-val{font-size:22px;font-weight:700;color:#1a237e;}
-.kpi-unit{font-size:11px;color:#888;margin-left:3px;}
+/* ── 탑바 ── */
+.top-bar{background:#1a3a5c;color:#fff;padding:0;}
+.top-bar-inner{max-width:1280px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.top-bar h1{font-size:clamp(14px,2vw,18px);font-weight:700;letter-spacing:1px;}
+.top-bar .sub{font-size:clamp(10px,1.1vw,12px);opacity:.70;}
+
+/* ── 툴바 ── */
+.toolbar{background:#fff;border-bottom:2px solid #1a3a5c;}
+.toolbar-inner{max-width:1280px;margin:0 auto;padding:0 16px;}
+.search-row{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;padding:10px 0 8px;}
+.sg{display:flex;flex-direction:column;gap:3px;}
+.sg label{font-size:11px;font-weight:600;color:#1a3a5c;white-space:nowrap;}
+.sg input[type=text]{height:30px;padding:0 8px;border:1px solid #b0b8c8;border-radius:4px;font-size:12px;font-family:inherit;color:#222;background:#fff;width:260px;}
+.btn-group{display:flex;gap:5px;align-self:flex-end;}
+.btn{height:30px;padding:0 14px;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;border:none;}
+.btn-primary{background:#1a3a5c;color:#fff;font-weight:700;}
+.btn-primary:hover{background:#254f7a;}
+.btn-green{background:#2e7d32;color:#fff;font-weight:700;}
+.btn-green:hover{background:#1b5e20;}
+.btn-reset{background:#fff;color:#555;border:1px solid #bbb;}
+.btn-reset:hover{background:#f5f5f5;}
+.btn-csv{background:#fff;color:#1a3a5c;border:1px solid #b0b8c8;font-weight:600;}
+.btn-csv:hover{background:#e8f0fb;}
+.btn-pdf{background:#b3261e;color:#fff;font-weight:600;}
+.btn-pdf:hover{background:#d83a30;}
+.btn-pdf:disabled{background:#999;cursor:default;}
 
 /* 탭 */
-.tab-row{display:flex;gap:3px;background:#fff;border-radius:8px 8px 0 0;padding:8px 12px 0;border:1px solid #e8e8e8;border-bottom:none;overflow-x:auto;}
-.tab-btn{padding:5px 12px;font-size:11px;border:1px solid transparent;border-radius:5px 5px 0 0;cursor:pointer;background:none;color:#666;white-space:nowrap;font-family:'맑은 고딕',sans-serif;}
-.tab-btn.on{background:#1a237e;color:#fff;border-color:#1a237e;font-weight:700;}
+.tab-row{display:flex;flex-wrap:wrap;gap:3px;padding:8px 0 0;border-top:1px solid #e8ecf3;margin-top:2px;}
+.tab-btn{padding:4px 12px;font-size:11px;border:1px solid #ccc;border-radius:4px 4px 0 0;cursor:pointer;background:#f5f5f5;color:#666;font-family:inherit;}
+.tab-btn.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c;font-weight:700;}
+
+/* ── 컨테이너 ── */
+.container{max-width:1280px;margin:0 auto;padding:14px 16px;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.kpi{background:#fff;border:1px solid #ddd;border-radius:6px;padding:10px 16px;}
+.kpi .kl{font-size:11px;color:#888;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.kpi .kv{font-size:22px;font-weight:700;color:#1a3a5c;}
+.kpi-db{font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:9999px;font-weight:600;}
 
 /* 카드 */
-.card{background:#fff;border-radius:0 8px 8px 8px;border:1px solid #e8e8e8;margin-bottom:14px;}
-.card-top{padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.search-input{flex:1;min-width:200px;height:30px;border:1px solid #d0d0d0;border-radius:5px;padding:0 10px;font-size:12px;font-family:'맑은 고딕',sans-serif;}
-.chips{display:flex;gap:6px;padding:6px 14px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap;}
-.chip{font-size:11px;padding:2px 10px;border-radius:9999px;background:#f5f5f5;border:1px solid #e0e0e0;color:#555;}
-.chip b{color:#1a237e;}
-.chip.warn b{color:#c62828;}
+.card{background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:12px;}
+.card-hd{background:#1a3a5c;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:700;}
+.card-hd-btns{display:flex;gap:5px;}
+.btn-hd{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.45);height:26px;padding:0 12px;border-radius:4px;font-size:11px;font-family:inherit;cursor:pointer;}
+.btn-hd:hover{background:rgba(255,255,255,.15);}
 
-/* 버튼 */
-.btn{height:30px;padding:0 14px;border-radius:5px;border:1px solid #ccc;font-size:12px;font-family:'맑은 고딕',sans-serif;cursor:pointer;background:#fff;color:#333;white-space:nowrap;}
-.btn:hover{background:#f5f5f5;}
-.btn-primary{background:#1a237e;color:#fff;border-color:#1a237e;}
-.btn-primary:hover{background:#283593;}
-.btn-green{background:#2e7d32;color:#fff;border-color:#2e7d32;}
-.btn-red{background:#b71c1c;color:#fff;border-color:#b71c1c;}
-.btn-warn{background:#e65100;color:#fff;border-color:#e65100;}
-.btn-sm{height:24px;padding:0 8px;font-size:11px;border-radius:4px;border:1px solid #ccc;cursor:pointer;background:#fff;font-family:'맑은 고딕',sans-serif;}
-.btn-del{height:24px;padding:0 8px;font-size:11px;border-radius:4px;border:1px solid #f48fb1;cursor:pointer;background:#fce4ec;color:#880e4f;font-family:'맑은 고딕',sans-serif;}
+/* chips */
+.chips-row{display:flex;flex-wrap:wrap;gap:5px;padding:6px 14px;border-bottom:1px solid #eee;background:#fafafa;font-size:11px;}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:1px 8px;border-radius:99px;border:1px solid #b8ddb8;background:#f1f8ec;color:#2e7d32;}
+.chip.warn{border-color:#ffb3b3;background:#fff0f0;color:#c62828;}
+.chip b{font-weight:700;}
 
 /* 테이블 */
-.tbl-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:11.5px;}
-thead th{background:#e8eaf6;padding:7px 8px;text-align:center;font-weight:700;color:#1a237e;border-bottom:2px solid #c5cae9;white-space:nowrap;}
-thead th.l{text-align:left;}
-thead th.db{background:#e3f2fd;color:#1565c0;}
-tbody tr:hover{background:#f5f5f5;}
-tbody td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
-tbody td.c{text-align:center;}
-tbody td.mu{color:#888;}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.1vw,12.5px);min-width:980px;}
+th,td{border:1px solid #ccc;padding:5px 6px;text-align:center;vertical-align:middle;white-space:nowrap;}
+thead th{background:#1a3a5c;color:#fff;font-weight:700;font-size:12px;}
+thead th.db{background:#1565c0;}
+tbody tr:hover td{background:#f0f5fc;}
+td.l{text-align:left;}
 .badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9999px;font-weight:600;background:#e8f5e9;color:#1b5e20;}
 .stock-zero{color:#c62828;font-weight:700;}
 .badge-zero{background:#fce4ec;color:#880e4f;font-size:10px;padding:1px 6px;border-radius:9999px;}
 
-/* 폼 */
-.form-panel{padding:14px;border-top:1px solid #f0f0f0;background:#fafafa;display:none;}
-.form-title{font-size:13px;font-weight:700;color:#333;margin-bottom:10px;}
-.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 12px;}
+/* 폼 패널 */
+.form-panel{padding:16px;border-top:2px solid #1a3a5c;background:#f8f9fb;display:none;}
+.form-title{font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #dde;}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 14px;}
 .form-group{display:flex;flex-direction:column;gap:3px;}
-.form-label{font-size:11px;color:#666;}
+.form-label{font-size:11px;color:#555;font-weight:600;}
 .req{color:#c62828;}
-.form-input,.form-select{height:28px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:12px;font-family:'맑은 고딕',sans-serif;width:100%;}
-.form-input:focus,.form-select:focus{outline:none;border-color:#1a237e;}
+.form-input,.form-select{height:28px;border:1px solid #b0b8c8;border-radius:4px;padding:0 8px;font-size:12px;font-family:inherit;width:100%;background:#fff;}
+.form-input:focus,.form-select:focus{outline:none;border-color:#1a3a5c;}
 .locked{background:#f5f5f5;color:#888;}
 .span2{grid-column:span 2;}
-.form-btns{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+.form-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end;}
+.btn-save{height:30px;padding:0 18px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer;font-weight:700;}
+.btn-save:hover{background:#254f7a;}
+.btn-warn{height:30px;padding:0 18px;background:#e65100;color:#fff;border:none;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer;font-weight:700;}
+.btn-warn:hover{background:#bf360c;}
+.btn-cancel{height:30px;padding:0 14px;background:#fff;color:#555;border:1px solid #bbb;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer;}
+.btn-cancel:hover{background:#f5f5f5;}
+.btn-sm{height:24px;padding:0 8px;font-size:11px;border-radius:3px;border:1px solid #b0b8c8;cursor:pointer;background:#fff;font-family:inherit;color:#1a3a5c;}
+.btn-sm:hover{background:#e8f0fb;}
+.btn-del{height:24px;padding:0 8px;font-size:11px;border-radius:3px;border:1px solid #f48fb1;cursor:pointer;background:#fce4ec;color:#880e4f;font-family:inherit;}
+.btn-del:hover{background:#f8bbd0;}
 
-#status{padding:6px 14px;font-size:11px;color:#888;border-top:1px solid #f0f0f0;min-height:28px;}
-.loading{color:#1a237e;} .err{color:#c62828;} .ok{color:#2e7d32;}
+.status-bar{padding:5px 14px;font-size:11px;color:#888;background:#fafafa;border-top:1px solid #eee;display:flex;align-items:center;gap:5px;min-height:28px;}
+.sdot{width:7px;height:7px;border-radius:50%;background:#4caf50;flex-shrink:0;}
+.sdot.err{background:#c62828;}
+.status-bar.err{color:#c62828;}
+.status-bar.ok{color:#2e7d32;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#1a3a5c;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div style="display:flex;align-items:center;">
-    <a class="topbar-back" href="index.html">← 대시보드</a>
-    <span class="topbar-title">코일List관리대장</span>
-    <span class="topbar-sub">코일마스터data — 조회 · 등록 · 수정 · 삭제</span>
-  </div>
-  <div class="topbar-btns">
-    <button class="btn btn-green" onclick="showNewForm()">+ 신규 등록</button>
-    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
-    <button class="btn btn-red" onclick="exportPDF()">⬇ PDF</button>
+<!-- 탑바 -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div>
+      <h1>🔗 코일List관리대장 <span style="font-size:12px;font-weight:400;opacity:.7;">(Coil List Management)</span></h1>
+      <div class="sub">HeatPro MES · 코일마스터data — 조회 · 등록 · 수정 · 삭제</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-green" onclick="showNewForm()">+ 신규 등록</button>
+      <button class="btn btn-csv" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-pdf" onclick="exportPDF()">⬇ PDF</button>
+    </div>
   </div>
 </div>
 
-<div class="content" id="container">
+<!-- 툴바 -->
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="search-row">
+      <div class="sg">
+        <label>코일식별번호 · 규격 · 부품명 검색</label>
+        <input type="text" id="search" placeholder="예: A-1, Ø30, 외경가열" oninput="filterTable()">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-reset" onclick="resetSearch()">초기화</button>
+        <button class="btn btn-primary" onclick="loadData()">조 회</button>
+      </div>
+    </div>
+    <div class="tab-row" id="tab-row"></div>
+  </div>
+</div>
+
+<div class="container" id="container">
+  <!-- KPI -->
   <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">전체 코일 수</div><div><span class="kpi-val" id="kpi-total">-</span><span class="kpi-unit">ea</span></div></div>
-    <div class="kpi-card"><div class="kpi-label">총 사용건수 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-cnt">-</span><span class="kpi-unit">건</span></div></div>
-    <div class="kpi-card"><div class="kpi-label">총 사용수량 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-qty">-</span><span class="kpi-unit">ea</span></div></div>
-    <div class="kpi-card"><div class="kpi-label">총 사용시간 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-hour">-</span><span class="kpi-unit">hr</span></div></div>
+    <div class="kpi"><div class="kl">전체 코일 수</div><div class="kv" id="kpi-total">-</div></div>
+    <div class="kpi"><div class="kl">총 사용건수 <span class="kpi-db">DB</span></div><div class="kv" id="kpi-cnt">-</div></div>
+    <div class="kpi"><div class="kl">총 사용수량 <span class="kpi-db">DB</span></div><div class="kv" id="kpi-qty">-</div></div>
+    <div class="kpi"><div class="kl">총 사용시간 <span class="kpi-db">DB</span></div><div class="kv" id="kpi-hour">-</div></div>
   </div>
 
-  <div class="tab-row" id="tab-row"></div>
-
+  <!-- 테이블 카드 -->
   <div class="card">
-    <div class="card-top">
-      <input class="search-input" id="search" placeholder="코일식별번호 · 규격 · 부품명 검색 (예: A-1, Ø30)" oninput="filterTable()">
-      <button class="btn btn-primary" onclick="loadData()">조회</button>
+    <div class="card-hd">
+      <span>코일 목록 <span id="tbl-cnt" style="font-size:11px;font-weight:400;opacity:.8;"></span></span>
+      <div class="card-hd-btns">
+        <button class="btn-hd" onclick="exportCSV()">⬇ CSV</button>
+      </div>
     </div>
-    <div class="chips" id="chips"></div>
-    <div id="status" class="loading">조회 버튼을 눌러주세요.</div>
+    <div class="chips-row" id="chips"></div>
     <div class="tbl-wrap" id="tbl-wrap" style="display:none;">
       <table>
         <thead>
           <tr>
-            <th class="c">번호</th><th class="l">코일식별번호</th><th class="l">분류명</th>
-            <th class="c">코일규격</th><th class="c">적용공정</th>
-            <th class="c">수명(년)</th><th class="c">수명수량(EA)</th>
-            <th class="c">적정재고</th><th class="c">현재고량</th>
-            <th class="c db">사용건수</th><th class="c db">사용수량</th><th class="c db">사용시간</th>
-            <th class="c">관리</th>
+            <th>번호</th><th>코일식별번호</th><th>분류명</th>
+            <th>코일규격</th><th>적용공정</th>
+            <th>수명(년)</th><th>수명수량(EA)</th>
+            <th>적정재고</th><th>현재고량</th>
+            <th class="db">사용건수</th><th class="db">사용수량</th><th class="db">사용시간</th>
+            <th>관리</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -131,9 +179,10 @@ tbody td.mu{color:#888;}
 
     <!-- 신규 등록 폼 -->
     <div class="form-panel" id="form-new">
-      <div class="form-title">+ 신규 코일 등록</div>
+      <div class="form-title">＋ 신규 코일 등록</div>
       <div class="form-grid">
-        <div class="form-group"><div class="form-label">식별코드 <span class="req">*</span></div>
+        <div class="form-group">
+          <div class="form-label">식별코드 <span class="req">*</span></div>
           <select class="form-select" id="n-code" onchange="autoClass()">
             <option value="">선택</option>
             <option value="A">A — 원형(Shaft)외경담금질</option>
@@ -166,14 +215,14 @@ tbody td.mu{color:#888;}
         <div class="form-group span2"><div class="form-label">코일마스터 비고</div><input class="form-input" id="n-note" placeholder="특이사항"></div>
       </div>
       <div class="form-btns">
-        <button class="btn" onclick="hideForm()">취소</button>
-        <button class="btn btn-green" onclick="saveNew()">저장</button>
+        <button class="btn-cancel" onclick="hideForm()">취소</button>
+        <button class="btn-save" onclick="saveNew()">저장</button>
       </div>
     </div>
 
     <!-- 수정 폼 -->
     <div class="form-panel" id="form-edit">
-      <div class="form-title">수정 — <span id="edit-id"></span></div>
+      <div class="form-title">✏️ 수정 — <span id="edit-id" style="color:#1a3a5c;"></span></div>
       <div class="form-grid">
         <div class="form-group"><div class="form-label">코일식별번호 (잠금)</div><input class="form-input locked" id="e-id" readonly></div>
         <div class="form-group"><div class="form-label">코일규격</div><input class="form-input" id="e-spec"></div>
@@ -190,12 +239,12 @@ tbody td.mu{color:#888;}
         <div class="form-group span2"><div class="form-label">코일마스터 비고</div><input class="form-input" id="e-note"></div>
       </div>
       <div class="form-btns">
-        <button class="btn" onclick="hideForm()">취소</button>
-        <button class="btn btn-warn" onclick="saveEdit()">수정 저장</button>
+        <button class="btn-cancel" onclick="hideForm()">취소</button>
+        <button class="btn-warn" onclick="saveEdit()">수정 저장</button>
       </div>
     </div>
 
-    <div id="status2" style="display:none;padding:6px 14px;font-size:11px;border-top:1px solid #f0f0f0;"></div>
+    <div class="status-bar" id="status-bar"><span class="sdot"></span><span id="status-msg">조회 버튼을 눌러주세요.</span></div>
   </div>
 </div>
 
@@ -207,7 +256,13 @@ var TABS=[{c:'',l:'전체'},{c:'A',l:'A—원형'},{c:'B',l:'B—원형2단'},{c
 var allData=[],currentTab='',editTarget=null;
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function st(msg,cls){document.getElementById('status').textContent=msg;document.getElementById('status').className=cls||'';}
+function st(msg,type){
+  var bar=document.getElementById('status-bar');
+  var dot=bar.querySelector('.sdot');
+  document.getElementById('status-msg').textContent=msg;
+  bar.className='status-bar'+(type?' '+type:'');
+  if(dot)dot.className='sdot'+(type==='err'?' err':'');
+}
 
 function jsonp(params,cb){
   var name='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
@@ -215,12 +270,12 @@ function jsonp(params,cb){
   var qs=Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
   window[name]=function(d){delete window[name];if(sc.parentNode)sc.parentNode.removeChild(sc);cb(d);};
   var sc=document.createElement('script');sc.src=API_URL+'?'+qs;
-  sc.onerror=function(){cb({status:'error',message:'네트워크 오류'});};
+  sc.onerror=function(){cb({status:'error',message:'네트워크 오류 — API 접근 실패'});};
   document.head.appendChild(sc);
 }
 function postApi(action,data,cb){
   fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,key:API_KEY,data:data})})
-  .then(function(r){return r.json();}).then(function(r){cb(r);}).catch(function(e){cb({status:'error',message:e.message});});
+  .then(function(r){return r.json();}).then(cb).catch(function(e){cb({status:'error',message:e.message});});
 }
 
 function renderTabs(){
@@ -236,13 +291,13 @@ function renderTabs(){
 }
 
 function loadData(){
-  st('조회 중...','loading');
+  st('조회 중...','');
   document.getElementById('tbl-wrap').style.display='none';
   hideForm();
   jsonp({action:'getCoilMaster'},function(res){
-    if(res.status!=='ok'){st('오류: '+(res.message||''),'err');return;}
+    if(res.status!=='ok'){st('오류: '+(res.message||'알 수 없는 오류'),'err');return;}
     allData=res.rows||[];
-    document.getElementById('kpi-total').textContent=allData.length;
+    document.getElementById('kpi-total').textContent=allData.length.toLocaleString();
     var db=res.dbTotal||{};
     document.getElementById('kpi-cnt').textContent=Number(db.cnt||0).toLocaleString();
     document.getElementById('kpi-qty').textContent=Number(db.qty||0).toLocaleString();
@@ -264,40 +319,40 @@ function filterTable(){
   });
   var zero=fd.filter(function(r){return(parseInt(r['현재고량_Ea'])||0)===0;}).length;
   document.getElementById('chips').innerHTML=
-    '<span class="chip">조회결과 <b>'+fd.length+'</b></span>'+
-    (zero?'<span class="chip warn">재고없음 <b>'+zero+'</b></span>':'')+
+    '<span class="chip">조회결과 <b>'+fd.length+'</b>건</span>'+
+    (zero?'<span class="chip warn">재고없음 <b>'+zero+'</b>건</span>':'')+
     '<span class="chip">고주파열처리 <b>'+fd.filter(function(r){return r['적용공정']==='고주파열처리';}).length+'</b></span>'+
     '<span class="chip">고주파가열 <b>'+fd.filter(function(r){return r['적용공정']==='고주파가열';}).length+'</b></span>';
+  document.getElementById('tbl-cnt').textContent='('+fd.length+'건)';
   var tbody=document.getElementById('tbody');
-  if(!fd.length){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:20px;color:#aaa;">데이터가 없습니다.</td></tr>';return;}
+  if(!fd.length){tbody.innerHTML='<tr><td colspan="13" style="padding:30px;color:#aaa;">데이터가 없습니다.</td></tr>';return;}
   tbody.innerHTML=fd.map(function(r,idx){
     var stock=parseInt(r['현재고량_Ea'])||0;
-    var sc=stock===0?'<span class="stock-zero">0</span> <span class="badge-zero">재고없음</span>':'<strong>'+stock+'</strong>';
-    /* ⭐ onclick에 JSON 직접 삽입 대신 data-index 방식으로 변경 → 특수문자 충돌 방지 */
+    var sc=stock===0?'<span class="stock-zero">0</span> <span class="badge-zero">재고없음</span>':'<b>'+stock+'</b>';
     return '<tr>'+
-      '<td class="c mu">'+esc(r['번호'])+'</td>'+
-      '<td><strong>'+esc(r['코일식별번호'])+'</strong></td>'+
-      '<td class="mu">'+esc(r['분류명'])+'</td>'+
-      '<td class="c">'+esc(r['코일규격'])+'</td>'+
-      '<td class="c"><span class="badge">'+esc(r['적용공정'])+'</span></td>'+
-      '<td class="c">'+(r['수명_년']||'')+'년</td>'+
-      '<td class="c">'+Number(r['수명_수량EA']||0).toLocaleString()+'</td>'+
-      '<td class="c">'+(r['적정재고_Ea']||'')+'</td>'+
-      '<td class="c">'+sc+'</td>'+
-      '<td class="c mu">'+Number(r['DB_사용건수']||0).toLocaleString()+'</td>'+
-      '<td class="c mu">'+Number(r['DB_사용수량']||0).toLocaleString()+'</td>'+
-      '<td class="c mu">'+(r['DB_사용시간']||0)+'</td>'+
-      '<td class="c" style="white-space:nowrap;">'+
+      '<td>'+esc(r['번호'])+'</td>'+
+      '<td><b>'+esc(r['코일식별번호'])+'</b></td>'+
+      '<td class="l">'+esc(r['분류명'])+'</td>'+
+      '<td>'+esc(r['코일규격'])+'</td>'+
+      '<td><span class="badge">'+esc(r['적용공정'])+'</span></td>'+
+      '<td>'+(r['수명_년']||'')+'년</td>'+
+      '<td>'+Number(r['수명_수량EA']||0).toLocaleString()+'</td>'+
+      '<td>'+(r['적정재고_Ea']||'')+'</td>'+
+      '<td>'+sc+'</td>'+
+      '<td>'+Number(r['DB_사용건수']||0).toLocaleString()+'</td>'+
+      '<td>'+Number(r['DB_사용수량']||0).toLocaleString()+'</td>'+
+      '<td>'+(r['DB_사용시간']||0)+'</td>'+
+      '<td style="white-space:nowrap;">'+
         '<button class="btn-sm" onclick="showEditByIdx('+idx+')">수정</button> '+
         '<button class="btn-del" onclick="delRow(\''+esc(r['코일식별번호'])+'\')">삭제</button>'+
       '</td>'+
     '</tr>';
   }).join('');
-  /* 현재 필터된 목록을 전역 저장 (showEditByIdx에서 참조) */
   window._filteredData=fd;
 }
 
-function autoClass(){var c=document.getElementById('n-code').value;document.getElementById('n-class').value=CLASS_MAP[c]||'';}
+function resetSearch(){document.getElementById('search').value='';filterTable();}
+function autoClass(){document.getElementById('n-class').value=CLASS_MAP[document.getElementById('n-code').value]||'';}
 function showNewForm(){
   document.getElementById('form-edit').style.display='none';
   var f=document.getElementById('form-new');
@@ -311,12 +366,10 @@ function saveNew(){
   var code=document.getElementById('n-code').value;
   var spec=document.getElementById('n-spec').value.trim();
   if(!id||!code||!spec){alert('식별코드, 코일식별번호, 코일규격은 필수입니다.');return;}
-  var d={
-    '식별코드':code,'분류명':CLASS_MAP[code]||'','코일식별번호':id,
+  var d={'식별코드':code,'분류명':CLASS_MAP[code]||'','코일식별번호':id,
     '부품명':document.getElementById('n-partname').value,
     '적용품명':document.getElementById('n-appname').value,
-    '코일규격':spec,
-    '적용공정':document.getElementById('n-process').value,
+    '코일규격':spec,'적용공정':document.getElementById('n-process').value,
     '제작업체':document.getElementById('n-maker').value,
     '수명_년':document.getElementById('n-year').value,
     '수명_수량EA':document.getElementById('n-qty').value,
@@ -325,21 +378,15 @@ function saveNew(){
     '등록일':document.getElementById('n-date').value,
     '등록사유':document.getElementById('n-reason').value,
     '등록수량':document.getElementById('n-regqty').value,
-    '코일마스터 비고':document.getElementById('n-note').value
-  };
-  st('등록 중...','loading');
+    '코일마스터 비고':document.getElementById('n-note').value};
+  st('등록 중...','');
   postApi('saveCoilMaster',d,function(res){
     if(res.status==='ok'){st('등록 완료: '+id,'ok');hideForm();loadData();}
     else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
   });
 }
 
-/* ⭐ index 기반 수정 팝업 (JSON 직접 삽입 방식 제거) */
-function showEditByIdx(idx){
-  var r=(window._filteredData||[])[idx];
-  if(!r)return;
-  showEdit(r);
-}
+function showEditByIdx(idx){var r=(window._filteredData||[])[idx];if(!r)return;showEdit(r);}
 function showEdit(r){
   document.getElementById('form-new').style.display='none';
   editTarget=r;
@@ -360,8 +407,7 @@ function showEdit(r){
 }
 function saveEdit(){
   if(!editTarget)return;
-  var d={
-    '코일식별번호':document.getElementById('e-id').value,
+  var d={'코일식별번호':document.getElementById('e-id').value,
     '코일규격':document.getElementById('e-spec').value,
     '부품명':document.getElementById('e-partname').value,
     '적용공정':document.getElementById('e-process').value,
@@ -371,9 +417,8 @@ function saveEdit(){
     '적정재고_Ea':document.getElementById('e-std').value,
     '현재고량_Ea':document.getElementById('e-cur').value,
     '등록사유':document.getElementById('e-reason').value,
-    '코일마스터 비고':document.getElementById('e-note').value
-  };
-  st('수정 중...','loading');
+    '코일마스터 비고':document.getElementById('e-note').value};
+  st('수정 중...','');
   postApi('updateCoilMaster',d,function(res){
     if(res.status==='ok'){st('수정 완료: '+d['코일식별번호'],'ok');hideForm();loadData();}
     else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
@@ -381,7 +426,7 @@ function saveEdit(){
 }
 function delRow(id){
   if(!confirm('삭제하시겠습니까?\n\n코일식별번호: '+id))return;
-  st('삭제 중...','loading');
+  st('삭제 중...','');
   postApi('deleteCoilMaster',{'코일식별번호':id},function(res){
     if(res.status==='ok'){st('삭제 완료: '+id,'ok');loadData();}
     else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
@@ -398,18 +443,14 @@ function exportCSV(){
 }
 function exportPDF(){
   if(!allData.length){alert('먼저 조회를 진행해 주세요.');return;}
-  var btn=document.querySelector('.btn-red');var orig=btn.textContent;btn.textContent='생성 중...';btn.disabled=true;
-  var target=document.getElementById('container');
-  html2canvas(target,{scale:2,backgroundColor:'#f0f2f5',useCORS:true}).then(function(canvas){
-    var img=canvas.toDataURL('image/png');
+  var btn=document.querySelector('.btn-pdf');var orig=btn.textContent;btn.textContent='생성 중...';btn.disabled=true;
+  html2canvas(document.getElementById('container'),{scale:2,backgroundColor:'#f0f2f5',useCORS:true}).then(function(canvas){
     var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     var pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=8;
     var ratio=Math.min((pw-m*2)/canvas.width,(ph-m*2)/canvas.height);
-    var rw=canvas.width*ratio,rh=canvas.height*ratio;
-    pdf.addImage(img,'PNG',(pw-rw)/2,m,rw,rh);
+    pdf.addImage(canvas.toDataURL('image/png'),'PNG',(pw-canvas.width*ratio)/2,m,canvas.width*ratio,canvas.height*ratio);
     pdf.save('코일List관리대장_'+new Date().toISOString().slice(0,10)+'.pdf');
-  }).catch(function(err){alert('PDF 생성 오류: '+err.message);
-  }).finally(function(){btn.textContent=orig;btn.disabled=false;});
+  }).catch(function(e){alert('PDF 오류: '+e.message);}).finally(function(){btn.textContent=orig;btn.disabled=false;});
 }
 </script>
 </body>
