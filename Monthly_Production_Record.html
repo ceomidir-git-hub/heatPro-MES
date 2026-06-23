@@ -346,7 +346,9 @@ function renderTable(actualDays,month,planArr,inputArr,resultArr,diffArr,rateArr
     for(var i=0;i<MAX_DAYS;i++){
       var day=i+1;
       if(i<actualDays){
-        var tc=isHoliday(YEAR,month,day)?'td-holiday':'';
+        // 토/일/공휴일이어도 실적 데이터가 있으면 배경색 흰색 유지 (특근 대응)
+        var hasData = arr[i] !== null && arr[i] !== undefined && arr[i] !== 0 && arr[i] !== '';
+        var tc = (isHoliday(YEAR,month,day) && !hasData) ? 'td-holiday' : '';
         c+='<td class="'+tc+'">'+(isRate?fmtR(arr[i]):fmt(arr[i]))+'</td>';
       } else {
         c+='<td class="td-none"></td>';
