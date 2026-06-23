@@ -127,13 +127,11 @@
     </div>
   </header>
 
-  <!-- ===== 사이드바 (변경후 메뉴 구조) ===== -->
   <nav class="sidebar">
     <a class="nav-item active" href="index.html"><div class="nav-left"><span class="icon">⬛</span> 대시보드</div></a>
     <div class="nav-group-label">현장 관리</div>
 
-    <!-- 1. 생산관리 : 작업일보 / 월생산실적(달성율) / 년생산실적 / 불량률 / 가동률 -->
-    <!-- 1. 생산관리: 작업일보 / 월생산실적(달성율) / 년생산실적 / 불량률 -->
+    <!-- 1. 생산관리 -->
     <div class="nav-item" id="m-prod" onclick="toggleMenu('prod')"><div class="nav-left"><span class="icon">🏭</span> 생산관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-prod">
       <a class="sub-item" href="GitHub_Worksheet.html">작업일보</a>
@@ -142,7 +140,7 @@
       <a class="sub-item" href="Defect_Rate.html">불량률</a>
     </div>
 
-    <!-- 2. 설비관리: 설비운영관리대장 / 설비수리현황 / 검사장비현황 / 가동률 -->
+    <!-- 2. 설비관리 -->
     <div class="nav-item" id="m-equip" onclick="toggleMenu('equip')"><div class="nav-left"><span class="icon">⚙️</span> 설비관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-equip">
       <a class="sub-item" href="Machine_operation_Log.html">설비운영관리대장</a>
@@ -151,14 +149,15 @@
       <a class="sub-item" href="Operating_Rate.html">가동률</a>
     </div>
 
-    <!-- 3. 도면관리: 도면관리대장 / 코일관리대장 -->
+    <!-- 3. 도면관리: 도면관리대장(유지) / 코일List관리대장(수정) / 코일이력관리대장(신규) -->
     <div class="nav-item" id="m-draw" onclick="toggleMenu('draw')"><div class="nav-left"><span class="icon">📐</span> 도면관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-draw">
       <a class="sub-item" href="Drawing_Inventory_Log.html">도면관리대장</a>
-      <a class="sub-item" href="Coil_Inventory_Log.html">코일관리대장</a>
+      <a class="sub-item" href="Coil_List_Management.html">코일List관리대장</a>
+      <a class="sub-item" href="Coil_History_Management.html">코일이력관리대장</a>
     </div>
 
-    <!-- 4. 검사관리: 입출고검사현황 / 검사성적서관리현황 / 도면관리대장 -->
+    <!-- 4. 검사관리 -->
     <div class="nav-item" id="m-insp" onclick="toggleMenu('insp')"><div class="nav-left"><span class="icon">🔍</span> 검사관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-insp">
       <a class="sub-item" href="InOut_Inspection_Status.html">입출고검사현황</a>
@@ -166,13 +165,13 @@
       <a class="sub-item" href="Drawing_Inventory_Log.html">도면관리대장</a>
     </div>
 
-    <!-- 5. 고객관리: 고객관리대장 -->
+    <!-- 5. 고객관리 -->
     <div class="nav-item" id="m-cust" onclick="toggleMenu('cust')"><div class="nav-left"><span class="icon">🤝</span> 고객관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-cust">
       <a class="sub-item" href="Customer_Managerment_Log.html">고객관리대장</a>
     </div>
 
-    <!-- 6. 출하관리: 입출고관리대장 -->
+    <!-- 6. 출하관리 -->
     <div class="nav-item" id="m-ship" onclick="toggleMenu('ship')"><div class="nav-left"><span class="icon">🚚</span> 출하관리</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-ship">
       <a class="sub-item" href="InOut_Management_Log.html">입출고관리대장</a>
@@ -180,7 +179,7 @@
 
     <div class="nav-divider"></div>
 
-    <!-- 7. 통계분석: 월생산실적(달성율) / 불량률(G) / 가동률(G) -->
+    <!-- 7. 통계분석 -->
     <div class="nav-item" id="m-stat" onclick="toggleMenu('stat')"><div class="nav-left"><span class="icon">📊</span> 통계분석</div><span class="chevron">▼</span></div>
     <div class="sub-menu" id="sub-stat">
       <a class="sub-item" href="Monthly_Production_Record.html">월생산실적(달성율)</a>
@@ -280,7 +279,8 @@
             <a class="doc-card" href="GitHub_Worksheet.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📑</div><div class="doc-preview"></div><div class="doc-title">작업일보</div><div class="doc-meta">DAILY REPORT</div></a>
             <a class="doc-card" href="InOut_Management_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📥</div><div class="doc-preview"></div><div class="doc-title">입출고관리대장</div><div class="doc-meta">I/O LEDGER</div></a>
             <a class="doc-card" href="Drawing_Inventory_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📐</div><div class="doc-preview"></div><div class="doc-title">도면관리대장</div><div class="doc-meta">DRAWING LOG</div></a>
-            <a class="doc-card" href="Coil_Inventory_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔗</div><div class="doc-preview"></div><div class="doc-title">코일관리대장</div><div class="doc-meta">COIL LOG</div></a>
+            <a class="doc-card" href="Coil_List_Management.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔗</div><div class="doc-preview"></div><div class="doc-title">코일List관리대장</div><div class="doc-meta">COIL LIST</div></a>
+            <a class="doc-card" href="Coil_History_Management.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📜</div><div class="doc-preview"></div><div class="doc-title">코일이력관리대장</div><div class="doc-meta">COIL HISTORY</div></a>
             <a class="doc-card" href="Yearly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📅</div><div class="doc-preview"></div><div class="doc-title">년생산실적</div><div class="doc-meta">YEARLY OUTPUT</div></a>
             <a class="doc-card" href="Monthly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🗓️</div><div class="doc-preview"></div><div class="doc-title">월생산달성율</div><div class="doc-meta">MONTHLY ACHIEVEMENT</div></a>
             <a class="doc-card" href="Defect_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📉</div><div class="doc-preview"></div><div class="doc-title">불량률(G)</div><div class="doc-meta">DEFECT RATE GRAPH</div></a>
