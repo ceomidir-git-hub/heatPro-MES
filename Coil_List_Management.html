@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코일List관리대장 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'맑은 고딕',sans-serif;font-size:13px;background:#f0f2f5;color:#222;min-height:100vh;}
+.topbar{background:#1a237e;padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{color:#fff;font-size:15px;font-weight:700;}
+.topbar-sub{color:rgba(255,255,255,.65);font-size:11px;margin-left:8px;}
+.topbar-btns{display:flex;gap:6px;align-items:center;}
+.topbar-back{color:rgba(255,255,255,.8);font-size:12px;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,.4);border-radius:4px;margin-right:6px;}
+.topbar-back:hover{background:rgba(255,255,255,.1);}
+.content{padding:16px 20px;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.kpi-card{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e8e8e8;}
+.kpi-label{font-size:11px;color:#888;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.kpi-db{font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:9999px;font-weight:600;}
+.kpi-val{font-size:22px;font-weight:700;color:#1a237e;}
+.kpi-unit{font-size:11px;color:#888;margin-left:3px;}
+
+/* 탭 */
+.tab-row{display:flex;gap:3px;background:#fff;border-radius:8px 8px 0 0;padding:8px 12px 0;border:1px solid #e8e8e8;border-bottom:none;overflow-x:auto;}
+.tab-btn{padding:5px 12px;font-size:11px;border:1px solid transparent;border-radius:5px 5px 0 0;cursor:pointer;background:none;color:#666;white-space:nowrap;font-family:'맑은 고딕',sans-serif;}
+.tab-btn.on{background:#1a237e;color:#fff;border-color:#1a237e;font-weight:700;}
+
+/* 카드 */
+.card{background:#fff;border-radius:0 8px 8px 8px;border:1px solid #e8e8e8;margin-bottom:14px;}
+.card-top{padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.search-input{flex:1;min-width:200px;height:30px;border:1px solid #d0d0d0;border-radius:5px;padding:0 10px;font-size:12px;font-family:'맑은 고딕',sans-serif;}
+.chips{display:flex;gap:6px;padding:6px 14px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap;}
+.chip{font-size:11px;padding:2px 10px;border-radius:9999px;background:#f5f5f5;border:1px solid #e0e0e0;color:#555;}
+.chip b{color:#1a237e;}
+.chip.warn b{color:#c62828;}
+
+/* 버튼 */
+.btn{height:30px;padding:0 14px;border-radius:5px;border:1px solid #ccc;font-size:12px;font-family:'맑은 고딕',sans-serif;cursor:pointer;background:#fff;color:#333;white-space:nowrap;}
+.btn:hover{background:#f5f5f5;}
+.btn-primary{background:#1a237e;color:#fff;border-color:#1a237e;}
+.btn-primary:hover{background:#283593;}
+.btn-green{background:#2e7d32;color:#fff;border-color:#2e7d32;}
+.btn-red{background:#b71c1c;color:#fff;border-color:#b71c1c;}
+.btn-warn{background:#e65100;color:#fff;border-color:#e65100;}
+.btn-sm{height:24px;padding:0 8px;font-size:11px;border-radius:4px;border:1px solid #ccc;cursor:pointer;background:#fff;font-family:'맑은 고딕',sans-serif;}
+.btn-del{height:24px;padding:0 8px;font-size:11px;border-radius:4px;border:1px solid #f48fb1;cursor:pointer;background:#fce4ec;color:#880e4f;font-family:'맑은 고딕',sans-serif;}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:11.5px;}
+thead th{background:#e8eaf6;padding:7px 8px;text-align:center;font-weight:700;color:#1a237e;border-bottom:2px solid #c5cae9;white-space:nowrap;}
+thead th.l{text-align:left;}
+thead th.db{background:#e3f2fd;color:#1565c0;}
+tbody tr:hover{background:#f5f5f5;}
+tbody td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+tbody td.c{text-align:center;}
+tbody td.mu{color:#888;}
+.badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9999px;font-weight:600;background:#e8f5e9;color:#1b5e20;}
+.stock-zero{color:#c62828;font-weight:700;}
+.badge-zero{background:#fce4ec;color:#880e4f;font-size:10px;padding:1px 6px;border-radius:9999px;}
+
+/* 폼 */
+.form-panel{padding:14px;border-top:1px solid #f0f0f0;background:#fafafa;display:none;}
+.form-title{font-size:13px;font-weight:700;color:#333;margin-bottom:10px;}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 12px;}
+.form-group{display:flex;flex-direction:column;gap:3px;}
+.form-label{font-size:11px;color:#666;}
+.req{color:#c62828;}
+.form-input,.form-select{height:28px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:12px;font-family:'맑은 고딕',sans-serif;width:100%;}
+.form-input:focus,.form-select:focus{outline:none;border-color:#1a237e;}
+.locked{background:#f5f5f5;color:#888;}
+.span2{grid-column:span 2;}
+.form-btns{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+
+#status{padding:6px 14px;font-size:11px;color:#888;border-top:1px solid #f0f0f0;min-height:28px;}
+.loading{color:#1a237e;} .err{color:#c62828;} .ok{color:#2e7d32;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;">
+    <a class="topbar-back" href="index.html">← 대시보드</a>
+    <span class="topbar-title">코일List관리대장</span>
+    <span class="topbar-sub">코일마스터data — 조회 · 등록 · 수정 · 삭제</span>
+  </div>
+  <div class="topbar-btns">
+    <button class="btn btn-green" onclick="showNewForm()">+ 신규 등록</button>
+    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-red" onclick="exportPDF()">⬇ PDF</button>
+  </div>
+</div>
+
+<div class="content" id="container">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">전체 코일 수</div><div><span class="kpi-val" id="kpi-total">-</span><span class="kpi-unit">ea</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용건수 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-cnt">-</span><span class="kpi-unit">건</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용수량 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-qty">-</span><span class="kpi-unit">ea</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용시간 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-hour">-</span><span class="kpi-unit">hr</span></div></div>
+  </div>
+
+  <div class="tab-row" id="tab-row"></div>
+
+  <div class="card">
+    <div class="card-top">
+      <input class="search-input" id="search" placeholder="코일식별번호 · 규격 · 부품명 검색 (예: A-1, Ø30)" oninput="filterTable()">
+      <button class="btn btn-primary" onclick="loadData()">조회</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="status" class="loading">조회 버튼을 눌러주세요.</div>
+    <div class="tbl-wrap" id="tbl-wrap" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th class="c">번호</th><th class="l">코일식별번호</th><th class="l">분류명</th>
+            <th class="c">코일규격</th><th class="c">적용공정</th>
+            <th class="c">수명(년)</th><th class="c">수명수량(EA)</th>
+            <th class="c">적정재고</th><th class="c">현재고량</th>
+            <th class="c db">사용건수</th><th class="c db">사용수량</th><th class="c db">사용시간</th>
+            <th class="c">관리</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 신규 등록 폼 -->
+    <div class="form-panel" id="form-new">
+      <div class="form-title">+ 신규 코일 등록</div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">식별코드 <span class="req">*</span></div>
+          <select class="form-select" id="n-code" onchange="autoClass()">
+            <option value="">선택</option>
+            <option value="A">A — 원형(Shaft)외경담금질</option>
+            <option value="B">B — 원형(Shaft)외경담금질(2단)</option>
+            <option value="C">C — 축류(Shaft)가열</option>
+            <option value="D">D — 수평,수직담금질</option>
+            <option value="E">E — 형상(PLATE양면)</option>
+            <option value="F">F — 내경</option>
+            <option value="G">G — 곡선</option>
+            <option value="H">H — 사각</option>
+            <option value="I">I — 크랭크</option>
+          </select>
+        </div>
+        <div class="form-group"><div class="form-label">코일식별번호 <span class="req">*</span></div><input class="form-input" id="n-id" placeholder="예: A-20"></div>
+        <div class="form-group"><div class="form-label">분류명</div><input class="form-input locked" id="n-class" readonly></div>
+        <div class="form-group"><div class="form-label">코일규격 <span class="req">*</span></div><input class="form-input" id="n-spec" placeholder="예: Ø30"></div>
+        <div class="form-group"><div class="form-label">부품명</div><input class="form-input" id="n-partname" placeholder="외경가열 COIL"></div>
+        <div class="form-group"><div class="form-label">적용품명</div><input class="form-input" id="n-appname" placeholder="SHAFT 전용"></div>
+        <div class="form-group"><div class="form-label">적용공정</div>
+          <select class="form-select" id="n-process"><option>고주파열처리</option><option>고주파가열</option></select>
+        </div>
+        <div class="form-group"><div class="form-label">제작업체</div><input class="form-input" id="n-maker" value="자작"></div>
+        <div class="form-group"><div class="form-label">수명_년</div><input class="form-input" id="n-year" type="number" value="3"></div>
+        <div class="form-group"><div class="form-label">수명_수량EA</div><input class="form-input" id="n-qty" type="number" value="20000"></div>
+        <div class="form-group"><div class="form-label">적정재고_Ea</div><input class="form-input" id="n-std" type="number" value="1"></div>
+        <div class="form-group"><div class="form-label">현재고량_Ea</div><input class="form-input" id="n-cur" type="number" value="1"></div>
+        <div class="form-group"><div class="form-label">등록일</div><input class="form-input" id="n-date" type="date"></div>
+        <div class="form-group"><div class="form-label">등록사유</div><input class="form-input" id="n-reason" value="신규"></div>
+        <div class="form-group"><div class="form-label">등록수량</div><input class="form-input" id="n-regqty" type="number" value="1"></div>
+        <div class="form-group span2"><div class="form-label">코일마스터 비고</div><input class="form-input" id="n-note" placeholder="특이사항"></div>
+      </div>
+      <div class="form-btns">
+        <button class="btn" onclick="hideForm()">취소</button>
+        <button class="btn btn-green" onclick="saveNew()">저장</button>
+      </div>
+    </div>
+
+    <!-- 수정 폼 -->
+    <div class="form-panel" id="form-edit">
+      <div class="form-title">수정 — <span id="edit-id"></span></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">코일식별번호 (잠금)</div><input class="form-input locked" id="e-id" readonly></div>
+        <div class="form-group"><div class="form-label">코일규격</div><input class="form-input" id="e-spec"></div>
+        <div class="form-group"><div class="form-label">부품명</div><input class="form-input" id="e-partname"></div>
+        <div class="form-group"><div class="form-label">적용공정</div>
+          <select class="form-select" id="e-process"><option>고주파열처리</option><option>고주파가열</option></select>
+        </div>
+        <div class="form-group"><div class="form-label">제작업체</div><input class="form-input" id="e-maker"></div>
+        <div class="form-group"><div class="form-label">수명_년</div><input class="form-input" id="e-year" type="number"></div>
+        <div class="form-group"><div class="form-label">수명_수량EA</div><input class="form-input" id="e-qty" type="number"></div>
+        <div class="form-group"><div class="form-label">적정재고_Ea</div><input class="form-input" id="e-std" type="number"></div>
+        <div class="form-group"><div class="form-label">현재고량_Ea</div><input class="form-input" id="e-cur" type="number"></div>
+        <div class="form-group"><div class="form-label">등록사유</div><input class="form-input" id="e-reason"></div>
+        <div class="form-group span2"><div class="form-label">코일마스터 비고</div><input class="form-input" id="e-note"></div>
+      </div>
+      <div class="form-btns">
+        <button class="btn" onclick="hideForm()">취소</button>
+        <button class="btn btn-warn" onclick="saveEdit()">수정 저장</button>
+      </div>
+    </div>
+
+    <div id="status2" style="display:none;padding:6px 14px;font-size:11px;border-top:1px solid #f0f0f0;"></div>
+  </div>
+</div>
+
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
+var CLASS_MAP={A:'축류(Shaft)외경담금질코일',B:'축류(Shaft)외경담금질코일(2단)',C:'축류(Shaft)가열코일',D:'수평,수직담금질코일',E:'형상(PLATE양면)',F:'내경 코일',G:'곡선코일',H:'사각코일',I:'크랭크코일'};
+var TABS=[{c:'',l:'전체'},{c:'A',l:'A—원형'},{c:'B',l:'B—원형2단'},{c:'C',l:'C—가열'},{c:'D',l:'D—수평수직'},{c:'E',l:'E—형상'},{c:'F',l:'F—내경'},{c:'G',l:'G—곡선'},{c:'H',l:'H—사각'},{c:'I',l:'I—크랭크'}];
+var allData=[],currentTab='',editTarget=null;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function st(msg,cls){document.getElementById('status').textContent=msg;document.getElementById('status').className=cls||'';}
+
+function jsonp(params,cb){
+  var name='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+  params.callback=name;params.key=API_KEY;
+  var qs=Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
+  window[name]=function(d){delete window[name];if(sc.parentNode)sc.parentNode.removeChild(sc);cb(d);};
+  var sc=document.createElement('script');sc.src=API_URL+'?'+qs;
+  sc.onerror=function(){cb({status:'error',message:'네트워크 오류'});};
+  document.head.appendChild(sc);
+}
+function postApi(action,data,cb){
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,key:API_KEY,data:data})})
+  .then(function(r){return r.json();}).then(function(r){cb(r);}).catch(function(e){cb({status:'error',message:e.message});});
+}
+
+function renderTabs(){
+  var el=document.getElementById('tab-row');el.innerHTML='';
+  TABS.forEach(function(t){
+    var cnt=allData.filter(function(r){return t.c===''||r['식별코드']===t.c;}).length;
+    var btn=document.createElement('button');
+    btn.className='tab-btn'+(currentTab===t.c?' on':'');
+    btn.textContent=t.l+(allData.length?' ('+cnt+')':'');
+    btn.onclick=function(){currentTab=t.c;renderTabs();filterTable();};
+    el.appendChild(btn);
+  });
+}
+
+function loadData(){
+  st('조회 중...','loading');
+  document.getElementById('tbl-wrap').style.display='none';
+  hideForm();
+  jsonp({action:'getCoilMaster'},function(res){
+    if(res.status!=='ok'){st('오류: '+(res.message||''),'err');return;}
+    allData=res.rows||[];
+    document.getElementById('kpi-total').textContent=allData.length;
+    var db=res.dbTotal||{};
+    document.getElementById('kpi-cnt').textContent=Number(db.cnt||0).toLocaleString();
+    document.getElementById('kpi-qty').textContent=Number(db.qty||0).toLocaleString();
+    document.getElementById('kpi-hour').textContent=Number(db.hour||0).toLocaleString();
+    renderTabs();filterTable();
+    document.getElementById('tbl-wrap').style.display='';
+    st('총 '+allData.length+'건 조회 완료.','ok');
+  });
+}
+
+function filterTable(){
+  var kw=(document.getElementById('search').value||'').toLowerCase().trim();
+  var fd=allData.filter(function(r){
+    if(currentTab&&r['식별코드']!==currentTab)return false;
+    if(!kw)return true;
+    return String(r['코일식별번호']||'').toLowerCase().indexOf(kw)>=0||
+           String(r['코일규격']||'').toLowerCase().indexOf(kw)>=0||
+           String(r['부품명']||'').toLowerCase().indexOf(kw)>=0;
+  });
+  var zero=fd.filter(function(r){return(parseInt(r['현재고량_Ea'])||0)===0;}).length;
+  document.getElementById('chips').innerHTML=
+    '<span class="chip">조회결과 <b>'+fd.length+'</b></span>'+
+    (zero?'<span class="chip warn">재고없음 <b>'+zero+'</b></span>':'')+
+    '<span class="chip">고주파열처리 <b>'+fd.filter(function(r){return r['적용공정']==='고주파열처리';}).length+'</b></span>'+
+    '<span class="chip">고주파가열 <b>'+fd.filter(function(r){return r['적용공정']==='고주파가열';}).length+'</b></span>';
+  var tbody=document.getElementById('tbody');
+  if(!fd.length){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:20px;color:#aaa;">데이터가 없습니다.</td></tr>';return;}
+  tbody.innerHTML=fd.map(function(r,idx){
+    var stock=parseInt(r['현재고량_Ea'])||0;
+    var sc=stock===0?'<span class="stock-zero">0</span> <span class="badge-zero">재고없음</span>':'<strong>'+stock+'</strong>';
+    /* ⭐ onclick에 JSON 직접 삽입 대신 data-index 방식으로 변경 → 특수문자 충돌 방지 */
+    return '<tr>'+
+      '<td class="c mu">'+esc(r['번호'])+'</td>'+
+      '<td><strong>'+esc(r['코일식별번호'])+'</strong></td>'+
+      '<td class="mu">'+esc(r['분류명'])+'</td>'+
+      '<td class="c">'+esc(r['코일규격'])+'</td>'+
+      '<td class="c"><span class="badge">'+esc(r['적용공정'])+'</span></td>'+
+      '<td class="c">'+(r['수명_년']||'')+'년</td>'+
+      '<td class="c">'+Number(r['수명_수량EA']||0).toLocaleString()+'</td>'+
+      '<td class="c">'+(r['적정재고_Ea']||'')+'</td>'+
+      '<td class="c">'+sc+'</td>'+
+      '<td class="c mu">'+Number(r['DB_사용건수']||0).toLocaleString()+'</td>'+
+      '<td class="c mu">'+Number(r['DB_사용수량']||0).toLocaleString()+'</td>'+
+      '<td class="c mu">'+(r['DB_사용시간']||0)+'</td>'+
+      '<td class="c" style="white-space:nowrap;">'+
+        '<button class="btn-sm" onclick="showEditByIdx('+idx+')">수정</button> '+
+        '<button class="btn-del" onclick="delRow(\''+esc(r['코일식별번호'])+'\')">삭제</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  /* 현재 필터된 목록을 전역 저장 (showEditByIdx에서 참조) */
+  window._filteredData=fd;
+}
+
+function autoClass(){var c=document.getElementById('n-code').value;document.getElementById('n-class').value=CLASS_MAP[c]||'';}
+function showNewForm(){
+  document.getElementById('form-edit').style.display='none';
+  var f=document.getElementById('form-new');
+  f.style.display=f.style.display==='none'?'block':'none';
+  document.getElementById('n-date').value=new Date().toISOString().slice(0,10);
+}
+function hideForm(){document.getElementById('form-new').style.display='none';document.getElementById('form-edit').style.display='none';}
+
+function saveNew(){
+  var id=document.getElementById('n-id').value.trim();
+  var code=document.getElementById('n-code').value;
+  var spec=document.getElementById('n-spec').value.trim();
+  if(!id||!code||!spec){alert('식별코드, 코일식별번호, 코일규격은 필수입니다.');return;}
+  var d={
+    '식별코드':code,'분류명':CLASS_MAP[code]||'','코일식별번호':id,
+    '부품명':document.getElementById('n-partname').value,
+    '적용품명':document.getElementById('n-appname').value,
+    '코일규격':spec,
+    '적용공정':document.getElementById('n-process').value,
+    '제작업체':document.getElementById('n-maker').value,
+    '수명_년':document.getElementById('n-year').value,
+    '수명_수량EA':document.getElementById('n-qty').value,
+    '적정재고_Ea':document.getElementById('n-std').value,
+    '현재고량_Ea':document.getElementById('n-cur').value,
+    '등록일':document.getElementById('n-date').value,
+    '등록사유':document.getElementById('n-reason').value,
+    '등록수량':document.getElementById('n-regqty').value,
+    '코일마스터 비고':document.getElementById('n-note').value
+  };
+  st('등록 중...','loading');
+  postApi('saveCoilMaster',d,function(res){
+    if(res.status==='ok'){st('등록 완료: '+id,'ok');hideForm();loadData();}
+    else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
+  });
+}
+
+/* ⭐ index 기반 수정 팝업 (JSON 직접 삽입 방식 제거) */
+function showEditByIdx(idx){
+  var r=(window._filteredData||[])[idx];
+  if(!r)return;
+  showEdit(r);
+}
+function showEdit(r){
+  document.getElementById('form-new').style.display='none';
+  editTarget=r;
+  document.getElementById('edit-id').textContent=r['코일식별번호'];
+  document.getElementById('e-id').value=r['코일식별번호']||'';
+  document.getElementById('e-spec').value=r['코일규격']||'';
+  document.getElementById('e-partname').value=r['부품명']||'';
+  document.getElementById('e-process').value=r['적용공정']||'고주파열처리';
+  document.getElementById('e-maker').value=r['제작업체']||'';
+  document.getElementById('e-year').value=r['수명_년']||'';
+  document.getElementById('e-qty').value=r['수명_수량EA']||'';
+  document.getElementById('e-std').value=r['적정재고_Ea']||'';
+  document.getElementById('e-cur').value=r['현재고량_Ea']||'';
+  document.getElementById('e-reason').value=r['등록사유']||'';
+  document.getElementById('e-note').value=r['코일마스터 비고']||'';
+  document.getElementById('form-edit').style.display='block';
+  document.getElementById('form-edit').scrollIntoView({behavior:'smooth'});
+}
+function saveEdit(){
+  if(!editTarget)return;
+  var d={
+    '코일식별번호':document.getElementById('e-id').value,
+    '코일규격':document.getElementById('e-spec').value,
+    '부품명':document.getElementById('e-partname').value,
+    '적용공정':document.getElementById('e-process').value,
+    '제작업체':document.getElementById('e-maker').value,
+    '수명_년':document.getElementById('e-year').value,
+    '수명_수량EA':document.getElementById('e-qty').value,
+    '적정재고_Ea':document.getElementById('e-std').value,
+    '현재고량_Ea':document.getElementById('e-cur').value,
+    '등록사유':document.getElementById('e-reason').value,
+    '코일마스터 비고':document.getElementById('e-note').value
+  };
+  st('수정 중...','loading');
+  postApi('updateCoilMaster',d,function(res){
+    if(res.status==='ok'){st('수정 완료: '+d['코일식별번호'],'ok');hideForm();loadData();}
+    else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
+  });
+}
+function delRow(id){
+  if(!confirm('삭제하시겠습니까?\n\n코일식별번호: '+id))return;
+  st('삭제 중...','loading');
+  postApi('deleteCoilMaster',{'코일식별번호':id},function(res){
+    if(res.status==='ok'){st('삭제 완료: '+id,'ok');loadData();}
+    else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
+  });
+}
+
+function exportCSV(){
+  if(!allData.length){alert('먼저 조회를 진행해 주세요.');return;}
+  var h=['번호','식별코드','코일식별번호','분류명','코일규격','적용공정','수명_년','수명_수량EA','적정재고_Ea','현재고량_Ea','등록일','등록사유','등록수량','코일마스터 비고','DB_사용건수','DB_사용수량','DB_사용시간'];
+  var rows=[h.join(',')];
+  allData.forEach(function(r){rows.push(h.map(function(k){return '"'+String(r[k]||'').replace(/"/g,'""')+'"';}).join(','));});
+  var blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='코일List관리대장_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+}
+function exportPDF(){
+  if(!allData.length){alert('먼저 조회를 진행해 주세요.');return;}
+  var btn=document.querySelector('.btn-red');var orig=btn.textContent;btn.textContent='생성 중...';btn.disabled=true;
+  var target=document.getElementById('container');
+  html2canvas(target,{scale:2,backgroundColor:'#f0f2f5',useCORS:true}).then(function(canvas){
+    var img=canvas.toDataURL('image/png');
+    var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    var pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=8;
+    var ratio=Math.min((pw-m*2)/canvas.width,(ph-m*2)/canvas.height);
+    var rw=canvas.width*ratio,rh=canvas.height*ratio;
+    pdf.addImage(img,'PNG',(pw-rw)/2,m,rw,rh);
+    pdf.save('코일List관리대장_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }).catch(function(err){alert('PDF 생성 오류: '+err.message);
+  }).finally(function(){btn.textContent=orig;btn.disabled=false;});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코일이력관리대장 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'맑은 고딕',sans-serif;font-size:13px;background:#f0f2f5;color:#222;min-height:100vh;}
+.topbar{background:#1a237e;padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{color:#fff;font-size:15px;font-weight:700;}
+.topbar-sub{color:rgba(255,255,255,.65);font-size:11px;margin-left:8px;}
+.topbar-btns{display:flex;gap:6px;align-items:center;}
+.topbar-back{color:rgba(255,255,255,.8);font-size:12px;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,.4);border-radius:4px;margin-right:6px;}
+.topbar-back:hover{background:rgba(255,255,255,.1);}
+.content{padding:16px 20px;}
+
+/* 검색 패널 */
+.search-panel{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e8e8e8;margin-bottom:12px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fl{font-size:11px;color:#666;}
+.si,.fs{height:28px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:12px;font-family:'맑은 고딕',sans-serif;background:#fff;}
+.si:focus,.fs:focus{outline:none;border-color:#1a237e;}
+.dr{display:flex;gap:4px;align-items:center;}
+.sep{font-size:11px;color:#999;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.kpi-card{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e8e8e8;}
+.kpi-label{font-size:11px;color:#888;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.kpi-db{font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:9999px;font-weight:600;}
+.kpi-val{font-size:22px;font-weight:700;color:#1a237e;}
+.kpi-val.warn{color:#c62828;}
+.kpi-unit{font-size:11px;color:#888;margin-left:3px;}
+
+/* 코일 헤더 */
+.coil-header{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e8e8e8;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
+.coil-avatar{width:40px;height:40px;border-radius:8px;background:#e3f2fd;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1565c0;flex-shrink:0;}
+.coil-info strong{font-size:14px;color:#1a237e;}
+.coil-info p{font-size:11px;color:#888;margin-top:2px;}
+
+/* 카드 */
+.card{background:#fff;border-radius:8px;border:1px solid #e8e8e8;margin-bottom:12px;}
+.card-top{padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;}
+.card-title{font-size:13px;font-weight:700;color:#1a237e;}
+.cnt{font-size:11px;color:#888;}
+
+/* 버튼 */
+.btn{height:30px;padding:0 14px;border-radius:5px;border:1px solid #ccc;font-size:12px;font-family:'맑은 고딕',sans-serif;cursor:pointer;background:#fff;color:#333;}
+.btn:hover{background:#f5f5f5;}
+.btn-primary{background:#1a237e;color:#fff;border-color:#1a237e;}
+.btn-red{background:#b71c1c;color:#fff;border-color:#b71c1c;}
+.btn-warn{background:#e65100;color:#fff;border-color:#e65100;}
+.btn-sm{height:24px;padding:0 8px;font-size:11px;border-radius:4px;border:1px solid #ccc;cursor:pointer;background:#fff;font-family:'맑은 고딕',sans-serif;}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:11.5px;}
+thead th{background:#e8eaf6;padding:7px 8px;text-align:center;font-weight:700;color:#1a237e;border-bottom:2px solid #c5cae9;white-space:nowrap;}
+thead th.l{text-align:left;}
+tbody tr:hover{background:#f5f5f5;}
+tbody td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+tbody td.c{text-align:center;}
+tbody td.mu{color:#888;font-size:11px;}
+.badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9999px;font-weight:600;background:#e8f5e9;color:#1b5e20;}
+
+/* 수정 폼 */
+.form-panel{padding:14px;border-top:1px solid #f0f0f0;background:#fafafa;display:none;}
+.form-title{font-size:13px;font-weight:700;color:#333;margin-bottom:10px;}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 12px;}
+.form-group{display:flex;flex-direction:column;gap:3px;}
+.form-label{font-size:11px;color:#666;}
+.form-input{height:28px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:12px;font-family:'맑은 고딕',sans-serif;width:100%;}
+.form-input:focus{outline:none;border-color:#1a237e;}
+.locked{background:#f5f5f5;color:#888;}
+.span2{grid-column:span 2;}
+.form-btns{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+
+#status{padding:6px 14px;font-size:11px;color:#888;border-top:1px solid #f0f0f0;min-height:28px;}
+.loading{color:#1a237e;} .err{color:#c62828;} .ok{color:#2e7d32;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;">
+    <a class="topbar-back" href="index.html">← 대시보드</a>
+    <span class="topbar-title">코일이력관리대장</span>
+    <span class="topbar-sub">코일사용이력data — 조회 · 수정</span>
+  </div>
+  <div class="topbar-btns">
+    <button class="btn" style="color:#fff;border-color:rgba(255,255,255,.5);background:transparent;" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-red" onclick="exportPDF()">⬇ PDF</button>
+  </div>
+</div>
+
+<div class="content" id="container">
+  <!-- 검색 패널 -->
+  <div class="search-panel">
+    <div class="fg"><div class="fl">분류코드</div>
+      <select class="fs" id="s-code" style="width:130px;" onchange="updateCoilList()">
+        <option value="">전체</option>
+        <option value="A">A — 원형</option><option value="B">B — 원형2단</option>
+        <option value="C">C — 가열</option><option value="D">D — 수평수직</option>
+        <option value="E">E — 형상</option><option value="F">F — 내경</option>
+        <option value="G">G — 곡선</option><option value="H">H — 사각</option>
+        <option value="I">I — 크랭크</option>
+      </select>
+    </div>
+    <div class="fg"><div class="fl">코일식별번호</div>
+      <select class="fs" id="s-coil" style="width:130px;"><option value="">전체</option></select>
+    </div>
+    <div class="fg"><div class="fl">고객사</div>
+      <select class="fs" id="s-customer" style="width:120px;"><option value="">전체</option></select>
+    </div>
+    <div class="fg"><div class="fl">부품명</div>
+      <input class="si" id="s-part" style="width:110px;" placeholder="부품명 검색">
+    </div>
+    <div class="fg"><div class="fl">부품번호</div>
+      <input class="si" id="s-partno" style="width:110px;" placeholder="부품번호 검색">
+    </div>
+    <div class="fg"><div class="fl">조회기간</div>
+      <div class="dr">
+        <input class="si" id="s-start" type="date" style="width:120px;">
+        <span class="sep">~</span>
+        <input class="si" id="s-end" type="date" style="width:120px;">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="loadHistory()">조회</button>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">현재고량</div><div><span class="kpi-val" id="kpi-stock">-</span><span class="kpi-unit">ea</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용건수 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-cnt">-</span><span class="kpi-unit">건</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용수량 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-qty">-</span><span class="kpi-unit">ea</span></div></div>
+    <div class="kpi-card"><div class="kpi-label">총 사용시간 <span class="kpi-db">DB</span></div><div><span class="kpi-val" id="kpi-hour">-</span><span class="kpi-unit">hr</span></div></div>
+  </div>
+
+  <!-- 선택 코일 정보 -->
+  <div class="coil-header" id="coil-hdr" style="display:none;">
+    <div class="coil-avatar" id="coil-av">-</div>
+    <div class="coil-info"><strong id="coil-name">-</strong><p id="coil-meta">-</p></div>
+  </div>
+
+  <!-- 이력 테이블 -->
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">사용이력 목록</span>
+      <span class="cnt" id="hist-cnt"></span>
+    </div>
+    <div id="status" class="loading">조회 조건을 선택 후 조회 버튼을 눌러주세요.</div>
+    <div class="tbl-wrap" id="tbl-wrap" style="display:none;">
+      <table>
+        <thead><tr>
+          <th class="c">NO</th><th class="c">분류</th><th class="c">식별번호</th>
+          <th class="c">작업일</th><th class="l">고객사</th><th class="l">품명</th>
+          <th class="c">품번</th><th class="l">설비명</th>
+          <th class="c">사용수량</th><th class="c">사용시간(hr)</th>
+          <th class="l">코일사용이력 비고</th><th class="c">관리</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 수정 폼 -->
+    <div class="form-panel" id="form-edit">
+      <div class="form-title">수정 — NO <span id="edit-no"></span></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">NO (잠금)</div><input class="form-input locked" id="e-no" readonly></div>
+        <div class="form-group"><div class="form-label">식별번호 (잠금)</div><input class="form-input locked" id="e-coil" readonly></div>
+        <div class="form-group"><div class="form-label">작업일 (잠금)</div><input class="form-input locked" id="e-date" readonly></div>
+        <div class="form-group"><div class="form-label">고객사 (잠금)</div><input class="form-input locked" id="e-customer" readonly></div>
+        <div class="form-group"><div class="form-label">품명 (잠금)</div><input class="form-input locked" id="e-part" readonly></div>
+        <div class="form-group"><div class="form-label">설비명 (잠금)</div><input class="form-input locked" id="e-equip" readonly></div>
+        <div class="form-group"><div class="form-label">사용수량</div><input class="form-input" id="e-qty" type="number"></div>
+        <div class="form-group"><div class="form-label">사용시간(hr)</div><input class="form-input" id="e-hour" type="number" step="0.1"></div>
+        <div class="form-group span2"><div class="form-label">코일사용이력 비고</div><input class="form-input" id="e-note" placeholder="특이사항 입력"></div>
+      </div>
+      <div class="form-btns">
+        <button class="btn" onclick="hideForm()">취소</button>
+        <button class="btn btn-warn" onclick="saveEdit()">수정 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
+/* ⭐ COIL_MAP: 분류코드별 식별번호 목록 (드롭다운 연동용) */
+var COIL_MAP={
+  A:['A-1','A-2','A-3','A-4','A-5','A-6','A-7','A-8','A-9','A-10','A-11','A-12','A-13','A-14','A-15','A-16','A-17','A-18','A-19'],
+  B:['B-1','B-2','B-3','B-4','B-5','B-6','B-7'],
+  C:['C-1','C-2','C-3','C-4','C-5','C-6','C-7','C-8','C-9','C-10','C-11','C-12','C-13'],
+  D:['D-1','D-2','D-3','D-4','D-5','D-6','D-7','D-8','D-9','D-10','D-11','D-12','D-13','D-14','D-15','D-16','D-17','D-18','D-19'],
+  E:['E-1','E-2','E-3','E-4','E-5','E-6','E-7','E-8','E-9','E-10','E-11','E-12','E-14','E-15','E-16'],
+  F:['F-1','F-2','F-3','F-4','F-5','F-6','F-7','F-8','F-9'],
+  G:['G-1','G-2','G-3','G-4','G-5','G-6','G-7','G-8','G-9','G-10'],
+  H:['H-1','H-2','H-3','H-4','H-5'],
+  I:['I-1','I-2','I-3','I-4','I-5','I-6','I-7','I-8']
+};
+var masterMap={}, allHistory=[];
+
+/* ⭐ 페이지 로드 시: 날짜 초기값 설정 + 코일마스터 로드(고객사 드롭다운 빌드용) */
+(function init(){
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById('s-start').value=today.slice(0,4)+'-01-01';
+  document.getElementById('s-end').value=today;
+  jsonp({action:'getCoilMaster'},function(res){
+    if(res.status!=='ok')return;
+    (res.rows||[]).forEach(function(r){masterMap[r['코일식별번호']]=r;});
+    buildCustomers();
+  });
+})();
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function st(msg,cls){document.getElementById('status').textContent=msg;document.getElementById('status').className=cls||'';}
+
+function jsonp(params,cb){
+  var name='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+  params.callback=name;params.key=API_KEY;
+  var qs=Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
+  window[name]=function(d){delete window[name];if(sc.parentNode)sc.parentNode.removeChild(sc);cb(d);};
+  var sc=document.createElement('script');sc.src=API_URL+'?'+qs;
+  sc.onerror=function(){cb({status:'error',message:'네트워크 오류'});};
+  document.head.appendChild(sc);
+}
+function postApi(action,data,cb){
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,key:API_KEY,data:data})})
+  .then(function(r){return r.json();}).then(function(r){cb(r);}).catch(function(e){cb({status:'error',message:e.message});});
+}
+
+/* 분류코드 선택 시 코일식별번호 드롭다운 갱신 */
+function updateCoilList(){
+  var code=document.getElementById('s-code').value;
+  var sel=document.getElementById('s-coil');
+  sel.innerHTML='<option value="">전체</option>';
+  var list=code?(COIL_MAP[code]||[]):Object.keys(COIL_MAP).reduce(function(a,k){return a.concat(COIL_MAP[k]);},[]);
+  list.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+}
+
+/* 페이지 로드 시 고객사 드롭다운 빌드 (사용이력 전체 조회 후 추출) */
+function buildCustomers(){
+  jsonp({action:'getCoilHistory'},function(res){
+    if(res.status!=='ok')return;
+    var map={};(res.rows||[]).forEach(function(r){if(r['고객사'])map[r['고객사']]=1;});
+    var sel=document.getElementById('s-customer');
+    Object.keys(map).sort().forEach(function(c){
+      var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);
+    });
+  });
+}
+
+function loadHistory(){
+  var params={action:'getCoilHistory'};
+  var coilId=document.getElementById('s-coil').value;
+  var code=document.getElementById('s-code').value;
+  var cust=document.getElementById('s-customer').value;
+  var s=document.getElementById('s-start').value;
+  var e=document.getElementById('s-end').value;
+  if(coilId)params.coilId=coilId;
+  else if(code)params.identCode=code;
+  if(cust)params.customer=cust;
+  var partName=document.getElementById('s-part').value.trim();
+  var partNo=document.getElementById('s-partno').value.trim();
+  if(partName)params.partName=partName;
+  if(partNo)params.partNo=partNo;
+  if(s)params.startDate=s;
+  if(e)params.endDate=e;
+  st('조회 중...','loading');
+  document.getElementById('tbl-wrap').style.display='none';
+  hideForm();
+  jsonp(params,function(res){
+    if(res.status!=='ok'){st('오류: '+(res.message||''),'err');return;}
+    allHistory=res.rows||[];
+    var kpi=res.kpi||{};
+    /* 특정 코일 선택 시 마스터 정보 헤더 표시 */
+    if(coilId&&masterMap[coilId]){
+      var m=masterMap[coilId];
+      var stock=parseInt(m['현재고량_Ea'])||0;
+      var sv=document.getElementById('kpi-stock');
+      sv.textContent=stock;sv.className='kpi-val'+(stock===0?' warn':'');
+      document.getElementById('coil-av').textContent=coilId;
+      document.getElementById('coil-name').textContent=(m['부품명']||'')+' — '+(m['코일규격']||'')+' ('+(m['분류명']||'')+')';
+      document.getElementById('coil-meta').textContent='적용공정: '+(m['적용공정']||'-')+' ｜ 수명: '+(m['수명_년']||'-')+'년 / '+Number(m['수명_수량EA']||0).toLocaleString()+' EA ｜ 제작업체: '+(m['제작업체']||'-');
+      document.getElementById('coil-hdr').style.display='';
+    } else {
+      document.getElementById('kpi-stock').textContent='-';
+      document.getElementById('coil-hdr').style.display='none';
+    }
+    document.getElementById('kpi-cnt').textContent=Number(kpi.cnt||0).toLocaleString();
+    document.getElementById('kpi-qty').textContent=Number(kpi.qty||0).toLocaleString();
+    document.getElementById('kpi-hour').textContent=Number(kpi.hour||0).toLocaleString();
+    renderTable();
+    document.getElementById('tbl-wrap').style.display='';
+    document.getElementById('hist-cnt').textContent='총 '+allHistory.length+'건';
+    st('조회 완료 — '+allHistory.length+'건','ok');
+  });
+}
+
+function renderTable(){
+  var tbody=document.getElementById('tbody');
+  if(!allHistory.length){
+    tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#aaa;">해당 조건의 이력이 없습니다.</td></tr>';
+    return;
+  }
+  /* ⭐ onclick에 JSON 직접 삽입 대신 data-index 방식으로 변경 */
+  tbody.innerHTML=allHistory.map(function(r,idx){
+    return '<tr>'+
+      '<td class="c mu">'+esc(r['NO'])+'</td>'+
+      '<td class="c"><span class="badge">'+esc(r['코일식별분류'])+'</span></td>'+
+      '<td class="c"><strong>'+esc(r['식별번호'])+'</strong></td>'+
+      '<td class="c">'+esc(r['작업일'])+'</td>'+
+      '<td>'+esc(r['고객사'])+'</td>'+
+      '<td>'+esc(r['품명'])+'</td>'+
+      '<td class="c mu">'+esc(r['품번'])+'</td>'+
+      '<td class="mu">'+esc(r['설비명'])+'</td>'+
+      '<td class="c">'+Number(r['사용수량']||0).toLocaleString()+'</td>'+
+      '<td class="c">'+(r['사용시간']||0)+'</td>'+
+      '<td class="mu">'+esc(r['코일사용이력 비고'])+'</td>'+
+      '<td class="c"><button class="btn-sm" onclick="showEditByIdx('+idx+')">수정</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* ⭐ index 기반 수정 팝업 */
+function showEditByIdx(idx){
+  var r=allHistory[idx];
+  if(!r)return;
+  showEdit(r);
+}
+function showEdit(r){
+  document.getElementById('edit-no').textContent=r['NO'];
+  document.getElementById('e-no').value=r['NO']||'';
+  document.getElementById('e-coil').value=r['식별번호']||'';
+  document.getElementById('e-date').value=r['작업일']||'';
+  document.getElementById('e-customer').value=r['고객사']||'';
+  document.getElementById('e-part').value=r['품명']||'';
+  document.getElementById('e-equip').value=r['설비명']||'';
+  document.getElementById('e-qty').value=r['사용수량']||'';
+  document.getElementById('e-hour').value=r['사용시간']||'';
+  document.getElementById('e-note').value=r['코일사용이력 비고']||'';
+  document.getElementById('form-edit').style.display='block';
+  document.getElementById('form-edit').scrollIntoView({behavior:'smooth'});
+}
+function hideForm(){document.getElementById('form-edit').style.display='none';}
+function saveEdit(){
+  var no=parseInt(document.getElementById('e-no').value);
+  if(!no)return;
+  var data={
+    NO:no,
+    '사용수량':document.getElementById('e-qty').value,
+    '사용시간':document.getElementById('e-hour').value,
+    '코일사용이력 비고':document.getElementById('e-note').value
+  };
+  st('수정 중...','loading');
+  postApi('updateCoilHistory',data,function(res){
+    if(res.status==='ok'){st('수정 완료 — NO '+no,'ok');hideForm();loadHistory();}
+    else{st('오류: '+(res.message||''),'err');alert('오류: '+(res.message||''));}
+  });
+}
+
+/* ⭐ CSV — '분류명' 키 제거, '코일식별분류'로 통일 (Code.gs 응답 필드와 일치) */
+function exportCSV(){
+  if(!allHistory.length){alert('먼저 조회를 진행해 주세요.');return;}
+  var h=['NO','코일식별분류','식별번호','작업일','고객사','품명','품번','설비명','사용수량','사용시간','코일사용이력 비고'];
+  var rows=[h.join(',')];
+  allHistory.forEach(function(r){
+    rows.push(h.map(function(k){return '"'+String(r[k]||'').replace(/"/g,'""')+'"';}).join(','));
+  });
+  var blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='코일이력관리대장_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+}
+function exportPDF(){
+  if(!allHistory.length){alert('먼저 조회를 진행해 주세요.');return;}
+  var btn=document.querySelector('.btn-red');var orig=btn.textContent;btn.textContent='생성 중...';btn.disabled=true;
+  html2canvas(document.getElementById('container'),{scale:2,backgroundColor:'#f0f2f5',useCORS:true}).then(function(canvas){
+    var img=canvas.toDataURL('image/png');
+    var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    var pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=8;
+    var ratio=Math.min((pw-m*2)/canvas.width,(ph-m*2)/canvas.height);
+    pdf.addImage(img,'PNG',(pw-ratio*canvas.width)/2,m,canvas.width*ratio,canvas.height*ratio);
+    pdf.save('코일이력관리대장_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }).catch(function(err){alert('PDF 생성 오류: '+err.message);
+  }).finally(function(){btn.textContent=orig;btn.disabled=false;});
+}
+</script>
+</body>
+</html>
