@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업조건관리대장 | HeatPro MES</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;background:#f0f2f5;min-height:100vh;}
+
+/* ── 상단바 ── */
+.topbar{background:#1a3a5c;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:46px;position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:15px;font-weight:600;letter-spacing:0.3px;}
+.topbar-right{display:flex;gap:6px;align-items:center;}
+
+/* ── 툴바 ── */
+.toolbar{background:#fff;border-bottom:2px solid #1a3a5c;padding:7px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.toolbar label{font-size:11px;color:#444;white-space:nowrap;font-weight:500;}
+.toolbar select,.toolbar input[type=text]{height:28px;border:1px solid #b0b8c1;border-radius:3px;padding:0 7px;font-size:11px;color:#222;background:#fff;}
+.toolbar select:focus,.toolbar input:focus{border-color:#1a3a5c;outline:none;}
+.sep{width:1px;height:22px;background:#dde2e8;margin:0 2px;}
+
+/* ── 버튼 ── */
+.btn{height:28px;padding:0 13px;border-radius:3px;border:none;font-size:11px;cursor:pointer;font-weight:600;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn:disabled{opacity:.5;cursor:default;}
+.btn-primary{background:#1a3a5c;color:#fff;}
+.btn-reset{background:#e8ecf0;color:#444;}
+.btn-pdf{background:#b3261e;color:#fff;}
+.btn-csv{background:#1a6e2e;color:#fff;}
+.btn-save{background:#1565c0;color:#fff;}
+.btn-cancel{background:#78909c;color:#fff;}
+.btn-edit{background:#e65100;color:#fff;padding:2px 9px;height:22px;font-size:10px;border-radius:2px;border:none;cursor:pointer;font-weight:600;}
+.btn-edit:hover{background:#bf360c;}
+.btn-editing{background:#f9a825;color:#fff;padding:2px 9px;height:22px;font-size:10px;border-radius:2px;border:none;cursor:default;font-weight:600;}
+
+/* ── 안내 ── */
+.notice{background:#e3f2fd;border-left:3px solid #1565c0;padding:5px 12px;font-size:11px;color:#0d47a1;margin:8px 14px 0;}
+
+/* ── 본문 ── */
+.content{padding:8px 14px 0;}
+.card-header{background:#1a3a5c;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:3px 3px 0 0;display:flex;justify-content:space-between;align-items:center;}
+.tag{border-radius:2px;padding:2px 8px;font-size:10px;font-weight:600;}
+.tag-blue{background:#d0e4f7;color:#1a3a5c;}
+.tag-orange{background:#fff3e0;color:#e65100;border:1px solid #ffb74d;}
+
+/* ── 테이블 ── */
+.table-wrap{overflow-x:auto;border:1px solid #c8d0d8;border-top:none;max-height:360px;overflow-y:auto;}
+table{border-collapse:collapse;width:100%;min-width:1600px;font-size:10px;table-layout:fixed;}
+thead{position:sticky;top:0;z-index:3;}
+thead tr:first-child th{background:#1a3a5c;color:#fff;font-size:10px;font-weight:600;padding:5px 3px;border:1px solid #2a5070;text-align:center;white-space:nowrap;}
+thead tr:last-child th{background:#e8ecf1;color:#1a3a5c;font-size:10px;font-weight:600;padding:4px 2px;border:1px solid #c8d0d8;text-align:center;white-space:normal;word-break:keep-all;line-height:1.2;}
+thead tr:last-child th.cond{background:#dce8f5;color:#1a3a5c;}
+th.col-btn{width:38px;}th.col-no{width:30px;}th.col-date{width:70px;}
+th.col-cs{width:78px;}th.col-pnm{width:68px;}th.col-pno{width:78px;}
+th.col-eq{width:88px;}th.col-qty{width:44px;}th.col-time{width:44px;}
+th.cond-wide{width:50px;}th.cond-narrow{width:44px;}
+td{padding:3px 3px;border:1px solid #dde2e8;text-align:center;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tr:nth-child(even) td{background:#f7f9fb;}
+tr:hover td{background:#eef3f8;}
+tr.editing td{background:#fff8e1 !important;border-top:2px solid #f9a825 !important;border-bottom:2px solid #f9a825 !important;}
+.empty-cell{color:#bbb;}
+.has-data{color:#1565c0;font-weight:600;}
+.has-temper{color:#c62828;font-weight:600;}
+
+/* ── 편집 패널 ── */
+.edit-panel{background:#f0f4f8;border:2px solid #1a3a5c;border-radius:4px;margin:8px 14px;padding:12px 16px;display:none;}
+.edit-panel.active{display:block;}
+.edit-panel-title{font-size:12px;font-weight:700;color:#1a3a5c;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.edit-section-label{font-size:10px;color:#666;font-weight:600;margin:8px 0 5px;border-bottom:1px solid #c8d0d8;padding-bottom:3px;}
+.edit-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px 10px;max-width:70%;}
+.edit-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px;}
+.edit-field{display:flex;flex-direction:column;gap:2px;}
+.edit-field label{font-size:10px;color:#555;font-weight:600;}
+.edit-field input{height:26px;border:1px solid #90a4ae;border-radius:3px;padding:0 7px;font-size:11px;background:#fff;}
+.edit-field input:focus{border-color:#1565c0;outline:none;box-shadow:0 0 0 2px rgba(21,101,192,.15);}
+.edit-field input.empty-input{background:#fff9f9;border-color:#ffcdd2;}
+.edit-actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end;align-items:center;}
+.edit-info{font-size:10px;color:#888;margin-right:auto;}
+
+/* ── 상태바 ── */
+.statusbar{background:#1a3a5c;color:#b0c8e0;font-size:10px;padding:5px 16px;display:flex;gap:16px;flex-wrap:wrap;}
+
+/* ── 로딩 ── */
+.loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:999;align-items:center;justify-content:center;}
+.loading-overlay.active{display:flex;}
+.loading-box{background:#fff;border-radius:6px;padding:20px 32px;font-size:13px;color:#1a3a5c;font-weight:600;}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">⏳ 처리 중...</div>
+</div>
+
+<!-- 상단바 -->
+<div class="topbar">
+  <span class="topbar-title">⚙ 작업조건관리대장</span>
+  <div class="topbar-right">
+    <button class="btn btn-pdf" onclick="exportPDF()">⬇ PDF</button>
+    <button class="btn btn-csv" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+</div>
+
+<!-- 툴바 -->
+<div class="toolbar">
+  <label>작업일</label>
+  <input type="text" id="dateFrom" value="" placeholder="2026-01-01" style="width:95px;" oninput="formatDateInput(this)">
+  <span style="color:#888;font-size:11px;">~</span>
+  <input type="text" id="dateTo" value="" placeholder="2026-12-31" style="width:95px;" oninput="formatDateInput(this)">
+  <div class="sep"></div>
+  <label>고객사</label>
+  <select id="filterCustomer" style="width:100px;"><option value="">전체</option></select>
+  <label>설비명</label>
+  <select id="filterEquip" style="width:110px;"><option value="">전체</option></select>
+  <label>품명</label>
+  <input type="text" id="filterProduct" placeholder="품명 검색" style="width:90px;">
+  <label>품번</label>
+  <input type="text" id="filterPartNo" placeholder="품번 검색" style="width:90px;">
+  <div class="sep"></div>
+  <button class="btn btn-primary" onclick="loadData()">🔍 조회</button>
+  <button class="btn btn-reset" onclick="resetFilter()">초기화</button>
+</div>
+
+<!-- 안내 -->
+<div class="notice" id="noticeBox">
+  💡 <strong>[수정]</strong> 버튼을 클릭하면 하단 편집 패널에서 작업조건을 입력·수정할 수 있습니다. 먼저 조회를 진행해 주세요.
+</div>
+
+<!-- 본문 -->
+<div class="content">
+  <div class="card-header">
+    <span>작업조건 목록</span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span class="tag tag-orange" id="editingTag" style="display:none;"></span>
+      <span class="tag tag-blue" id="totalTag">총 0건</span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th rowspan="2" class="col-btn">수정</th>
+          <th rowspan="2" class="col-no">No</th>
+          <th rowspan="2" class="col-date">작업일</th>
+          <th rowspan="2" class="col-cs">고객사</th>
+          <th rowspan="2" class="col-pnm">품명</th>
+          <th rowspan="2" class="col-pno">품번</th>
+          <th rowspan="2" class="col-eq">설비명</th>
+          <th rowspan="2" class="col-qty">투입<br>수량</th>
+          <th rowspan="2" class="col-time">가동<br>시간</th>
+          <th colspan="11" class="cond">고주파 조건</th>
+          <th colspan="4" class="cond">템퍼링 / 교정</th>
+        </tr>
+        <tr>
+          <th class="cond cond-wide">전압(V)</th>
+          <th class="cond cond-wide">전류(A)</th>
+          <th class="cond cond-wide">출력(kW)</th>
+          <th class="cond cond-narrow">주파수(kHz)</th>
+          <th class="cond cond-narrow">가열시간(sec)</th>
+          <th class="cond cond-narrow">이동속도(mm/s)</th>
+          <th class="cond cond-narrow">코일-제품간격(mm)</th>
+          <th class="cond cond-narrow">회전수(RPM)</th>
+          <th class="cond cond-narrow">냉각수압력(bar)</th>
+          <th class="cond cond-narrow">냉각수온도(℃)</th>
+          <th class="cond cond-narrow">냉각시간(sec)</th>
+          <th class="cond cond-narrow">내용무</th>
+          <th class="cond cond-narrow">템퍼링온도(℃)</th>
+          <th class="cond cond-narrow">템퍼링시간(sec)</th>
+          <th class="cond cond-narrow">템퍼링경도(HRC)</th>
+          <th class="cond cond-narrow">교정값(mm)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="25" style="text-align:center;color:#999;padding:30px;">조회 버튼을 클릭하여 데이터를 불러오세요.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 편집 패널 -->
+<div class="edit-panel" id="editPanel">
+  <div class="edit-panel-title">
+    ✏️ 작업조건 편집 &nbsp;—&nbsp;
+    <span id="editTitle" style="color:#555;font-weight:400;"></span>
+    <span class="tag tag-orange" style="margin-left:auto;">저장 전 확인 필요</span>
+  </div>
+
+  <div class="edit-section-label">▶ 고주파 조건</div>
+  <div class="edit-grid">
+    <div class="edit-field"><label>전압(V)</label><input id="e_volt" type="number" step="0.01"></div>
+    <div class="edit-field"><label>전류(A)</label><input id="e_curr" type="number" step="0.01"></div>
+    <div class="edit-field"><label>출력(kW)</label><input id="e_power" type="number" step="0.01"></div>
+    <div class="edit-field"><label>주파수(kHz)</label><input id="e_freq" type="number" step="0.01"></div>
+    <div class="edit-field"><label>가열시간(sec)</label><input id="e_heat" type="number" step="0.01"></div>
+    <div class="edit-field"><label>이동속도(mm/s)</label><input id="e_speed" type="number" step="0.01"></div>
+    <div class="edit-field"><label>코일-제품간격(mm)</label><input id="e_gap" type="number" step="0.01"></div>
+    <div class="edit-field"><label>회전수(RPM)</label><input id="e_rpm" type="number" step="0.01"></div>
+    <div class="edit-field"><label>냉각수압력(bar)</label><input id="e_wpress" type="number" step="0.01"></div>
+    <div class="edit-field"><label>냉각수온도(℃)</label><input id="e_wtemp" type="number" step="0.01"></div>
+    <div class="edit-field"><label>냉각시간(sec)</label><input id="e_wcool" type="number" step="0.01"></div>
+    <div class="edit-field"><label>내용무</label><input id="e_content" type="text"></div>
+  </div>
+
+  <div class="edit-section-label">▶ 템퍼링 / 교정 조건</div>
+  <div class="edit-grid-4">
+    <div class="edit-field"><label>템퍼링온도(℃)</label><input id="e_ttemp" type="number" step="0.01" class="empty-input"></div>
+    <div class="edit-field"><label>템퍼링시간(sec)</label><input id="e_ttime" type="number" step="0.01" class="empty-input"></div>
+    <div class="edit-field"><label>템퍼링경도(HRC)</label><input id="e_thrc" type="text" class="empty-input"></div>
+    <div class="edit-field"><label>교정값(mm)</label><input id="e_calib" type="number" step="0.001" class="empty-input"></div>
+  </div>
+
+  <div class="edit-actions">
+    <span class="edit-info" id="editInfo"></span>
+    <button class="btn btn-cancel" onclick="cancelEdit()">취소</button>
+    <button class="btn btn-save" onclick="saveRow()">💾 저장</button>
+  </div>
+</div>
+
+<!-- 상태바 -->
+<div class="statusbar">
+  <span id="sb_total">총 0건</span>
+  <span>|</span>
+  <span id="sb_cond">작업조건 입력: 0건 / 미입력: 0건</span>
+  <span>|</span>
+  <span id="sb_edit">수정 중: 없음</span>
+  <span>|</span>
+  <span>HeatPro MES v1.0</span>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY = '@qgis2026';
+
+// 작업조건 컬럼 ID 목록 (DB 헤더명 순서)
+const COND_FIELDS = [
+  {id:'e_volt',   col:'전압(V)'},
+  {id:'e_curr',   col:'전류(A)'},
+  {id:'e_power',  col:'출력(kW)'},
+  {id:'e_freq',   col:'주파수(kHz)'},
+  {id:'e_heat',   col:'가열시간(sec)'},
+  {id:'e_speed',  col:'이동속도(mm/s)'},
+  {id:'e_gap',    col:'코일-제품간격(mm)'},
+  {id:'e_rpm',    col:'회전수(RPM)'},
+  {id:'e_wpress', col:'냉각수압력(bar)'},
+  {id:'e_wtemp',  col:'냉각수온도(℃)'},
+  {id:'e_wcool',  col:'냉각시간(sec)'},
+  {id:'e_content',col:'내용무'},
+  {id:'e_ttemp',  col:'템퍼링온도(℃)'},
+  {id:'e_ttime',  col:'템퍼링시간(sec)'},
+  {id:'e_thrc',   col:'템퍼링경도(HRC)'},
+  {id:'e_calib',  col:'교정값(mm)'}
+];
+
+// 화면 표시용 컬럼 순서 (내용무 포함)
+const DISP_COLS = [
+  '전압(V)','전류(A)','출력(kW)','주파수(kHz)',
+  '가열시간(sec)','이동속도(mm/s)','코일-제품간격(mm)','회전수(RPM)',
+  '냉각수압력(bar)','냉각수온도(℃)','냉각시간(sec)','내용무',
+  '템퍼링온도(℃)','템퍼링시간(sec)','템퍼링경도(HRC)','교정값(mm)'
+];
+const TEMPER_COLS = ['템퍼링온도(℃)','템퍼링시간(sec)','템퍼링경도(HRC)','교정값(mm)'];
+
+let allRows = [];        // 전체 원본 데이터
+let filteredRows = [];   // 필터 적용 결과
+let editingRowIdx = -1;  // 현재 편집 중인 filteredRows 인덱스
+
+// ── 날짜 자동 포맷 ──────────────────────────────
+function formatDateInput(el){
+  let v = el.value.replace(/[^0-9]/g,'');
+  if(v.length>=5) v = v.slice(0,4)+'-'+v.slice(4);
+  if(v.length>=8) v = v.slice(0,7)+'-'+v.slice(7,9);
+  el.value = v.slice(0,10);
+}
+
+// ── 로딩 표시 ──────────────────────────────────
+function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('active',v); }
+
+// ── JSONP 호출 ─────────────────────────────────
+function callJsonp(params, cb){
+  const cbName = 'cb_'+Date.now();
+  const script  = document.createElement('script');
+  const qs = Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+  window[cbName] = function(data){ delete window[cbName]; document.body.removeChild(script); cb(data); };
+  script.src = API_URL+'?'+qs+'&callback='+cbName;
+  script.onerror = function(){ delete window[cbName]; document.body.removeChild(script); alert('API 연결 오류'); showLoading(false); };
+  document.body.appendChild(script);
+}
+
+// ── 데이터 조회 ────────────────────────────────
+function loadData(){
+  cancelEdit();
+  showLoading(true);
+  callJsonp({action:'getWorkCondition', key:API_KEY}, function(data){
+    showLoading(false);
+    if(data.error){ alert('오류: '+data.error); return; }
+    allRows = data.rows || [];
+    buildDropdowns();
+    applyFilter();
+  });
+}
+
+// ── 드롭다운 생성 ───────────────────────────────
+function buildDropdowns(){
+  const customers = [...new Set(allRows.map(r=>r['고객사']).filter(Boolean))].sort();
+  const equips    = [...new Set(allRows.map(r=>r['설비명']).filter(Boolean))].sort();
+  fillSelect('filterCustomer', customers);
+  fillSelect('filterEquip',    equips);
+}
+function fillSelect(id, items){
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  while(sel.options.length>1) sel.remove(1);
+  items.forEach(v=>{ const o=document.createElement('option'); o.value=o.text=v; sel.appendChild(o); });
+  sel.value = cur;
+}
+
+// ── 필터 적용 ──────────────────────────────────
+function applyFilter(){
+  const dateFrom = document.getElementById('dateFrom').value.trim();
+  const dateTo   = document.getElementById('dateTo').value.trim();
+  const customer = document.getElementById('filterCustomer').value;
+  const equip    = document.getElementById('filterEquip').value;
+  const product  = document.getElementById('filterProduct').value.trim().toLowerCase();
+  const partNo   = document.getElementById('filterPartNo').value.trim().toLowerCase();
+
+  filteredRows = allRows.filter(r=>{
+    const d = r['작업일']||'';
+    if(dateFrom && d < dateFrom) return false;
+    if(dateTo   && d > dateTo)   return false;
+    if(customer && r['고객사'] !== customer) return false;
+    if(equip    && r['설비명'] !== equip)    return false;
+    if(product  && !(r['품명']||'').toLowerCase().includes(product)) return false;
+    if(partNo   && !(r['품번']||'').toLowerCase().includes(partNo))  return false;
+    return true;
+  });
+  renderTable();
+}
+
+// ── 테이블 렌더링 ──────────────────────────────
+function renderTable(){
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML='';
+
+  let filledCnt=0, emptyCnt=0;
+
+  if(filteredRows.length===0){
+    tbody.innerHTML='<tr><td colspan="25" style="text-align:center;color:#999;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+    updateStatus(0,0,0);
+    return;
+  }
+
+  filteredRows.forEach(function(r,idx){
+    const hasData = DISP_COLS.some(c=>r[c]!==''&&r[c]!==null&&r[c]!==undefined);
+    if(hasData) filledCnt++; else emptyCnt++;
+
+    const tr = document.createElement('tr');
+    if(idx===editingRowIdx) tr.classList.add('editing');
+
+    // 수정 버튼
+    const tdBtn = document.createElement('td');
+    if(idx===editingRowIdx){
+      tdBtn.innerHTML='<button class="btn-editing">편집중</button>';
+    } else {
+      tdBtn.innerHTML='<button class="btn-edit" onclick="startEdit('+idx+')">수정</button>';
+    }
+    tr.appendChild(tdBtn);
+
+    // 기본 컬럼
+    ['No','작업일','고객사','품명','품번','설비명','투입수량','가동시간'].forEach(function(col){
+      const td=document.createElement('td');
+      td.textContent = r[col]!==undefined&&r[col]!==''&&r[col]!==null ? r[col] : '-';
+      tr.appendChild(td);
+    });
+
+    // 작업조건 컬럼
+    DISP_COLS.forEach(function(col){
+      const td=document.createElement('td');
+      const v = r[col];
+      if(v===''||v===null||v===undefined){
+        td.textContent='-';
+        td.className='empty-cell';
+      } else {
+        td.textContent=v;
+        td.className = TEMPER_COLS.includes(col) ? 'has-temper' : 'has-data';
+      }
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  updateStatus(filteredRows.length, filledCnt, emptyCnt);
+  document.getElementById('totalTag').textContent='총 '+filteredRows.length+'건';
+}
+
+function updateStatus(total, filled, empty){
+  document.getElementById('sb_total').textContent='총 '+total+'건';
+  document.getElementById('sb_cond').textContent='작업조건 입력: '+filled+'건 / 미입력: '+empty+'건';
+}
+
+// ── 수정 시작 ──────────────────────────────────
+function startEdit(idx){
+  editingRowIdx = idx;
+  const r = filteredRows[idx];
+
+  // 편집 패널 타이틀
+  document.getElementById('editTitle').textContent=
+    'No.'+r['No']+' | '+r['고객사']+' / '+r['품명']+' / '+r['품번'];
+  document.getElementById('editInfo').textContent=
+    '작업일: '+(r['작업일']||'-')+'  |  설비: '+(r['설비명']||'-')+'  |  투입수량: '+(r['투입수량']||'-');
+
+  // 필드 채우기
+  COND_FIELDS.forEach(function(f){
+    const el = document.getElementById(f.id);
+    const v  = r[f.col];
+    el.value = (v!==null&&v!==undefined&&v!=='') ? v : '';
+    // 템퍼링/교정은 빈값이면 연분홍 배경
+    if(['e_ttemp','e_ttime','e_thrc','e_calib'].includes(f.id)){
+      el.classList.toggle('empty-input', el.value==='');
+    }
+  });
+
+  document.getElementById('editPanel').classList.add('active');
+  document.getElementById('editingTag').style.display='';
+  document.getElementById('editingTag').textContent='수정모드: No.'+r['No'];
+  document.getElementById('sb_edit').textContent='수정 중: No.'+r['No'];
+
+  renderTable();
+  document.getElementById('editPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── 수정 취소 ──────────────────────────────────
+function cancelEdit(){
+  editingRowIdx=-1;
+  document.getElementById('editPanel').classList.remove('active');
+  document.getElementById('editingTag').style.display='none';
+  document.getElementById('sb_edit').textContent='수정 중: 없음';
+  renderTable();
+}
+
+// ── 저장 ───────────────────────────────────────
+function saveRow(){
+  if(editingRowIdx<0) return;
+  const r = filteredRows[editingRowIdx];
+
+  // 수집
+  const updateData = {};
+  COND_FIELDS.forEach(function(f){
+    updateData[f.col] = document.getElementById(f.id).value.trim();
+  });
+
+  if(!confirm('No.'+r['No']+' ('+r['품명']+') 작업조건을 저장하시겠습니까?')) return;
+
+  showLoading(true);
+  fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      action:'saveWorkCondition',
+      key: API_KEY,
+      rowNo: r['No'],
+      updateData: updateData
+    })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    showLoading(false);
+    if(data.result==='ok'){
+      // 로컬 allRows 업데이트
+      const origIdx = allRows.findIndex(function(row){ return String(row['No'])===String(r['No']); });
+      if(origIdx>=0) COND_FIELDS.forEach(function(f){ allRows[origIdx][f.col]=updateData[f.col]; });
+      alert('저장되었습니다.');
+      cancelEdit();
+      applyFilter();
+    } else {
+      alert('저장 실패: '+(data.error||'알 수 없는 오류'));
+    }
+  })
+  .catch(function(err){
+    showLoading(false);
+    alert('저장 중 오류: '+err.message);
+  });
+}
+
+// ── 필터 초기화 ────────────────────────────────
+function resetFilter(){
+  document.getElementById('dateFrom').value='';
+  document.getElementById('dateTo').value='';
+  document.getElementById('filterCustomer').value='';
+  document.getElementById('filterEquip').value='';
+  document.getElementById('filterProduct').value='';
+  document.getElementById('filterPartNo').value='';
+  if(allRows.length>0) applyFilter();
+}
+
+// ── PDF 다운로드 ───────────────────────────────
+function exportPDF(){
+  if(filteredRows.length===0){ alert('먼저 조회를 진행해 주세요.'); return; }
+  const btn=document.querySelector('.btn-pdf');
+  const orig=btn.textContent; btn.textContent='생성 중...'; btn.disabled=true;
+  const target=document.querySelector('.content');
+  html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(function(canvas){
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const W=pdf.internal.pageSize.getWidth(), H=pdf.internal.pageSize.getHeight(), m=8;
+    const ratio=Math.min((W-m*2)/canvas.width,(H-m*2)/canvas.height);
+    const rW=canvas.width*ratio, rH=canvas.height*ratio;
+    pdf.addImage(canvas.toDataURL('image/png'),'PNG',(W-rW)/2,m,rW,rH);
+    pdf.save('작업조건관리대장_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }).catch(function(e){ alert('PDF 오류: '+e.message); })
+  .finally(function(){ btn.textContent=orig; btn.disabled=false; });
+}
+
+// ── CSV 다운로드 ───────────────────────────────
+function exportCSV(){
+  if(filteredRows.length===0){ alert('먼저 조회를 진행해 주세요.'); return; }
+  const headers=['No','작업일','고객사','품명','품번','설비명','투입수량','가동시간'].concat(DISP_COLS);
+  const rows = filteredRows.map(function(r){
+    return headers.map(function(h){ return '"'+(r[h]!==null&&r[h]!==undefined?r[h]:'')+'"'; }).join(',');
+  });
+  const csv = [headers.map(function(h){return '"'+h+'"';}).join(',')].concat(rows).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='작업조건관리대장_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+</script>
+
+<!-- PDF 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</body>
+</html>
