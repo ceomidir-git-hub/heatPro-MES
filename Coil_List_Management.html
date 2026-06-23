@@ -22,11 +22,15 @@ body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:#f0f2f5;c
 .search-row{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;padding:10px 0 8px;}
 .sg{display:flex;flex-direction:column;gap:3px;}
 .sg label{font-size:11px;font-weight:600;color:#1a3a5c;white-space:nowrap;}
-.sg input[type=text]{height:30px;padding:0 8px;border:1px solid #b0b8c8;border-radius:4px;font-size:12px;font-family:inherit;color:#222;background:#fff;width:260px;}
+.sg select,.sg input[type=date]{height:30px;padding:0 8px;border:1px solid #b0b8c8;border-radius:4px;font-size:12px;font-family:inherit;color:#222;background:#fff;}
+.date-range{display:flex;align-items:center;gap:4px;}
+.date-range span{font-size:12px;color:#666;}
 .btn-group{display:flex;gap:5px;align-self:flex-end;}
 .btn{height:30px;padding:0 14px;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;border:none;}
 .btn-primary{background:#1a3a5c;color:#fff;font-weight:700;}
 .btn-primary:hover{background:#254f7a;}
+.btn-today{background:#e8f0fb;color:#1a3a5c;border:1px solid #b0c4de;font-weight:600;}
+.btn-today:hover{background:#d0e0f5;}
 .btn-green{background:#2e7d32;color:#fff;font-weight:700;}
 .btn-green:hover{background:#1b5e20;}
 .btn-reset{background:#fff;color:#555;border:1px solid #bbb;}
@@ -37,8 +41,12 @@ body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:#f0f2f5;c
 .btn-pdf:hover{background:#d83a30;}
 .btn-pdf:disabled{background:#999;cursor:default;}
 
+/* 힌트 칩 */
+.hint-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:5px 0 8px;border-top:1px solid #e8ecf3;font-size:11px;}
+.hint-row .hl{color:#888;font-weight:600;margin-right:2px;}
+
 /* 탭 */
-.tab-row{display:flex;flex-wrap:wrap;gap:3px;padding:8px 0 0;border-top:1px solid #e8ecf3;margin-top:2px;}
+.tab-row{display:flex;flex-wrap:wrap;gap:3px;padding:6px 0 0;border-top:1px solid #e8ecf3;}
 .tab-btn{padding:4px 12px;font-size:11px;border:1px solid #ccc;border-radius:4px 4px 0 0;cursor:pointer;background:#f5f5f5;color:#666;font-family:inherit;}
 .tab-btn.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c;font-weight:700;}
 
@@ -131,13 +139,62 @@ td.l{text-align:left;}
   <div class="toolbar-inner">
     <div class="search-row">
       <div class="sg">
-        <label>코일식별번호 · 규격 · 부품명 검색</label>
-        <input type="text" id="search" placeholder="예: A-1, Ø30, 외경가열" oninput="filterTable()">
+        <label>분류코드</label>
+        <select id="f-code" style="width:130px;" onchange="onCodeChange()">
+          <option value="">전체</option>
+          <option value="A">A — 원형</option>
+          <option value="B">B — 원형2단</option>
+          <option value="C">C — 가열</option>
+          <option value="D">D — 수평수직</option>
+          <option value="E">E — 형상</option>
+          <option value="F">F — 내경</option>
+          <option value="G">G — 곡선</option>
+          <option value="H">H — 사각</option>
+          <option value="I">I — 크랭크</option>
+        </select>
+      </div>
+      <div class="sg">
+        <label>코일식별번호</label>
+        <select id="f-coilid" style="width:130px;"><option value="">전체</option></select>
+      </div>
+      <div class="sg">
+        <label>적용공정</label>
+        <select id="f-process" style="width:110px;">
+          <option value="">전체</option>
+          <option value="고주파열처리">고주파열처리</option>
+          <option value="고주파가열">고주파가열</option>
+        </select>
+      </div>
+      <div class="sg">
+        <label>재고현황</label>
+        <select id="f-stock" style="width:100px;">
+          <option value="">전체</option>
+          <option value="있음">재고있음</option>
+          <option value="없음">재고없음</option>
+        </select>
+      </div>
+      <div class="sg">
+        <label>등록일 기준</label>
+        <div class="date-range">
+          <input type="date" id="f-from" style="width:120px;">
+          <span>~</span>
+          <input type="date" id="f-to" style="width:120px;">
+        </div>
       </div>
       <div class="btn-group">
+        <button class="btn btn-today" onclick="setToday()">오늘</button>
         <button class="btn btn-reset" onclick="resetSearch()">초기화</button>
         <button class="btn btn-primary" onclick="loadData()">조 회</button>
       </div>
+    </div>
+    <div class="hint-row">
+      <span class="hl">AND 조합 :</span>
+      <span class="chip">분류코드만</span>
+      <span class="chip">코일식별번호</span>
+      <span class="chip">적용공정만</span>
+      <span class="chip">재고현황</span>
+      <span class="chip">기간 + 분류</span>
+      <span class="chip">전체 조합</span>
     </div>
     <div class="tab-row" id="tab-row"></div>
   </div>
@@ -308,15 +365,58 @@ function loadData(){
   });
 }
 
+function onCodeChange(){
+  var code=document.getElementById('f-code').value;
+  var sel=document.getElementById('f-coilid');
+  sel.innerHTML='<option value="">전체</option>';
+  var COIL_MAP={
+    A:['A-1','A-2','A-3','A-4','A-5','A-6','A-7','A-8','A-9','A-10','A-11','A-12','A-13','A-14','A-15','A-16','A-17','A-18','A-19'],
+    B:['B-1','B-2','B-3','B-4','B-5','B-6','B-7'],
+    C:['C-1','C-2','C-3','C-4','C-5','C-6','C-7','C-8','C-9','C-10','C-11','C-12','C-13'],
+    D:['D-1','D-2','D-3','D-4','D-5','D-6','D-7','D-8','D-9','D-10','D-11','D-12','D-13','D-14','D-15','D-16','D-17','D-18','D-19'],
+    E:['E-1','E-2','E-3','E-4','E-5','E-6','E-7','E-8','E-9','E-10','E-11','E-12','E-14','E-15','E-16'],
+    F:['F-1','F-2','F-3','F-4','F-5','F-6','F-7','F-8','F-9'],
+    G:['G-1','G-2','G-3','G-4','G-5','G-6','G-7','G-8','G-9','G-10'],
+    H:['H-1','H-2','H-3','H-4','H-5'],
+    I:['I-1','I-2','I-3','I-4','I-5','I-6','I-7','I-8']
+  };
+  var list=code?(COIL_MAP[code]||[]):[];
+  list.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  /* 탭도 연동 */
+  currentTab=code;renderTabs();filterTable();
+}
+
+function setToday(){
+  var t=new Date().toISOString().slice(0,10);
+  document.getElementById('f-from').value=t;
+  document.getElementById('f-to').value=t;
+}
+
 function filterTable(){
-  var kw=(document.getElementById('search').value||'').toLowerCase().trim();
+  var code=document.getElementById('f-code').value;
+  var coilId=document.getElementById('f-coilid').value;
+  var process=document.getElementById('f-process').value;
+  var stock=document.getElementById('f-stock').value;
+  var from=document.getElementById('f-from').value;
+  var to=document.getElementById('f-to').value;
+
   var fd=allData.filter(function(r){
+    /* 탭(분류코드) */
     if(currentTab&&r['식별코드']!==currentTab)return false;
-    if(!kw)return true;
-    return String(r['코일식별번호']||'').toLowerCase().indexOf(kw)>=0||
-           String(r['코일규격']||'').toLowerCase().indexOf(kw)>=0||
-           String(r['부품명']||'').toLowerCase().indexOf(kw)>=0;
+    /* 드롭다운 필터 */
+    if(coilId&&r['코일식별번호']!==coilId)return false;
+    if(process&&r['적용공정']!==process)return false;
+    if(stock==='있음'&&(parseInt(r['현재고량_Ea'])||0)===0)return false;
+    if(stock==='없음'&&(parseInt(r['현재고량_Ea'])||0)>0)return false;
+    /* 등록일 기간 */
+    if(from||to){
+      var reg=String(r['등록일']||'').slice(0,10);
+      if(from&&reg&&reg<from)return false;
+      if(to&&reg&&reg>to)return false;
+    }
+    return true;
   });
+
   var zero=fd.filter(function(r){return(parseInt(r['현재고량_Ea'])||0)===0;}).length;
   document.getElementById('chips').innerHTML=
     '<span class="chip">조회결과 <b>'+fd.length+'</b>건</span>'+
@@ -327,8 +427,8 @@ function filterTable(){
   var tbody=document.getElementById('tbody');
   if(!fd.length){tbody.innerHTML='<tr><td colspan="13" style="padding:30px;color:#aaa;">데이터가 없습니다.</td></tr>';return;}
   tbody.innerHTML=fd.map(function(r,idx){
-    var stock=parseInt(r['현재고량_Ea'])||0;
-    var sc=stock===0?'<span class="stock-zero">0</span> <span class="badge-zero">재고없음</span>':'<b>'+stock+'</b>';
+    var stock2=parseInt(r['현재고량_Ea'])||0;
+    var sc=stock2===0?'<span class="stock-zero">0</span> <span class="badge-zero">재고없음</span>':'<b>'+stock2+'</b>';
     return '<tr>'+
       '<td>'+esc(r['번호'])+'</td>'+
       '<td><b>'+esc(r['코일식별번호'])+'</b></td>'+
@@ -351,7 +451,16 @@ function filterTable(){
   window._filteredData=fd;
 }
 
-function resetSearch(){document.getElementById('search').value='';filterTable();}
+function resetSearch(){
+  document.getElementById('f-code').value='';
+  document.getElementById('f-coilid').innerHTML='<option value="">전체</option>';
+  document.getElementById('f-process').value='';
+  document.getElementById('f-stock').value='';
+  document.getElementById('f-from').value='';
+  document.getElementById('f-to').value='';
+  currentTab='';
+  if(allData.length){renderTabs();filterTable();}
+}
 function autoClass(){document.getElementById('n-class').value=CLASS_MAP[document.getElementById('n-code').value]||'';}
 function showNewForm(){
   document.getElementById('form-edit').style.display='none';
