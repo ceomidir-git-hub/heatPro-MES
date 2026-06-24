@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>불량률현황 | HeatPro MES</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#185FA5;--blue-lt:#E6F1FB;--blue-dk:#0C447C;
+  --green:#3B6D11;--green-lt:#EAF3DE;--green-dk:#27500A;
+  --amber:#854F0B;--amber-lt:#FAEEDA;
+  --red:#A32D2D;--red-lt:#FCEBEB;
+  --pink:#72243E;--pink-lt:#FBEAF0;
+  --gray:#5F5E5A;--gray-lt:#F1EFE8;--gray-bd:#D3D1C7;
+  --bg:#F8F7F4;--white:#FFFFFF;--text:#2C2C2A;--text-sub:#888780;
+}
+body{font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+.top-header{background:var(--white);border-bottom:1px solid var(--gray-bd);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;}
+.logo svg{width:20px;height:20px;}
+nav{display:flex;gap:4px;}
+nav a{font-size:12px;color:var(--text-sub);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid transparent;}
+nav a:hover{background:var(--gray-lt);color:var(--text);}
+nav a.active{background:var(--blue-lt);color:var(--blue-dk);border-color:#B5D4F4;font-weight:500;}
+.container{max-width:1280px;margin:0 auto;padding:20px 20px 48px;width:100%;}
+.page-title{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.page-title svg{width:20px;height:20px;color:var(--pink);flex-shrink:0;}
+.page-title h1{font-size:18px;font-weight:700;}
+.page-title .sub{font-size:12px;color:var(--text-sub);}
+.badge-wrap{margin-left:auto;display:flex;gap:6px;align-items:center;}
+.year-badge{background:var(--blue-lt);color:var(--blue-dk);font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;}
+.unit-badge{background:var(--pink-lt);color:var(--pink);font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;}
+.filter-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;padding:13px 16px;margin-bottom:12px;}
+.filter-label{font-size:11px;font-weight:600;color:var(--text-sub);letter-spacing:.05em;margin-bottom:9px;}
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.filter-row:last-child{margin-bottom:0;}
+.fg{display:flex;align-items:center;gap:5px;}
+.fg label{font-size:12px;color:var(--text-sub);white-space:nowrap;}
+.fg input[type=date],.fg select{height:32px;border:1px solid var(--gray-bd);border-radius:6px;padding:0 8px;font-size:12px;color:var(--text);background:var(--white);outline:none;}
+.fg input[type=date]{width:125px;}
+.fg select{min-width:100px;}
+.fg input:focus,.fg select:focus{border-color:var(--blue);}
+.sep{font-size:12px;color:var(--text-sub);}
+.btn-row{display:flex;gap:6px;margin-left:auto;}
+.btn{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--gray-bd);background:var(--white);color:var(--text-sub);transition:background .1s;}
+.btn:hover{background:var(--gray-lt);}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn-today{background:var(--green-lt);color:var(--green-dk);border-color:#C0DD97;}
+.btn-today:hover{background:#C0DD97;}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-primary:hover{background:var(--blue-dk);}
+.dash-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;padding:12px 14px;margin-bottom:12px;}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.dash-title{font-size:12px;font-weight:600;color:var(--text);}
+.period-badge{font-size:11px;padding:2px 9px;border-radius:99px;font-weight:500;}
+.pb-single{background:var(--green-lt);color:var(--green-dk);}
+.pb-range{background:var(--blue-lt);color:var(--blue-dk);}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.kpi-item{background:var(--gray-lt);border-radius:8px;padding:9px 11px;}
+.kpi-label{font-size:10px;color:var(--text-sub);margin-bottom:3px;white-space:nowrap;}
+.kpi-val{font-size:16px;font-weight:700;color:var(--text);}
+.kpi-unit{font-size:10px;color:var(--text-sub);margin-left:1px;}
+.table-card{background:var(--white);border:1px solid var(--gray-bd);border-radius:10px;overflow:hidden;}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--gray-bd);}
+.t-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
+.cnt-badge{background:var(--blue-lt);color:var(--blue-dk);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;}
+.table-wrap{overflow-x:auto;overflow-y:auto;max-height:420px;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:11px;min-width:1100px;}
+thead{position:sticky;top:0;z-index:10;}
+thead th{padding:6px 4px;text-align:center;font-size:10px;font-weight:600;background:var(--gray-lt);color:var(--text-sub);border-bottom:1px solid var(--gray-bd);border-right:1px solid var(--gray-bd);white-space:nowrap;}
+thead th.th-db{background:#E6F1FB;color:var(--blue-dk);}
+thead th.th-input{background:#FAEEDA;color:#633806;}
+thead th.th-calc{background:#FBEAF0;color:var(--pink);}
+thead th:last-child{border-right:none;}
+tbody td{padding:5px 4px;text-align:center;border-bottom:1px solid #EEECEA;border-right:1px solid #EEECEA;color:var(--text);font-size:11px;}
+tbody td:last-child{border-right:none;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:#FAFAF8;}
+.td-db{background:#EEF7FD;color:var(--blue-dk);font-weight:500;}
+.td-calc{background:#FBEAF0;color:var(--pink);font-weight:500;}
+.td-calc-bad{background:#FCEBEB;color:var(--red);font-weight:600;}
+.td-input{border:1px solid transparent;border-radius:3px;padding:2px 3px;font-size:11px;width:100%;background:transparent;color:var(--text);text-align:center;outline:none;font-family:inherit;min-width:34px;}
+.td-input:hover{border-color:var(--gray-bd);background:var(--gray-lt);}
+.td-input:focus{border-color:var(--blue);background:var(--white);}
+.td-input.modified{border-color:#EF9F27;background:#FAEEDA;}
+.save-btn{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk);transition:background .1s;}
+.save-btn:hover{background:#B5D4F4;}
+.save-btn.saved{border-color:var(--green);background:var(--green-lt);color:var(--green-dk);}
+.save-btn.saving{opacity:.6;pointer-events:none;}
+.status-bar{display:flex;align-items:center;gap:6px;padding:8px 14px;border-top:1px solid var(--gray-bd);font-size:11px;color:var(--text-sub);}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-ok{background:var(--green);}
+.dot-loading{background:var(--amber);animation:pulse 1s infinite;}
+.dot-error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2C2C2A;color:#fff;font-size:13px;padding:10px 20px;border-radius:8px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap;}
+.toast.show{opacity:1;}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}.filter-row{flex-wrap:wrap;}}
+</style>
+</head>
+<body>
+<header class="top-header">
+  <a class="logo" href="https://ceomidir-git-hub.github.io/heatPro-MES/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>HeatPro MES
+  </a>
+  <nav>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/">대시보드</a>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/GitHub_Worksheet.html">작업일보</a>
+    <a href="https://ceomidir-git-hub.github.io/heatPro-MES/Monthly_Production_Record_FINAL.html">월생산달성율</a>
+    <a class="active" href="#">불량률현황</a>
+  </nav>
+</header>
+<main class="container">
+  <div class="page-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h1>불량률현황</h1>
+    <span class="sub">Defect Rate</span>
+    <div class="badge-wrap">
+      <span class="year-badge" id="yearBadge">2026년도</span>
+      <span class="unit-badge">[단위 : PPM]</span>
+    </div>
+  </div>
+
+  <div class="filter-card">
+    <div class="filter-label">조회 조건 (복합 AND 검색)</div>
+    <div class="filter-row">
+      <div class="fg">
+        <label>기간</label>
+        <input type="date" id="fFrom"/>
+        <span class="sep">~</span>
+        <input type="date" id="fTo"/>
+      </div>
+      <div class="fg">
+        <label>고객사</label>
+        <select id="selCust"><option value="">전체</option></select>
+      </div>
+      <div class="fg">
+        <label>품명</label>
+        <select id="selProd"><option value="">전체</option></select>
+      </div>
+      <div class="fg">
+        <label>품번</label>
+        <select id="selPartNo"><option value="">전체</option></select>
+      </div>
+      <div class="fg">
+        <label>설비명</label>
+        <select id="selEquip"><option value="">전체</option></select>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="btn-row">
+        <button class="btn btn-today" onclick="setToday()">오늘</button>
+        <button class="btn" onclick="resetFilter()">초기화</button>
+        <button class="btn btn-primary" onclick="doQuery()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          조회
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-card">
+    <div class="dash-header">
+      <span class="dash-title" id="dashTitle">조회 후 집계가 표시됩니다</span>
+      <span class="period-badge pb-range" id="periodBadge">기간 집계</span>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-item"><div class="kpi-label">총 투입수량</div><div class="kpi-val" id="dInput">—<span class="kpi-unit">ea</span></div></div>
+      <div class="kpi-item"><div class="kpi-label">총 양품수량</div><div class="kpi-val" id="dGood">—<span class="kpi-unit">ea</span></div></div>
+      <div class="kpi-item"><div class="kpi-label">총 불량수량</div><div class="kpi-val" id="dBad">—<span class="kpi-unit">ea</span></div></div>
+      <div class="kpi-item" id="dPpmCard">
+        <div class="kpi-label">불량률</div>
+        <div class="kpi-val" id="dPpm" style="color:var(--pink);">—<span class="kpi-unit">PPM</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <span class="t-title">불량 내역<span class="cnt-badge" id="tCount">0건</span></span>
+      <button class="btn" onclick="exportCSV()" style="height:28px;font-size:11px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CSV 내보내기
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">작업일</th>
+            <th rowspan="2">고객사</th>
+            <th rowspan="2">품명</th>
+            <th rowspan="2">품번</th>
+            <th rowspan="2">설비명</th>
+            <th colspan="3" class="th-db">DB 합산 (DB DATA 2026)</th>
+            <th colspan="6" class="th-input">불량 유형 입력 (ea)</th>
+            <th colspan="2" class="th-calc">자동 계산</th>
+            <th rowspan="2" style="width:44px;">저장</th>
+          </tr>
+          <tr>
+            <th class="th-db" style="width:54px;">투입수량</th>
+            <th class="th-db" style="width:54px;">양품수량</th>
+            <th class="th-db" style="width:54px;">불량수량</th>
+            <th class="th-input" style="width:40px;">외관</th>
+            <th class="th-input" style="width:40px;">오염</th>
+            <th class="th-input" style="width:40px;">찍힘</th>
+            <th class="th-input" style="width:40px;">탈락</th>
+            <th class="th-input" style="width:40px;">경도</th>
+            <th class="th-input" style="width:40px;">변형</th>
+            <th class="th-calc" style="width:58px;">불량합계</th>
+            <th class="th-calc" style="width:70px;">불량률(PPM)</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="17" style="padding:30px;text-align:center;color:var(--text-sub);font-size:12px;">조회 조건을 선택 후 조회하세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="status-bar">
+      <span class="sdot dot-ok" id="sDot"></span>
+      <span id="sText">대기 중</span>
+    </div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
+var queryRows=[];
+var rowIdx=0;
+
+function pad2(n){return String(n).padStart(2,'0');}
+function toN(v){var n=Number(v);return isNaN(n)?0:n;}
+function fmtDate(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function fmtMonthFirst(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-01';}
+function esc(v){return String(v).replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+window.onload=function(){
+  var now=new Date();
+  /* ① 시작일: 해당월 1일, 종료일: 오늘 */
+  document.getElementById('fFrom').value=fmtMonthFirst(now);
+  document.getElementById('fTo').value=fmtDate(now);
+  document.getElementById('yearBadge').textContent=now.getFullYear()+'년도';
+  loadMeta();
+};
+
+function setToday(){
+  var t=fmtDate(new Date());
+  document.getElementById('fFrom').value=t;
+  document.getElementById('fTo').value=t;
+}
+function resetFilter(){
+  var now=new Date();
+  document.getElementById('fFrom').value=fmtMonthFirst(now);
+  document.getElementById('fTo').value=fmtDate(now);
+  document.getElementById('selCust').value='';
+  document.getElementById('selProd').value='';
+  document.getElementById('selPartNo').value='';
+  document.getElementById('selEquip').value='';
+}
+
+function loadMeta(){
+  var cb='cbMeta_'+Date.now(),sc=document.createElement('script');
+  sc.src=API_URL+'?key='+encodeURIComponent(API_KEY)+'&callback='+cb;
+  window[cb]=function(data){
+    document.head.removeChild(sc);delete window[cb];
+    fillSel('selCust', data.customers||[]);
+    fillSel('selEquip', (data.equipment||[]).map(function(e){return e.name;}));
+    var prods={},parts={};
+    var p=data.products||{};
+    Object.keys(p).forEach(function(c){
+      Object.keys(p[c]).forEach(function(n){
+        prods[n]=1;
+        (p[c][n]||[]).forEach(function(no){parts[no]=1;});
+      });
+    });
+    fillSel('selProd', Object.keys(prods).sort());
+    fillSel('selPartNo', Object.keys(parts).sort());
+    setStatus('ok','기준 정보 로드 완료');
+  };
+  sc.onerror=function(){document.head.removeChild(sc);delete window[cb];setStatus('error','기준 정보 로드 실패');};
+  document.head.appendChild(sc);
+}
+
+function fillSel(id, arr){
+  var sel=document.getElementById(id);
+  arr.forEach(function(v){if(v)sel.add(new Option(v,v));});
+}
+
+function doQuery(){
+  var from=document.getElementById('fFrom').value;
+  var to=document.getElementById('fTo').value;
+  var cust=document.getElementById('selCust').value;
+  var prod=document.getElementById('selProd').value;
+  var partNo=document.getElementById('selPartNo').value;
+  var eq=document.getElementById('selEquip').value;
+
+  if(!from&&!to&&!cust&&!prod&&!partNo&&!eq){
+    showToast('⚠️ 조회 조건을 하나 이상 선택하세요.');return;
+  }
+  setStatus('loading','데이터 불러오는 중...');
+
+  var url=API_URL+'?action=defectRate&key='+encodeURIComponent(API_KEY)+'&callback=cbDef_'+Date.now();
+  if(from)url+='&from='+from;
+  if(to)url+='&to='+to;
+  if(cust)url+='&customer='+encodeURIComponent(cust);
+  if(prod)url+='&product='+encodeURIComponent(prod);
+  if(partNo)url+='&partNo='+encodeURIComponent(partNo);
+  if(eq)url+='&equipment='+encodeURIComponent(eq);
+
+  var cbName=url.match(/callback=(cbDef_\d+)/)[1];
+  var sc=document.createElement('script');sc.src=url;
+
+  window[cbName]=function(data){
+    document.head.removeChild(sc);delete window[cbName];
+    queryRows=(data&&data.rows)?data.rows:[];
+    renderTable(from,to,cust,prod,partNo,eq,queryRows);
+    setStatus('ok','조회 완료 · '+queryRows.length+'건');
+  };
+  sc.onerror=function(){
+    document.head.removeChild(sc);delete window[cbName];
+    setStatus('error','API 연결 실패');
+  };
+  document.head.appendChild(sc);
+  setTimeout(function(){
+    if(window[cbName]){document.head.removeChild(sc);delete window[cbName];setStatus('error','응답 시간 초과');}
+  },10000);
+}
+
+function renderTable(from,to,cust,prod,partNo,eq,rows){
+  var isSingle=(from===to&&from!=='');
+  var condParts=[];
+  if(from&&to) condParts.push(from+(isSingle?'':' ~ '+to));
+  else if(from) condParts.push(from+' ~');
+  if(cust) condParts.push(cust);
+  if(prod) condParts.push(prod);
+  if(partNo) condParts.push(partNo);
+  if(eq) condParts.push(eq);
+  document.getElementById('dashTitle').textContent=condParts.join(' · ')||'전체';
+  document.getElementById('periodBadge').textContent=isSingle?'당일':'기간 집계';
+  document.getElementById('periodBadge').className='period-badge '+(isSingle?'pb-single':'pb-range');
+  document.getElementById('tCount').textContent=rows.length+'건';
+  rowIdx=0;
+
+  if(rows.length===0){
+    document.getElementById('tbody').innerHTML='<tr><td colspan="17" style="padding:30px;text-align:center;color:var(--text-sub);font-size:12px;">조회된 데이터가 없습니다.</td></tr>';
+    updateDash();return;
+  }
+
+  /* ② 투입/양품/불량수량 → DB DATA 2026 기준 (r.투입수량, r.양품수량, r.불량수량) */
+  var html=rows.map(function(r){
+    var idx=rowIdx++;
+    var dbInput=toN(r.투입수량);
+    var dbGood =toN(r.양품수량);
+    var dbBad  =toN(r.불량수량);
+    var badSum =toN(r.외관)+toN(r.오염)+toN(r.찍힘)+toN(r.탈락)+toN(r.경도)+toN(r.변형);
+    var ppm=dbInput>0?Math.round(dbBad/dbInput*1000000):0;
+    return '<tr data-idx="'+idx+'"'
+      +' data-date="'+esc(r.작업일)+'"'
+      +' data-cust="'+esc(r.고객사)+'"'
+      +' data-prod="'+esc(r.품명)+'"'
+      +' data-partno="'+esc(r.품번)+'"'
+      +' data-eq="'+esc(r.설비명)+'"'
+      +' data-eqno="'+esc(r.설비번호||'')+'"'
+      +' data-dbinput="'+dbInput+'"'
+      +' data-dbgood="'+dbGood+'"'
+      +' data-dbbad="'+dbBad+'">'
+      +'<td style="white-space:nowrap;font-size:11px;">'+r.작업일+'</td>'
+      +'<td>'+r.고객사+'</td>'
+      +'<td>'+r.품명+'</td>'
+      +'<td>'+r.품번+'</td>'
+      +'<td>'+r.설비명+'</td>'
+      +'<td class="td-db">'+dbInput.toLocaleString()+'</td>'
+      +'<td class="td-db">'+dbGood.toLocaleString()+'</td>'
+      +'<td class="td-db">'+dbBad.toLocaleString()+'</td>'
+      +mkI(idx,'외관',r.외관)+mkI(idx,'오염',r.오염)+mkI(idx,'찍힘',r.찍힘)
+      +mkI(idx,'탈락',r.탈락)+mkI(idx,'경도',r.경도)+mkI(idx,'변형',r.변형)
+      +'<td class="td-calc" id="c-sum-'+idx+'">'+badSum+'</td>'
+      +'<td class="'+(ppm>0?'td-calc-bad':'td-calc')+'" id="c-ppm-'+idx+'">'+ppm.toLocaleString()+'</td>'
+      +'<td><button class="save-btn" id="sbtn-'+idx+'" onclick="saveRow('+idx+')">저장</button></td>'
+      +'</tr>';
+  }).join('');
+
+  document.getElementById('tbody').innerHTML=html;
+  updateDash();
+}
+
+function mkI(idx,field,val){
+  var v=(val===undefined||val===null)?0:toN(val);
+  return '<td><input class="td-input" type="number" min="0" placeholder="0" value="'+v+'" data-field="'+field+'" data-idx="'+idx+'" oninput="markMod(this);recalc('+idx+')"/></td>';
+}
+function markMod(el){el.classList.add('modified');}
+
+function recalc(idx){
+  var tr=document.querySelector('tr[data-idx="'+idx+'"]');if(!tr)return;
+  function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
+  var badSum=gF('외관')+gF('오염')+gF('찍힘')+gF('탈락')+gF('경도')+gF('변형');
+  var dbInput=toN(tr.dataset.dbinput);
+  var dbBad  =toN(tr.dataset.dbbad);
+  /* PPM 계산: DB DATA 2026의 투입수량 기준 */
+  var ppm=dbInput>0?Math.round(dbBad/dbInput*1000000):0;
+  var sEl=document.getElementById('c-sum-'+idx);
+  var pEl=document.getElementById('c-ppm-'+idx);
+  if(sEl)sEl.textContent=badSum;
+  if(pEl){pEl.textContent=ppm.toLocaleString();pEl.className=ppm>0?'td-calc-bad':'td-calc';}
+  updateDash();
+}
+
+function updateDash(){
+  var trs=document.querySelectorAll('#tbody tr[data-idx]');
+  var totInput=0,totGood=0,totBad=0;
+  trs.forEach(function(tr){
+    totInput+=toN(tr.dataset.dbinput);
+    totGood +=toN(tr.dataset.dbgood);
+    totBad  +=toN(tr.dataset.dbbad);
+  });
+  var ppm=totInput>0?Math.round(totBad/totInput*1000000):0;
+  var isOk=ppm===0;
+  document.getElementById('dInput').innerHTML=totInput.toLocaleString()+'<span class="kpi-unit">ea</span>';
+  document.getElementById('dGood').innerHTML=totGood.toLocaleString()+'<span class="kpi-unit">ea</span>';
+  document.getElementById('dBad').innerHTML=totBad.toLocaleString()+'<span class="kpi-unit">ea</span>';
+  var pEl=document.getElementById('dPpm');
+  pEl.innerHTML=ppm.toLocaleString()+'<span class="kpi-unit">PPM</span>';
+  pEl.style.color=isOk?'var(--green-dk)':'var(--red)';
+  document.getElementById('dPpmCard').style.background=isOk?'var(--green-lt)':'var(--red-lt)';
+}
+
+/* ③ 저장: 불량data에 유형 저장 + DB DATA 2026 불량수량/양품수량 자동 동기화 */
+function saveRow(idx){
+  var tr=document.querySelector('tr[data-idx="'+idx+'"]');
+  var btn=document.getElementById('sbtn-'+idx);
+  if(!tr||!btn)return;
+  function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
+  var 외관=gF('외관'),오염=gF('오염'),찍힘=gF('찍힘'),탈락=gF('탈락'),경도=gF('경도'),변형=gF('변형');
+  var payload={
+    action:'saveDefectRate', key:API_KEY,
+    작업일:tr.dataset.date,   고객사:tr.dataset.cust,
+    품명:tr.dataset.prod,     품번:tr.dataset.partno,
+    설비명:tr.dataset.eq,     설비번호:tr.dataset.eqno,
+    외관:외관, 오염:오염, 찍힘:찍힘,
+    탈락:탈락, 경도:경도, 변형:변형
+  };
+  btn.classList.add('saving');btn.textContent='저장중';
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(data.result==='updated'||data.result==='inserted'){
+      var badSum=외관+오염+찍힘+탈락+경도+변형;
+      var dbInput=toN(tr.dataset.dbinput);
+      var newGood=Math.max(0,dbInput-badSum);
+      /* 화면의 DB합산 컬럼도 즉시 업데이트 */
+      tr.dataset.dbbad=String(badSum);
+      tr.dataset.dbgood=String(newGood);
+      tr.querySelectorAll('td.td-db').forEach(function(td,i){
+        if(i===0)td.textContent=dbInput.toLocaleString();
+        if(i===1)td.textContent=newGood.toLocaleString();
+        if(i===2)td.textContent=badSum.toLocaleString();
+      });
+      /* PPM 재계산 */
+      var ppm=dbInput>0?Math.round(badSum/dbInput*1000000):0;
+      var pEl=document.getElementById('c-ppm-'+idx);
+      if(pEl){pEl.textContent=ppm.toLocaleString();pEl.className=ppm>0?'td-calc-bad':'td-calc';}
+      tr.querySelectorAll('.modified').forEach(function(el){el.classList.remove('modified');});
+      btn.classList.remove('saving');btn.classList.add('saved');btn.textContent='완료';
+      showToast('✅ '+tr.dataset.date+' '+tr.dataset.cust+' 저장 완료 ('+(data.result==='updated'?'수정':'신규')+') | DB 동기화 완료');
+      updateDash();
+      setTimeout(function(){btn.classList.remove('saved');btn.textContent='저장';},2500);
+    }else{
+      btn.classList.remove('saving');btn.textContent='저장';
+      showToast('❌ 저장 실패: '+(data.error||data.message||''));
+    }
+  })
+  .catch(function(){btn.classList.remove('saving');btn.textContent='저장';showToast('❌ 네트워크 오류');});
+}
+
+function exportCSV(){
+  var rows=document.querySelectorAll('#tbody tr[data-idx]');
+  if(rows.length===0){showToast('내보낼 데이터가 없습니다.');return;}
+  var hdrs=['작업일','고객사','품명','품번','설비명','투입수량(DB)','양품수량(DB)','불량수량(DB)','외관','오염','찍힘','탈락','경도','변형','불량합계','불량률(PPM)'];
+  var lines=['\uFEFF'+hdrs.join(',')];
+  rows.forEach(function(tr){
+    var idx=tr.dataset.idx;
+    function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?el.value:0;}
+    var cells=[
+      tr.dataset.date,tr.dataset.cust,tr.dataset.prod,tr.dataset.partno,tr.dataset.eq,
+      tr.dataset.dbinput,tr.dataset.dbgood,tr.dataset.dbbad,
+      gF('외관'),gF('오염'),gF('찍힘'),gF('탈락'),gF('경도'),gF('변형'),
+      document.getElementById('c-sum-'+idx)?document.getElementById('c-sum-'+idx).textContent:'',
+      document.getElementById('c-ppm-'+idx)?document.getElementById('c-ppm-'+idx).textContent:''
+    ];
+    lines.push(cells.join(','));
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='Defect_Rate_'+fmtDate(new Date())+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  showToast('📥 CSV 완료');
+}
+
+function setStatus(type,msg){
+  document.getElementById('sDot').className='sdot '+(type==='loading'?'dot-loading':type==='error'?'dot-error':'dot-ok');
+  document.getElementById('sText').textContent=msg;
+}
+function showToast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3500);
+}
+</script>
+</body>
+</html>
