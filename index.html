@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeatPro MES — 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#15181D;--panel:#1F242C;--panel-2:#262C36;--line:#323A46;--text:#EAF0F6;--muted:#8A99AC;--accent:#FF6B35;--accent-glow:rgba(255,107,53,0.35);--good:#43D17A;--bad:#FF5C5C;--info:#4FA8FF;--font-display:'Space Grotesk','Noto Sans KR',sans-serif;--font-body:'Noto Sans KR',sans-serif;--font-mono:'IBM Plex Mono',monospace;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:64px 1fr;min-height:100vh;}
+  .topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--line);background:var(--panel);}
+  .brand{display:flex;align-items:center;gap:12px;font-family:var(--font-display);font-weight:700;font-size:1.15rem;letter-spacing:0.02em;}
+  .brand .mark{width:34px;height:34px;border-radius:8px;background:radial-gradient(circle at 30% 30%,#FF8A5C,var(--accent) 60%,#B8431B 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px var(--accent-glow);font-size:1.1rem;}
+  .brand .sub{font-size:0.72rem;color:var(--muted);font-weight:500;letter-spacing:0.08em;font-family:var(--font-mono);}
+  .topbar-right{display:flex;align-items:center;gap:22px;font-family:var(--font-mono);font-size:0.85rem;color:var(--muted);}
+  .topbar-right .date-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);}
+  .topbar-right .date-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);}
+  .user-chip{display:flex;align-items:center;gap:10px;color:var(--text);font-family:var(--font-body);font-size:0.9rem;font-weight:500;}
+  .user-chip .avatar{width:30px;height:30px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.95rem;}
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+  .nav-group-label{font-family:var(--font-mono);font-size:0.68rem;letter-spacing:0.14em;color:#5C6878;text-transform:uppercase;margin:18px 10px 6px;}
+  .nav-item .icon{width:18px;text-align:center;font-size:1rem;opacity:0.85;}
+  .nav-item:hover{background:var(--panel);color:var(--text);}
+  .nav-item.active{background:linear-gradient(90deg,var(--accent-glow),transparent);color:#FFFFFF;}
+  .nav-item.active::before{content:'';position:absolute;left:-12px;top:6px;bottom:6px;width:3px;border-radius:0 4px 4px 0;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+  .nav-divider{height:1px;background:var(--line);margin:14px 8px;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;gap:0;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:0.92rem;font-weight:500;transition:background 0.15s,color 0.15s;cursor:pointer;position:relative;}
+  .nav-item .nav-left{display:flex;align-items:center;gap:12px;}
+  .nav-item .chevron{font-size:0.6rem;color:#5C6878;transition:transform 0.2s;flex-shrink:0;}
+  .nav-item.open .chevron{transform:rotate(180deg);}
+  .sub-menu{overflow:hidden;max-height:0;transition:max-height 0.25s ease;}
+  .sub-menu.open{max-height:300px;}
+  .sub-item{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 38px;border-radius:6px;color:var(--muted);font-size:0.82rem;cursor:pointer;transition:background 0.1s,color 0.1s;text-decoration:none;}
+  .sub-item:hover{background:var(--panel-2);color:var(--text);}
+  .sub-item.active{color:var(--accent);}
+  .sub-item::before{content:'';width:4px;height:4px;border-radius:50%;background:#3C4554;flex-shrink:0;}
+  .sub-item.active::before{background:var(--accent);}
+  .main{padding:24px 28px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:20px;}
+  .page-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .page-head h1{font-family:var(--font-display);font-size:1.6rem;font-weight:700;letter-spacing:0.01em;}
+  .page-head .crumb{font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);}
+  .grid{display:grid;grid-template-columns:1fr 620px;gap:20px;align-items:stretch;}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .kpi{background:linear-gradient(155deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;min-height:130px;}
+  .kpi::after{content:'';position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:var(--accent);opacity:0.06;filter:blur(2px);}
+  .kpi .kpi-label{font-size:0.8rem;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .kpi .kpi-label .ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--panel-2);border:1px solid var(--line);font-size:0.85rem;}
+  .kpi .kpi-value{font-family:var(--font-mono);font-size:2.6rem;font-weight:700;letter-spacing:0.01em;display:flex;align-items:baseline;gap:8px;}
+  .kpi .kpi-value .unit{font-size:0.95rem;color:var(--muted);font-weight:500;}
+  .kpi.accent .kpi-value{color:var(--accent);}
+  .kpi .kpi-foot{margin-top:10px;font-size:0.74rem;color:#5C6878;font-family:var(--font-mono);}
+  .flow-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 18px;display:flex;flex-direction:column;}
+  .flow-card h3{font-family:var(--font-display);font-size:1rem;font-weight:600;margin-bottom:4px;}
+  .flow-card .flow-sub{font-size:0.78rem;color:var(--muted);margin-bottom:18px;font-family:var(--font-mono);}
+  .flow-track{display:flex;align-items:center;justify-content:space-between;gap:0;padding-bottom:6px;flex:1;}
+  .flow-step{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:54px;flex-shrink:0;}
+  .flow-step .node{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);}
+  .flow-step .label{font-size:0.7rem;color:var(--muted);font-weight:500;text-align:center;white-space:nowrap;}
+  .flow-step.active .node{background:radial-gradient(circle at 35% 30%,#FFA56B,var(--accent) 70%);color:#1A0F08;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow),0 0 24px var(--accent-glow);animation:furnace-pulse 2.2s ease-in-out infinite;}
+  .flow-step.active .label{color:var(--accent);font-weight:700;}
+  .flow-step.done .node{color:var(--good);border-color:rgba(67,209,122,0.35);}
+  @keyframes furnace-pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-glow),0 0 18px var(--accent-glow);}50%{box-shadow:0 0 0 7px rgba(255,107,53,0.18),0 0 36px var(--accent-glow);}}
+  .flow-arrow{color:#3C4554;font-size:0.95rem;flex-shrink:1;margin:0 2px;align-self:center;margin-bottom:22px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 14px;}
+  .panel h3{font-family:var(--font-display);font-size:0.98rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+  .panel h3 .tag{font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);font-weight:500;background:var(--panel-2);border:1px solid var(--line);padding:3px 9px;border-radius:999px;}
+  .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:140px;padding-top:24px;position:relative;overflow:visible;}
+  .bars .bar{flex:1;background:linear-gradient(180deg,#FF8A5C 0%,var(--accent) 100%);border-radius:3px 3px 0 0;min-height:4px;position:relative;transition:height 0.4s ease;}
+  .bars .bar .bar-label{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 3px);text-align:center;font-family:var(--font-mono);font-size:0.62rem;font-weight:600;color:var(--text);white-space:nowrap;line-height:1.2;pointer-events:none;}
+  .bars.muted .bar{background:linear-gradient(180deg,#5B86C9 0%,#3D6BB0 100%);}
+  .bars.acc .bar{background:linear-gradient(180deg,#61E39B 0%,var(--good) 100%);}
+  .chart-axis{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.62rem;color:#5C6878;margin-top:6px;}
+  .chart-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-family:var(--font-mono);font-size:0.74rem;color:var(--muted);}
+  .chart-foot .big{font-size:1.1rem;color:var(--text);font-weight:600;}
+  .linechart{width:100%;height:140px;display:block;}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:0.72rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);}
+  .status-pill.run{color:var(--good);border-color:rgba(67,209,122,0.3);}
+  .status-pill.run .dot{background:var(--good);box-shadow:0 0 6px var(--good);}
+  .status-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+  .doc-section h3{font-family:var(--font-display);font-size:1rem;font-weight:600;margin-bottom:4px;}
+  .doc-sub{font-size:0.78rem;color:var(--muted);margin-bottom:14px;font-family:var(--font-mono);}
+  .doc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1;}
+  .doc-card{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:10px 10px 8px;cursor:pointer;transition:border-color 0.15s,transform 0.15s;display:flex;flex-direction:column;gap:6px;}
+  .doc-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .doc-card .doc-icon{width:26px;height:26px;border-radius:6px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.82rem;color:var(--accent);}
+  .doc-card .doc-title{font-size:0.72rem;font-weight:600;color:var(--text);line-height:1.3;}
+  .doc-card .doc-meta{font-family:var(--font-mono);font-size:0.6rem;color:#5C6878;}
+  .doc-card .doc-preview{height:28px;border-radius:5px;background:repeating-linear-gradient(to bottom,var(--bg) 0px,var(--bg) 3px,transparent 3px,transparent 7px);border:1px solid var(--line);}
+  .modules{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .module-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
+  .module-card .module-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .module-card .module-head .ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;background:var(--panel-2);border:1px solid var(--line);color:var(--accent);}
+  .module-card .module-head h4{font-family:var(--font-display);font-size:0.95rem;font-weight:600;}
+  .module-card ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+  .module-card li{font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;}
+  .module-card li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--line);flex-shrink:0;}
+  .theme-toggle{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:0.85rem;}
+  .date-nav{display:flex;align-items:center;gap:8px;}
+  .date-nav button{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:0.85rem;font-family:var(--font-mono);line-height:1;}
+  .date-nav button:hover{border-color:var(--accent);color:var(--accent);}
+  .date-nav button:disabled{opacity:0.4;cursor:default;}
+  .date-nav .date-label{font-family:var(--font-mono);font-size:0.9rem;font-weight:600;padding:5px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);min-width:128px;text-align:center;}
+  body.light-theme{--bg:#F5F7FA;--panel:#FFFFFF;--panel-2:#EEF2F6;--line:#D5DCE5;--text:#1F242C;--muted:#5E6B7A;--accent:#2F6BFF;--accent-glow:rgba(47,107,255,0.25);color-scheme:light;}
+  @media(max-width:1180px){.grid{grid-template-columns:1fr;}.kpi-row{grid-template-columns:repeat(2,1fr);}.chart-grid-3{grid-template-columns:1fr 1fr;}.modules{grid-template-columns:repeat(2,1fr);}.doc-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:64px auto 1fr;}.sidebar{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;}.nav-group-label,.nav-divider{display:none;}.nav-item{white-space:nowrap;}.kpi-row{grid-template-columns:1fr 1fr;}.chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}.doc-grid{grid-template-columns:repeat(2,1fr);}.modules{grid-template-columns:1fr;}.topbar-right .date-chip{display:none;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <img src="data:image/png;base64,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"
+           alt="QGIS 로고"
+           style="height:36px;width:auto;object-fit:contain;margin-right:4px;vertical-align:middle;">
+      <div>
+        <div>HeatPro <span style="color:var(--accent)">MES</span></div>
+        <div class="sub">열처리 전문 통합 관리 시스템</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-chip"><span class="dot"></span><span id="systemDate"></span> · 가동중</div>
+      <button id="themeBtn" class="theme-toggle" onclick="toggleTheme()">☀️ 라이트모드</button>
+      <div class="user-chip"><div class="avatar">👤</div>관리자</div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <a class="nav-item active" href="index.html"><div class="nav-left"><span class="icon">⬛</span> 대시보드</div></a>
+    <div class="nav-group-label">현장 관리</div>
+
+    <!-- 1. 생산관리 -->
+    <div class="nav-item" id="m-prod" onclick="toggleMenu('prod')"><div class="nav-left"><span class="icon">🏭</span> 생산관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-prod">
+      <a class="sub-item" href="GitHub_Worksheet.html">작업일보</a>
+      <a class="sub-item" href="Monthly_Production_Record_FINAL.html">월생산실적(달성율)</a>
+      <a class="sub-item" href="Yearly_Production_Record.html">년생산실적</a>
+      <a class="sub-item" href="Defect_Rate.html">불량률</a>
+      <a class="sub-item" href="Work_Condition_Management.html">작업조건관리대장</a>
+    </div>
+
+    <!-- 2. 설비관리 -->
+    <div class="nav-item" id="m-equip" onclick="toggleMenu('equip')"><div class="nav-left"><span class="icon">⚙️</span> 설비관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-equip">
+      <a class="sub-item" href="Machine_operation_Log.html">설비운영관리대장</a>
+      <a class="sub-item" href="Machine_Repair_Status.html">설비수리현황</a>
+      <a class="sub-item" href="Inspection_Tool_Status.html">검사장비현황</a>
+      <a class="sub-item" href="Operating_Rate.html">가동률</a>
+    </div>
+
+    <!-- 3. 도면관리 -->
+    <div class="nav-item" id="m-draw" onclick="toggleMenu('draw')"><div class="nav-left"><span class="icon">📐</span> 도면관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-draw">
+      <a class="sub-item" href="Drawing_Inventory_Log.html">도면관리대장</a>
+      <a class="sub-item" href="Coil_List_Management.html">코일List관리대장</a>
+      <a class="sub-item" href="Coil_History_Management.html">코일이력관리대장</a>
+    </div>
+
+    <!-- 4. 검사관리 ── 순서 변경 + 검사성적서보고서 추가 -->
+    <div class="nav-item" id="m-insp" onclick="toggleMenu('insp')"><div class="nav-left"><span class="icon">🔍</span> 검사관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-insp">
+      <a class="sub-item" href="InOut_Inspection_Status.html">입출고검사현황</a>
+      <a class="sub-item" href="Only_InspectionSheet_Status.html">검사성적서관리현황</a>
+      <a class="sub-item active" href="Inspection_Report.html">검사성적서보고서</a>
+      <a class="sub-item" href="Drawing_Inventory_Log.html">도면관리대장</a>
+    </div>
+
+    <!-- 5. 고객관리 -->
+    <div class="nav-item" id="m-cust" onclick="toggleMenu('cust')"><div class="nav-left"><span class="icon">🤝</span> 고객관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-cust">
+      <a class="sub-item" href="Customer_Managerment_Log.html">고객관리대장</a>
+      <a class="sub-item" href="5S_Photo_Management.html" style="justify-content:space-between;">
+        <span>3정 5S 개선사진</span>
+        <span id="ss5-badge" style="display:none;align-items:center;gap:3px;">
+          <span id="ss5-dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;"></span>
+          <span id="ss5-pct" style="font-size:10px;font-weight:600;"></span>
+        </span>
+      </a>
+    </div>
+
+    <!-- 6. 출하관리 -->
+    <div class="nav-item" id="m-ship" onclick="toggleMenu('ship')"><div class="nav-left"><span class="icon">🚚</span> 출하관리</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-ship">
+      <a class="sub-item" href="InOut_Management_Log.html">입출고관리대장</a>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <!-- 7. 통계분석 -->
+    <div class="nav-item" id="m-stat" onclick="toggleMenu('stat')"><div class="nav-left"><span class="icon">📊</span> 통계분석</div><span class="chevron">▼</span></div>
+    <div class="sub-menu" id="sub-stat">
+      <a class="sub-item" href="Monthly_Production_Record_FINAL.html">월생산실적(달성율)</a>
+      <a class="sub-item" href="Defect_Rate_Graph.html">불량률(G)</a>
+      <a class="sub-item" href="Operating_Rate_Graph.html">가동률(G)</a>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <!-- 8. ISO9001 -->
+    <a class="nav-item" href="ISO9001_AutoDoc_main.html"><div class="nav-left"><span class="icon">✅</span> ISO 9001</div></a>
+    <div class="nav-divider"></div>
+    <a class="nav-item"><div class="nav-left"><span class="icon">🛠️</span> SYSTEM설정</div></a>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <h1>대시보드</h1>
+        <div class="date-nav">
+          <button onclick="changeDate(-1)" title="이전 날짜">◀</button>
+          <span class="date-label" id="selectedDateLabel">-</span>
+          <button id="nextDateBtn" onclick="changeDate(1)" title="다음 날짜">▶</button>
+        </div>
+      </div>
+      <div class="crumb">HOME / 대시보드 · 날짜 : <span id="crumbDate"></span></div>
+    </div>
+    <div class="grid">
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <section class="kpi-row">
+          <div class="kpi accent">
+            <div class="kpi-label"><span class="ico">📋</span> 오늘 작업건수</div>
+            <div class="kpi-value"><span id="kpi-job-count">-</span><span class="unit">건</span></div>
+            <div class="kpi-foot">기준일 <span id="kpiDate"></span></div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label"><span class="ico">📦</span> 오늘 생산수량</div>
+            <div class="kpi-value"><span id="kpi-production">-</span><span class="unit">개</span></div>
+            <div class="kpi-foot">전 라인 합산 (투입수량 기준)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label"><span class="ico">⚡</span> 오늘 작동설비</div>
+            <div class="kpi-value" id="kpi-equipment" style="font-size:1.35rem;">-</div>
+            <div class="kpi-foot"><span id="kpi-equipment-status" class="status-pill"><span class="dot"></span> -</span></div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label"><span class="ico">🚚</span> 오늘 출하건수</div>
+            <div class="kpi-value"><span id="kpi-shipment">-</span><span class="unit">건</span></div>
+            <div class="kpi-foot">DB DATA 2026 기준</div>
+          </div>
+        </section>
+        <div class="chart-grid-2">
+          <div class="panel"><h3>월 생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
+          <div class="panel"><h3>월 가동률 <span class="tag">%</span></h3><div class="bars muted" id="bar-rate"></div><div class="chart-axis" id="axis-rate"></div></div>
+        </div>
+        <div class="chart-grid-3">
+          <div class="panel"><h3>누적 생산실적</h3><div class="bars" id="bar-cumprod"></div><div class="chart-axis" id="axis-cumprod"></div><div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div></div>
+          <div class="panel"><h3>누적 가동률</h3><div class="bars acc" id="bar-cumrate"></div><div class="chart-axis" id="axis-cumrate"></div><div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div></div>
+          <div class="panel"><h3>누적 불량율 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-defect"></g></svg><div class="chart-axis" id="axis-cumdefect"></div><div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div></div>
+        </div>
+        <section>
+          <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:14px;">주요 모듈 구성</h3>
+          <div class="modules">
+            <div class="module-card"><div class="module-head"><div class="ico">🤝</div><h4>고객 관리</h4></div><ul><li>고객사 정보 관리</li><li>담당자 관리</li><li>거래 이력 관리</li></ul></div>
+            <div class="module-card"><div class="module-head"><div class="ico">🏭</div><h4>생산 관리</h4></div><ul><li>생산계획 수립</li><li>작업지시서 생성</li><li>진행 현황 추적</li></ul></div>
+            <div class="module-card"><div class="module-head"><div class="ico">✅</div><h4>품질 관리</h4></div><ul><li>검사 계획 수립</li><li>검사 결과 기록</li><li>불량 관리</li></ul></div>
+            <div class="module-card"><div class="module-head"><div class="ico">⚙️</div><h4>설비 관리</h4></div><ul><li>설비 정보 관리</li><li>점검/정비 관리</li><li>고장 이력 관리</li></ul></div>
+          </div>
+        </section>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;height:100%;">
+        <div class="flow-card">
+          <h3>생산 흐름도</h3>
+          <div class="flow-sub">PRODUCTION FLOW · 고주파 진행중</div>
+          <div class="flow-track">
+            <div class="flow-step done"><div class="node">📥</div><div class="label">입고검사</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step done"><div class="node">📋</div><div class="label">사양확인</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step done"><div class="node">⏳</div><div class="label">대기장</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step active"><div class="node">🔥</div><div class="label">고주파</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step"><div class="node">🌡️</div><div class="label">템퍼링</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step"><div class="node">🔎</div><div class="label">검사</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step"><div class="node">📦</div><div class="label">대기장</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step"><div class="node">🚚</div><div class="label">출하</div></div>
+          </div>
+        </div>
+        <div class="panel doc-section" style="flex:1;display:flex;flex-direction:column;">
+          <h3>문서 자동 생성 예시</h3>
+          <div class="doc-sub">AUTO-GENERATED DOCUMENTS · ISO 9001</div>
+          <div class="doc-grid">
+            <a class="doc-card" href="GitHub_Worksheet.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📑</div><div class="doc-preview"></div><div class="doc-title">작업일보</div><div class="doc-meta">DAILY REPORT</div></a>
+            <a class="doc-card" href="InOut_Management_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📥</div><div class="doc-preview"></div><div class="doc-title">입출고관리대장</div><div class="doc-meta">I/O LEDGER</div></a>
+            <a class="doc-card" href="Drawing_Inventory_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📐</div><div class="doc-preview"></div><div class="doc-title">도면관리대장</div><div class="doc-meta">DRAWING LOG</div></a>
+            <a class="doc-card" href="Coil_List_Management.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔗</div><div class="doc-preview"></div><div class="doc-title">코일List관리대장</div><div class="doc-meta">COIL LIST</div></a>
+            <a class="doc-card" href="Coil_History_Management.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📜</div><div class="doc-preview"></div><div class="doc-title">코일이력관리대장</div><div class="doc-meta">COIL HISTORY</div></a>
+            <a class="doc-card" href="Yearly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📅</div><div class="doc-preview"></div><div class="doc-title">년생산실적</div><div class="doc-meta">YEARLY OUTPUT</div></a>
+            <a class="doc-card" href="Monthly_Production_Record_FINAL.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🗓️</div><div class="doc-preview"></div><div class="doc-title">월생산달성율</div><div class="doc-meta">MONTHLY ACHIEVEMENT</div></a>
+            <a class="doc-card" href="Defect_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📉</div><div class="doc-preview"></div><div class="doc-title">불량률(G)</div><div class="doc-meta">DEFECT RATE GRAPH</div></a>
+            <a class="doc-card" href="Operating_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">⏱️</div><div class="doc-preview"></div><div class="doc-title">가동률(G)</div><div class="doc-meta">OPERATING RATE GRAPH</div></a>
+            <a class="doc-card" href="Machine_Repair_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔧</div><div class="doc-preview"></div><div class="doc-title">설비수리현황</div><div class="doc-meta">REPAIR STATUS</div></a>
+            <a class="doc-card" href="Inspection_Tool_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🧰</div><div class="doc-preview"></div><div class="doc-title">검사장비현황</div><div class="doc-meta">EQUIP. STATUS</div></a>
+            <a class="doc-card" href="Machine_operation_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🏭</div><div class="doc-preview"></div><div class="doc-title">설비운영관리대장</div><div class="doc-meta">MACHINE OP. LOG</div></a>
+            <a class="doc-card" href="InOut_Inspection_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔍</div><div class="doc-preview"></div><div class="doc-title">입출고검사현황</div><div class="doc-meta">I/O INSPECTION</div></a>
+            <a class="doc-card" href="Only_InspectionSheet_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📋</div><div class="doc-preview"></div><div class="doc-title">검사성적서관리현황</div><div class="doc-meta">INSPECTION SHEET</div></a>
+            <!-- ✅ 신규 추가: 검사성적서보고서 -->
+            <a class="doc-card" href="Inspection_Report.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📝</div><div class="doc-preview"></div><div class="doc-title">검사성적서보고서</div><div class="doc-meta">INSPECTION REPORT</div></a>
+            <a class="doc-card" href="Customer_Managerment_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🤝</div><div class="doc-preview"></div><div class="doc-title">고객관리대장</div><div class="doc-meta">CUSTOMER LOG</div></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY='@qgis2026';
+let selectedDate=new Date();
+function formatDateYMD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function formatDateLabel(d){var days=['일','월','화','수','목','금','토'];return formatDateYMD(d)+'('+days[d.getDay()]+')';}
+function getSystemTodayDateOnly(){var t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());}
+function updateDateDisplay(){var dateStr=formatDateYMD(selectedDate);var labelEl=document.getElementById('selectedDateLabel');var crumbEl=document.getElementById('crumbDate');var kpiDateEl=document.getElementById('kpiDate');var nextBtn=document.getElementById('nextDateBtn');if(labelEl)labelEl.textContent=formatDateLabel(selectedDate);if(crumbEl)crumbEl.textContent=dateStr;if(kpiDateEl)kpiDateEl.textContent=dateStr;if(nextBtn){var today=getSystemTodayDateOnly();var sel=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());nextBtn.disabled=sel.getTime()>=today.getTime();}}
+function changeDate(offsetDays){var candidate=new Date(selectedDate);candidate.setDate(candidate.getDate()+offsetDays);var today=getSystemTodayDateOnly();var candOnly=new Date(candidate.getFullYear(),candidate.getMonth(),candidate.getDate());if(candOnly.getTime()>today.getTime())return;selectedDate=candidate;updateDateDisplay();loadDashboard();}
+function makeBars(containerId,values,max,formatter){var el=document.getElementById(containerId);if(!el)return;el.innerHTML='';var safeMax=(max&&max>0)?max:1;var fmt=formatter||function(v){return Number(v).toLocaleString();};if(!values||values.length===0)return;values.forEach(function(v){var bar=document.createElement('div');bar.className='bar';var pct=Math.max(2,Math.min(100,(v/safeMax)*100));bar.style.height=pct+'%';bar.title=fmt(v);var label=document.createElement('span');label.className='bar-label';label.textContent=fmt(v);bar.appendChild(label);el.appendChild(bar);});}
+function setAxisLabels(elId,months){var el=document.getElementById(elId);if(!el||!months||months.length===0)return;var fmt=function(m){return Number(m.substring(5,7))+'월';};var first=months[0];var last=months[months.length-1];var mid=months[Math.floor((months.length-1)/2)];el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';}
+function renderLineChart(elId,values){var el=document.getElementById(elId);if(!el)return;if(!values||values.length===0){el.innerHTML='';return;}var w=240,h=140,pad=12;var max=Math.max.apply(null,values.concat([0.0001]));var n=values.length;var xStep=n>1?(w-pad*2)/(n-1):0;var pts=values.map(function(v,i){return{x:pad+i*xStep,y:h-pad-(v/max)*(h-pad*2)};});var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var circlesStr=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('');var labelsStr=pts.map(function(p,i){var ty=Math.max(9,p.y-8);return '<text x="'+p.x.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">'+Number(values[i]).toFixed(2)+'%</text>';}).join('');el.innerHTML='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="#FF5C5C">'+circlesStr+'</g><g>'+labelsStr+'</g>';}
+var dashboardRequestId=0;
+async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam+'&key='+encodeURIComponent(API_KEY));var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);makeBars('bar-rate',mr.map(function(x){return x.value;}),Math.max.apply(null,mr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-rate',months.length?months:mr.map(function(x){return x.month;}));var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderLineChart('line-defect',cd.map(function(x){return x.value;}));setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
+function updateSystemDate(){var today=new Date();var a=document.getElementById('systemDate');if(a)a.textContent=formatDateYMD(today);}
+function load5SCapacity(){var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SCount&callback=cb5SCount';var s=document.createElement('script');s.src=url;document.body.appendChild(s);}
+window.cb5SCount=function(data){if(!data||data.status!=='ok')return;var pct=data.pct||0;var badge=document.getElementById('ss5-badge');var dot=document.getElementById('ss5-dot');var pctEl=document.getElementById('ss5-pct');if(!badge||!dot||!pctEl)return;var color='';if(pct>=90){color='#A32D2D';}else if(pct>=80){color='#BA7517';}else{color='#3B6D11';}dot.style.background=color;pctEl.style.color=color;pctEl.textContent=pct+'%';badge.style.display='flex';};
+function toggleTheme(){document.body.classList.toggle('light-theme');var btn=document.getElementById('themeBtn');var isLight=document.body.classList.contains('light-theme');btn.textContent=isLight?'🌙 다크모드':'☀️ 라이트모드';localStorage.setItem('theme',isLight?'light':'dark');}
+window.addEventListener('load',function(){var savedTheme=localStorage.getItem('theme');var btn=document.getElementById('themeBtn');if(savedTheme==='light'){document.body.classList.add('light-theme');if(btn)btn.textContent='🌙 다크모드';}else{if(btn)btn.textContent='☀️ 라이트모드';}});
+updateSystemDate();updateDateDisplay();loadDashboard();load5SCapacity();
+var _openMenus={};
+function toggleMenu(key){var sub=document.getElementById('sub-'+key);var btn=document.getElementById('m-'+key);var isOpen=_openMenus[key];sub.classList.toggle('open',!isOpen);btn.classList.toggle('open',!isOpen);_openMenus[key]=!isOpen;}
+</script>
+</body>
+</html>
