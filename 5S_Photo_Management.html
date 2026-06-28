@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3정 5S 개선사진 관리대장 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'맑은 고딕',Arial,sans-serif;font-size:12px;background:#e8eaed;min-height:100vh;}
+
+/* ── 탑바 ── */
+.topbar{background:#1a3a5c;color:#fff;padding:9px 0;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.topbar-inner{max-width:1122px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-size:14px;font-weight:700;letter-spacing:0.5px;}
+.topbar-btns{display:flex;gap:6px;}
+.topbar-btns button{font-size:11px;padding:5px 12px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.1);color:#fff;border-radius:4px;cursor:pointer;font-family:inherit;}
+.topbar-btns button:hover{background:rgba(255,255,255,0.2);}
+.btn-save{background:#2e7d32!important;border-color:#2e7d32!important;}
+.btn-pdf-top{background:#b3261e!important;border-color:#b3261e!important;}
+.btn-pdf-top:disabled{background:#999!important;cursor:default!important;}
+
+/* ── 탭 ── */
+.tab-row{background:#fff;border-bottom:2px solid #1a3a5c;}
+.tab-row-inner{max-width:1122px;margin:0 auto;padding:0 16px;display:flex;padding-top:6px;gap:4px;}
+.tab{padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #ccc;border-bottom:none;background:#f0f2f5;color:#666;border-radius:5px 5px 0 0;}
+.tab.active{background:#1a3a5c;color:#fff;border-color:#1a3a5c;}
+
+/* ── 툴바: 조회만 ── */
+.toolbar{background:#fff;border-bottom:2px solid #1a3a5c;}
+.toolbar-inner{max-width:1122px;margin:0 auto;padding:6px 16px;}
+.srow{background:#f0f4f8;border-radius:4px;padding:5px 10px;border:1px solid #d0dcea;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.srow label{font-size:11px;color:#1a3a5c;font-weight:700;white-space:nowrap;}
+.srow input[type=date],.srow input[type=text],.srow select{font-size:11px;border:1px solid #bbb;border-radius:4px;padding:3px 7px;height:27px;font-family:inherit;}
+.sep{width:1px;height:22px;background:#ddd;margin:0 2px;}
+.btn-query{background:#1a3a5c;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit;height:27px;}
+.btn-query:hover{background:#234f7a;}
+
+/* ── 메인 ── */
+.main{max-width:1122px;margin:0 auto;padding:10px 16px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── 조회 결과 패널 ── */
+.result-panel{background:#fff;border:1px solid #ccc;border-radius:6px;padding:10px 14px;margin-bottom:10px;display:none;}
+.result-panel.show{display:block;}
+.list-table{width:100%;border-collapse:collapse;font-size:11px;}
+.list-table th{background:#1a3a5c;color:#fff;padding:6px 8px;text-align:center;font-weight:700;border:1px solid #0f2a42;white-space:nowrap;}
+.list-table td{padding:5px 8px;border:1px solid #ddd;text-align:center;vertical-align:middle;}
+.list-table tr:hover td{background:#eef4ff;}
+.badge-done{background:#e8f5e9;color:#1b5e20;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;}
+.badge-ing{background:#fff8e1;color:#e65100;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;}
+.badge-no{background:#ffebee;color:#b71c1c;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;}
+.btn-load{font-size:10px;padding:2px 8px;border:1px solid #1a3a5c;background:#fff;color:#1a3a5c;border-radius:3px;cursor:pointer;font-family:inherit;}
+.btn-load:hover{background:#eef4ff;}
+
+/* ── A4 가로 문서 프레임 ── */
+.doc-wrap{background:#fff;border:1px solid #ccc;border-radius:4px;overflow:hidden;width:1090px;margin:0 auto;}
+.doc-title-bar{background:#1a3a5c;color:#fff;font-size:13px;font-weight:700;padding:7px 14px;letter-spacing:1px;}
+
+/* 헤더: 작업일 + 담당자 + 완료여부 */
+.doc-header{display:grid;grid-template-columns:52px 180px 52px 1fr 68px 120px;border:1px solid #333;border-top:none;}
+.hc{padding:5px 8px;font-size:11px;border-right:1px solid #333;display:flex;align-items:center;justify-content:center;}
+.hc:last-child{border-right:none;}
+.hc.lbl{background:#e8edf2;font-weight:700;color:#1a3a5c;}
+.hc input[type=date]{font-size:11px;border:none;outline:none;background:transparent;font-family:inherit;height:24px;width:160px;}
+.hc select{font-size:11px;border:none;outline:none;background:transparent;font-family:inherit;width:100%;}
+.hc input[type=text]{font-size:11px;border:none;outline:none;background:transparent;font-family:inherit;width:100%;text-align:center;}
+/* ── 1행 헤더 14칸 균등 배분 ── */
+.doc-header-1row{
+  display:grid;
+  grid-template-columns:46px 110px 46px 110px 58px 90px 46px 120px 38px 130px 58px 70px 38px 1fr;
+  border:1px solid #333;border-top:none;
+}
+.doc-header-1row .hc{padding:4px 5px;border-right:1px solid #333;display:flex;align-items:center;justify-content:center;min-height:34px;font-size:10px;line-height:1.3;overflow:hidden;}
+.doc-header-1row .hc:last-child{border-right:none;}
+.doc-header-1row .hc.lbl{background:#e8edf2;font-weight:700;color:#1a3a5c;white-space:nowrap;text-align:center;flex-direction:column;gap:1px;}
+.doc-header-1row .hc.val{color:#222;justify-content:flex-start;font-size:10px;}
+.dept-auto-badge{font-size:9px;background:#e8f0fe;color:#3a5a9c;border-radius:3px;padding:1px 5px;margin-left:4px;white-space:nowrap;}
+
+/* 세트 헤더 */
+.set-header{background:#eef2f8;border:1px solid #333;border-top:none;padding:6px 12px;display:flex;align-items:center;gap:8px;}
+.set-no{width:26px;height:26px;background:#1a3a5c;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.set-tag{background:#dce6f4;border-radius:3px;padding:2px 7px;font-size:11px;color:#1a3a5c;font-weight:700;white-space:nowrap;}
+.set-arr{color:#aaa;font-size:11px;}
+.set-header select{font-size:11px;border:1px solid #c0cfe8;background:#fff;border-radius:3px;padding:2px 7px;font-family:inherit;cursor:pointer;height:26px;}
+
+/* 사진 영역 — A4 가로 기준 높이 */
+.set-photos{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-top:none;}
+.photo-box{border-right:1px solid #333;display:flex;flex-direction:column;}
+.photo-box:last-child{border-right:none;}
+.photo-lbl{background:#f5f5f5;border-bottom:1px solid #ddd;padding:4px 10px;font-size:11px;font-weight:700;color:#555;}
+.photo-area{padding:8px 10px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.url-inp{font-size:11px;border:1px solid #bbb;border-radius:3px;padding:3px 7px;width:100%;font-family:inherit;outline:none;}
+.url-inp:focus{border-color:#1a3a5c;}
+/* A4 가로 사진 높이:
+   전체 A4 가로(794px 96dpi) - 제목(35) - 헤더(33) - 세트헤더(38) - URL(29) - 버튼(26) - 설명(33) - 여백(30) ≈ 370px */
+.photo-prev-wrap{height:370px;background:#f9f9f9;border:1px dashed #ddd;border-radius:3px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.photo-prev-wrap img{max-width:100%;max-height:368px;object-fit:contain;display:none;}
+.ph-placeholder{font-size:11px;color:#ccc;text-align:center;padding:20px;line-height:1.6;}
+.photo-btns{display:flex;gap:6px;}
+.btn-preview{font-size:11px;padding:3px 12px;background:#f0f4f8;border:1px solid #bbb;border-radius:3px;cursor:pointer;font-family:inherit;}
+.btn-preview:hover{background:#e0e8f4;}
+.btn-url-clear{font-size:11px;padding:3px 12px;background:#fee;border:1px solid #faa;color:#a33;border-radius:3px;cursor:pointer;font-family:inherit;}
+
+/* 개선전/후 설명 */
+.set-desc{display:grid;grid-template-columns:52px 1fr 52px 1fr;border:1px solid #333;border-top:none;}
+.dc{padding:6px 9px;font-size:11px;border-right:1px solid #333;display:flex;align-items:center;}
+.dc:last-child{border-right:none;}
+.dc.lbl{background:#e8edf2;font-weight:700;color:#1a3a5c;justify-content:center;}
+.dc input[type=text]{border:none;outline:none;font-size:11px;width:100%;font-family:inherit;background:transparent;}
+
+/* 문서 하단 정보 */
+.doc-foot{display:flex;justify-content:space-between;padding-top:5px;margin-top:5px;border-top:1px solid #eee;}
+.foot-txt{font-size:9px;color:#bbb;}
+
+/* ── 이력 조회 탭 ── */
+.view-doc-area{margin-top:12px;border-top:2px solid #1a3a5c;padding-top:10px;}
+.view-doc-action{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.btn-act-pdf{background:#b3261e;color:#fff;border:none;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:inherit;}
+
+/* ── 상태바 ── */
+.statusbar{background:#1a3a5c;color:rgba(255,255,255,0.65);font-size:10px;padding:5px 0;margin-top:10px;}
+.statusbar-inner{max-width:1122px;margin:0 auto;padding:0 16px;display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+
+<!-- ══ 탑바: PDF + 저장만 ══ -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="topbar-title">3정 5S — 개선 사진 관리대장</span>
+    <div class="topbar-btns">
+      <button class="btn-pdf-top" id="btn-pdf" onclick="exportPDF()">⬇ PDF</button>
+      <button class="btn-save" id="btn-save-top" onclick="saveDoc()">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 탭 ══ -->
+<div class="tab-row">
+  <div class="tab-row-inner">
+    <div class="tab active" id="tab-btn-write" onclick="showTab('write')">✏️ 작성</div>
+    <div class="tab" id="tab-btn-view" onclick="showTab('view')">📋 이력 조회</div>
+  </div>
+</div>
+
+<!-- ══ 툴바: 조회만 ══ -->
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="srow">
+      <label>🔍 조회</label>
+      <div class="sep"></div>
+      <label>기간(발견일)</label>
+      <input type="date" id="s-start" style="width:120px;">
+      <span style="font-size:11px;color:#888;">~</span>
+      <input type="date" id="s-end" style="width:120px;">
+      <div class="sep"></div>
+      <label>문서번호</label>
+      <input type="text" id="s-docno" placeholder="2026-06-001" style="width:85px;">
+      <div class="sep"></div>
+      <label>담당자</label>
+      <select id="s-manager" style="width:80px;">
+        <option value="">전체</option>
+      </select>
+      <div class="sep"></div>
+      <label>구분</label>
+      <select id="s-cat" style="width:80px;">
+        <option value="">전체</option>
+      </select>
+      <div class="sep"></div>
+      <label>완료여부</label>
+      <select id="s-status" style="width:76px;">
+        <option value="">전체</option><option>완료</option><option>진행중</option><option>미완료</option>
+      </select>
+      <button class="btn-query" onclick="queryDocs()">조회</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 메인 ══ -->
+<div class="main">
+
+  <!-- 조회 결과 패널 -->
+  <div class="result-panel" id="result-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:11px;color:#666;">조회 결과 <strong id="result-count" style="color:#1a3a5c;">0건</strong></span>
+      <button onclick="hideResult()" style="font-size:10px;padding:2px 8px;border:1px solid #ccc;background:#f5f5f5;border-radius:3px;cursor:pointer;font-family:inherit;">✕ 닫기</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>문서번호</th><th>발견일</th><th>작업일</th><th>담당자</th><th>부서</th>
+            <th>구분</th><th>항목</th><th>장소</th>
+            <th>개선전 내용</th><th>개선후 내용</th><th>문제점</th><th>개선효과</th>
+            <th>사진전</th><th>사진후</th><th>완료여부</th><th>작성일</th><th>불러오기</th>
+          </tr>
+        </thead>
+        <tbody id="result-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ 작성 탭 ══ -->
+  <div class="tab-content active" id="tab-write">
+    <div class="doc-wrap" id="doc-container">
+      <div class="doc-title-bar" style="text-align:center;letter-spacing:3px;font-size:14px;">개선 보고서</div>
+
+      <!-- 헤더 1행 14칸: 발견일·작업일·문서번호·담당자·부서·완료여부·장소 -->
+      <div class="doc-header-1row">
+        <div class="hc lbl">발견일</div>
+        <div class="hc val" style="padding:2px 4px;">
+          <input type="date" id="inp-findday-date" onchange="syncFindday()" style="font-size:10px;width:100%;border:none;outline:none;background:transparent;font-family:inherit;">
+          <input type="hidden" id="inp-findday">
+        </div>
+
+        <div class="hc lbl">작업일</div>
+        <div class="hc val" style="padding:2px 4px;">
+          <input type="date" id="inp-workday-date" onchange="syncWorkday()" style="font-size:10px;width:100%;border:none;outline:none;background:transparent;font-family:inherit;">
+          <input type="hidden" id="inp-workday">
+        </div>
+
+        <div class="hc lbl">문서번호</div>
+        <div class="hc val" style="font-size:9px;font-weight:700;color:#1a3a5c;" id="hdr-docno-disp">—</div>
+
+        <div class="hc lbl">담당자</div>
+        <div class="hc val" style="padding:2px 3px;">
+          <select id="hdr-manager" onchange="onManagerChange()" style="font-size:10px;border:0.5px solid #c0cfe8;border-radius:3px;padding:1px 3px;background:#fff;font-family:inherit;width:100%;">
+            <option value="">선택</option>
+          </select>
+        </div>
+
+        <div class="hc lbl">부서</div>
+        <div class="hc val" style="font-size:10px;font-weight:700;color:#1a3a5c;padding:2px 5px;">
+          <span id="hdr-dept-disp" style="font-size:10px;"></span>
+        </div>
+
+        <div class="hc lbl"><span>완료</span><span>여부</span></div>
+        <div class="hc val" style="padding:2px 3px;">
+          <select id="hdr-status" style="font-size:10px;border:0.5px solid #c0cfe8;border-radius:3px;padding:1px 3px;background:#fff;font-family:inherit;width:100%;">
+            <option>진행중</option><option>완료</option><option>미완료</option>
+          </select>
+        </div>
+
+        <div class="hc lbl">장소</div>
+        <div class="hc val" style="padding:2px 4px;">
+          <input type="text" id="hdr-location" placeholder="장소 입력" style="font-size:10px;border:none;outline:none;background:transparent;font-family:inherit;width:100%;">
+        </div>
+      </div>
+
+      <!-- 세트 1개 고정 -->
+      <div class="set-header">
+        <div class="set-no">1</div>
+        <span class="set-tag">구분</span>
+        <select id="set-cat" onchange="updateSub()">
+          <option value="">선택</option>
+        </select>
+        <span class="set-arr">▶</span>
+        <span class="set-tag">항목</span>
+        <select id="set-sub">
+          <option value="">선택</option>
+        </select>
+      </div>
+
+      <!-- 사진 영역 -->
+      <div class="set-photos">
+        <!-- 개선전 -->
+        <div class="photo-box">
+          <div class="photo-lbl">📷 개선전 사진</div>
+          <div class="photo-area">
+            <input type="text" class="url-inp" id="url-front" placeholder="https://raw.githubusercontent.com/... 또는 공유 링크 붙여넣기">
+            <div class="photo-prev-wrap" id="wrap-front">
+              <img id="prev-front" alt="개선전 미리보기"
+                   onload="this.style.display='block';document.getElementById('ph-front').style.display='none';"
+                   onerror="onImgError('front')">
+              <div class="ph-placeholder" id="ph-front">📷 URL을 입력하고<br>미리보기 버튼을 눌러주세요</div>
+            </div>
+            <div class="photo-btns">
+              <button class="btn-preview" onclick="previewUrl('front')">🔍 미리보기</button>
+              <button class="btn-url-clear" onclick="clearUrl('front')">✕ 지우기</button>
+            </div>
+          </div>
+        </div>
+        <!-- 개선후 -->
+        <div class="photo-box">
+          <div class="photo-lbl">📷 개선후 사진</div>
+          <div class="photo-area">
+            <input type="text" class="url-inp" id="url-back" placeholder="https://raw.githubusercontent.com/... 또는 공유 링크 붙여넣기">
+            <div class="photo-prev-wrap" id="wrap-back">
+              <img id="prev-back" alt="개선후 미리보기"
+                   onload="this.style.display='block';document.getElementById('ph-back').style.display='none';"
+                   onerror="onImgError('back')">
+              <div class="ph-placeholder" id="ph-back">📷 URL을 입력하고<br>미리보기 버튼을 눌러주세요</div>
+            </div>
+            <div class="photo-btns">
+              <button class="btn-preview" onclick="previewUrl('back')">🔍 미리보기</button>
+              <button class="btn-url-clear" onclick="clearUrl('back')">✕ 지우기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 개선전/후 설명 -->
+      <div class="set-desc">
+        <div class="dc lbl">개선전</div>
+        <div class="dc"><input type="text" id="desc-front" placeholder="개선 전 상황 설명"></div>
+        <div class="dc lbl">개선후</div>
+        <div class="dc"><input type="text" id="desc-back" placeholder="개선 후 상황 설명"></div>
+      </div>
+
+      <!-- 문제점 / 개선효과 행 -->
+      <div class="set-desc" style="grid-template-columns:52px 1fr 52px 1fr;border-top:none;">
+        <div class="dc lbl" style="justify-content:center;flex-direction:column;gap:2px;"><span>문제점</span></div>
+        <div class="dc"><input type="text" id="desc-problem" placeholder="문제점 입력"></div>
+        <div class="dc lbl" style="justify-content:center;flex-direction:column;gap:2px;"><span>개선</span><span>효과</span></div>
+        <div class="dc"><input type="text" id="desc-effect" placeholder="개선 효과 입력"></div>
+      </div>
+
+      <!-- 문서 하단 정보 -->
+      <div style="padding:4px 0 2px;">
+        <div class="doc-foot">
+          <span class="foot-txt">HeatPro MES — 3정 5S 개선사진 관리대장</span>
+          <span class="foot-txt" id="foot-docno">문서번호: — &nbsp;|&nbsp; A4 가로</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 이력 조회 탭 ══ -->
+  <div class="tab-content" id="tab-view">
+    <div style="background:#fff;border:1px solid #ccc;border-radius:4px;padding:10px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:11px;color:#666;">조회 결과 <strong id="view-count" style="color:#1a3a5c;">—</strong></span>
+        <button onclick="exportCSV()" style="font-size:11px;padding:4px 12px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:inherit;">⬇ CSV</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="list-table">
+          <thead>
+            <tr>
+            <th>문서번호</th><th>발견일</th><th>작업일</th><th>담당자</th><th>부서</th>
+            <th>구분</th><th>항목</th><th>장소</th>
+            <th>개선전 내용</th><th>개선후 내용</th><th>문제점</th><th>개선효과</th>
+            <th>사진전</th><th>사진후</th><th>완료여부</th><th>작성일</th><th>열기</th>
+          </tr>
+          </thead>
+          <tbody id="view-tbody"></tbody>
+        </table>
+      </div>
+      <div class="view-doc-area" id="view-doc-area" style="display:none;">
+        <div class="view-doc-action">
+          <span id="view-doc-title" style="font-size:12px;font-weight:700;color:#1a3a5c;">📄 문서 미리보기</span>
+          <button class="btn-act-pdf" onclick="exportViewPDF()">⬇ PDF</button>
+        </div>
+        <div id="view-doc-container"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 상태바 ══ -->
+<div class="statusbar">
+  <div class="statusbar-inner">
+    <span>HeatPro MES — 3정 5S 개선사진 관리대장</span>
+    <span id="status-msg">준비 중...</span>
+  </div>
+</div>
+
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
+
+// ★ 구분/항목은 안전항목 시트에서 동적으로 로드
+var SS_ITEMS={};
+var CATEGORIES=[];
+var currentDocNo='', isDirty=false, lastViewData=null;
+
+/* ── 초기화 ── */
+window.onload=function(){
+  // ★ 안전항목 시트에서 구분/항목 로드 후 초기화
+  loadCategories(function(){
+    loadNextDocNo();
+  });
+  // ★ 직원코드 시트에서 담당자 로드
+  loadManagers();
+};
+
+// 담당자 목록 로드 (직원코드 시트)
+var gManagerList=[]; // {name, dept}
+function loadManagers(){
+  var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=employeesByDept&callback=cbManagers';
+  window.cbManagers=function(data){
+    var list=data.employees||[];
+    gManagerList=list;
+    // 입력폼 담당자 드롭다운
+    var sel=document.getElementById('hdr-manager');
+    if(sel){
+      sel.innerHTML='<option value="">선택</option>';
+      list.forEach(function(e){
+        var o=document.createElement('option');
+        o.value=e.name;
+        o.setAttribute('data-dept',e.dept||'');
+        o.textContent=e.name+(e.rank?' ('+e.rank+')':'');
+        sel.appendChild(o);
+      });
+    }
+    // 조회 담당자 드롭다운
+    var sMgr=document.getElementById('s-manager');
+    if(sMgr){
+      var done={};
+      sMgr.innerHTML='<option value="">전체</option>';
+      list.forEach(function(e){
+        if(!done[e.name]){
+          done[e.name]=true;
+          var o=document.createElement('option');
+          o.value=e.name; o.textContent=e.name;
+          sMgr.appendChild(o);
+        }
+      });
+    }
+  };
+  var s=document.createElement('script'); s.src=url; document.body.appendChild(s);
+}
+
+// 담당자 선택 시 부서 자동 표기
+function onManagerChange(){
+  var sel=document.getElementById('hdr-manager');
+  var opt=sel.options[sel.selectedIndex];
+  var dept=opt.getAttribute('data-dept')||'';
+  var deptDisp=document.getElementById('hdr-dept-disp');
+  if(deptDisp) deptDisp.textContent=dept;
+  isDirty=true;
+}
+
+function loadCategories(callback){
+  setStatus('구분/항목 목록 불러오는 중...');
+  var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SCategories&callback=cbCategories';
+  window.cbCategories=function(data){
+    if(data.status==='ok' && data.categories){
+      SS_ITEMS = data.categories;
+      CATEGORIES = Object.keys(SS_ITEMS);
+    } else {
+      // API 실패 시 기본값 사용
+      SS_ITEMS = {
+        '환경':    ['조명','온도','습도','도색','정리','청소','환경기타'],
+        '설비':    ['점검','부품교체','제작','청소','도색','정리','설비기타'],
+        '자재':    ['정위치','정량','선입선출','정리','폐기반출','자재기타'],
+        '공구':    ['정위치','공구함','폐기','정리','이동','공구기타'],
+        '품질':    ['불량감소','측정개선','절단개선','조건변경','장표류','품질기타'],
+        '안전':    ['통로','표지판','소화기','비상구','장표류','설치','안전기타'],
+        '작업장':  ['바닥','라인','표시판','작업대','정리','작업장기타'],
+        '개발(설비)':  ['설비','치공구','작업조건','작업방법','코일','개선기타'],
+        '개발(신제품)':['작업방법','작업조건','문서관리','문서기타'],
+        '인원':    ['복장','보호구','교육','상태','인원기타'],
+        '기타':    ['기타1','기타2','기타3','기타4','기타5','기타6','기타7']
+      };
+      CATEGORIES = Object.keys(SS_ITEMS);
+    }
+    // 입력폼 구분 드롭다운 초기화
+    var catSel=document.getElementById('set-cat');
+    catSel.innerHTML='<option value="">선택</option>';
+    CATEGORIES.forEach(function(c){
+      var o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+    });
+    // 조회 구분 드롭다운 초기화
+    var sCat=document.getElementById('s-cat');
+    if(sCat){
+      sCat.innerHTML='<option value="">전체</option>';
+      CATEGORIES.forEach(function(c){
+        var o=document.createElement('option'); o.value=c; o.textContent=c; sCat.appendChild(o);
+      });
+    }
+    setStatus('저장소: Google Sheets "5S관리대장"');
+    if(callback) callback();
+  };
+  var s=document.createElement('script');
+  s.src=url;
+  document.body.appendChild(s);
+}
+
+function updateSub(){
+  var cat=document.getElementById('set-cat').value;
+  var sub=document.getElementById('set-sub');
+  sub.innerHTML='<option value="">선택</option>';
+  if(cat&&SS_ITEMS[cat]) SS_ITEMS[cat].forEach(function(i){
+    var o=document.createElement('option'); o.value=i; o.textContent=i; sub.appendChild(o);
+  });
+  isDirty=true;
+}
+
+/* ── 발견일 ── */
+function syncFindday(){
+  var v=document.getElementById('inp-findday-date').value;
+  if(!v){document.getElementById('inp-findday').value='';return;}
+  var days=['일','월','화','수','목','금','토'], d=new Date(v+'T00:00:00');
+  document.getElementById('inp-findday').value=d.getFullYear()+'. '+String(d.getMonth()+1).padStart(2,'0')+'. '+String(d.getDate()).padStart(2,'0')+'('+days[d.getDay()]+')';
+  isDirty=true;
+}
+function restoreFindday(s){
+  if(!s)return;
+  var m=s.match(/(\d{4})[.\-]\s*(\d{2})[.\-]\s*(\d{2})/);
+  if(m)document.getElementById('inp-findday-date').value=m[1]+'-'+m[2]+'-'+m[3];
+  document.getElementById('inp-findday').value=s;
+}
+
+/* ── 작업일 ── */
+function syncWorkday(){
+  var v=document.getElementById('inp-workday-date').value;
+  if(!v){document.getElementById('inp-workday').value='';return;}
+  var days=['일','월','화','수','목','금','토'], d=new Date(v+'T00:00:00');
+  document.getElementById('inp-workday').value=d.getFullYear()+'. '+String(d.getMonth()+1).padStart(2,'0')+'. '+String(d.getDate()).padStart(2,'0')+'('+days[d.getDay()]+')';
+  isDirty=true;
+}
+function restoreWorkday(s){
+  if(!s)return;
+  var m=s.match(/(\d{4})[.\-]\s*(\d{2})[.\-]\s*(\d{2})/);
+  if(m)document.getElementById('inp-workday-date').value=m[1]+'-'+m[2]+'-'+m[3];
+  document.getElementById('inp-workday').value=s;
+}
+
+/* ── 탭 ── */
+function showTab(name){
+  document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('tab-btn-'+name).classList.add('active');
+  if(name==='view') queryViewDocs();
+}
+
+/* ── JSONP ── */
+var _jsonpCbs={}, _jsonpTimers={};
+function loadJsonp(url,cbName){
+  if(_jsonpCbs[cbName]){var old=document.getElementById('jsonp-'+cbName);if(old)old.remove();}
+  _jsonpCbs[cbName]=true;
+  var s=document.createElement('script'); s.id='jsonp-'+cbName; s.src=url; document.body.appendChild(s);
+}
+function jsonpGet(action,payload,cbName,onSuccess,onError){
+  var encoded=encodeURIComponent(JSON.stringify(payload));
+  var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action='+encodeURIComponent(action)+'&payload='+encoded+'&callback='+cbName;
+  if(_jsonpTimers[cbName])clearTimeout(_jsonpTimers[cbName]);
+  _jsonpTimers[cbName]=setTimeout(function(){
+    delete window[cbName];
+    if(onError)onError('응답 시간 초과(45초)');
+  },45000);
+  window[cbName]=function(data){
+    clearTimeout(_jsonpTimers[cbName]); delete _jsonpTimers[cbName];
+    if(data.status==='ok'||data.result==='ok'||data.result==='inserted'||data.result==='updated'){if(onSuccess)onSuccess(data);}
+    else{if(onError)onError(data.message||data.error||'오류');}
+  };
+  loadJsonp(url,cbName);
+}
+
+/* ── 문서번호 채번 ── */
+function loadNextDocNo(){
+  setStatus('문서번호 불러오는 중...');
+  loadJsonp(API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=getNextDocNo&callback=cbNextDocNo','cbNextDocNo');
+}
+window.cbNextDocNo=function(data){
+  if(data.status==='ok'){
+    currentDocNo=data.docNo;
+    document.getElementById('foot-docno').textContent='문서번호: '+currentDocNo+'  |  A4 가로';
+    var dd=document.getElementById('hdr-docno-disp');
+    if(dd) dd.textContent=currentDocNo;
+    setStatus('저장소: Google Sheets "5S관리대장"');
+  } else {
+    setStatus('문서번호 오류');
+  }
+};
+
+/* ── 사진 URL 함수 ── */
+function convertDriveUrl(url){
+  if(!url) return url;
+
+  // ★ GitHub blob URL → raw URL 변환
+  // 예: https://github.com/.../blob/main/파일.jpg?raw=true
+  //  → https://raw.githubusercontent.com/.../main/파일.jpg
+  var ghm = url.match(/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+?)(\?raw=true)?$/);
+  if(ghm) return 'https://raw.githubusercontent.com/'+ghm[1]+'/'+ghm[2]+'/'+ghm[3];
+
+  // Google Drive /file/d/ID 형식
+  var m=url.match(/\/file\/d\/([^/?]+)/);
+  if(m)return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w800';
+
+  // Google Drive ?id=ID 형식
+  var m2=url.match(/[?&]id=([^&]+)/);
+  if(m2)return 'https://drive.google.com/thumbnail?id='+m2[1]+'&sz=w800';
+
+  // 기타 URL 그대로
+  return url;
+}
+function previewUrl(side){
+  var input=document.getElementById('url-'+side);
+  var url=input?input.value.trim():'';
+  if(!url){alert('URL을 입력해 주세요.');return;}
+  var converted=convertDriveUrl(url);
+  var img=document.getElementById('prev-'+side);
+  var ph=document.getElementById('ph-'+side);
+
+  if(ph){ph.textContent='🔄 불러오는 중...';ph.style.display='block';}
+  if(img) img.style.display='none';
+
+  // ★ fetchBase64 XHR 방식 — CORS 차단 우회
+  fetchBase64(converted).then(function(b64){
+    if(b64){
+      if(img){
+        img.src=b64;
+        img.style.display='block';
+        img.style.maxWidth='100%';
+        img.style.maxHeight='368px';
+        img.style.objectFit='contain';
+      }
+      if(ph) ph.style.display='none';
+    } else {
+      // XHR 실패 시 img.src 직접 시도
+      if(img){
+        img.onload=function(){img.style.display='block';if(ph)ph.style.display='none';};
+        img.onerror=function(){onImgError(side);};
+        img.src=converted;
+      }
+    }
+  });
+}
+function onImgError(side){
+  var img=document.getElementById('prev-'+side);
+  var ph=document.getElementById('ph-'+side);
+  if(img)img.style.display='none';
+  if(ph){ph.style.display='block'; ph.innerHTML='⚠️ 이미지를 불러올 수 없습니다.<br>공유 설정을 확인해주세요.';}
+}
+function clearUrl(side){
+  var input=document.getElementById('url-'+side);
+  var img=document.getElementById('prev-'+side);
+  var ph=document.getElementById('ph-'+side);
+  if(input)input.value='';
+  if(img){img.src=''; img.style.display='none';}
+  if(ph){ph.style.display='block'; ph.innerHTML='📷 URL을 입력하고<br>미리보기 버튼을 눌러주세요';}
+  isDirty=true;
+}
+function getPhotoUrl(side){
+  var input=document.getElementById('url-'+side);
+  var url=input?input.value.trim():'';
+  return url; // ★ 원본 URL 그대로 저장 (표시/PDF 시 변환)
+}
+function restorePhotoUrl(side,url){
+  var input=document.getElementById('url-'+side);
+  var img=document.getElementById('prev-'+side);
+  var ph=document.getElementById('ph-'+side);
+  if(input&&url)input.value=url; // input에는 원본 URL 저장
+  if(!url)return;
+  var displayUrl=convertDriveUrl(url);
+  if(ph){ph.textContent='🔄 이미지 불러오는 중...';ph.style.display='block';}
+  if(img)img.style.display='none';
+
+  // ★ XHR Base64 방식으로 확실하게 로드 (CORS/캐시 문제 우회)
+  fetchBase64(displayUrl).then(function(b64){
+    if(b64){
+      if(img){
+        img.src=b64;
+        img.style.display='block';
+        img.style.maxWidth='100%';
+        img.style.maxHeight='368px';
+        img.style.objectFit='contain';
+        img.style.width='auto';
+        img.style.height='auto';
+      }
+      if(ph)ph.style.display='none';
+    } else {
+      // XHR 실패 시 img.src 직접 시도
+      if(img){
+        img.onload=function(){img.style.display='block';if(ph)ph.style.display='none';};
+        img.onerror=function(){onImgError(side);};
+        img.src=displayUrl;
+      }
+    }
+  });
+}
+
+/* ── 저장 ── */
+function saveDoc(){
+  var findday=document.getElementById('inp-findday').value.trim();
+  var workday=document.getElementById('inp-workday').value.trim();
+  var managerSel=document.getElementById('hdr-manager');
+  var manager=managerSel?managerSel.value.trim():'';
+  var dept=document.getElementById('hdr-dept-disp')?document.getElementById('hdr-dept-disp').textContent.trim():'';
+  var status=document.getElementById('hdr-status').value;
+  var location=document.getElementById('hdr-location').value.trim();
+  var cat=document.getElementById('set-cat').value;
+  var sub=document.getElementById('set-sub').value;
+  var descFront=document.getElementById('desc-front').value.trim();
+  var descBack=document.getElementById('desc-back').value.trim();
+  var descProblem=document.getElementById('desc-problem').value.trim();
+  var descEffect=document.getElementById('desc-effect').value.trim();
+  var urlFront=getPhotoUrl('front');
+  var urlBack=getPhotoUrl('back');
+
+  if(!workday){alert('작업일을 선택해 주세요.');return;}
+  if(!manager){alert('담당자를 입력해 주세요.');return;}
+  if(!currentDocNo){alert('문서번호를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return;}
+
+  var hasContent=cat||sub||descFront||descBack||urlFront||urlBack;
+  if(!hasContent){alert('내용을 입력해 주세요.');return;}
+
+  setBtnState(true,'저장 중...');
+
+  var payload={
+    key:API_KEY,
+    docNo:currentDocNo,
+    workDay:workday,
+    manager:manager,
+    status:status,
+    발견일:findday,
+    장소:location,
+    부서:dept,
+    sets:[{
+      구분:cat, 항목:sub,
+      위치:(cat&&sub)?cat+' > '+sub:(cat||sub),
+      사진_전_url:urlFront, 내용_전:descFront,
+      사진_후_url:urlBack,  내용_후:descBack,
+      문제점:descProblem, 개선효과:descEffect
+    }]
+  };
+
+  jsonpGet('save5S_get',payload,'cbSave5S',
+    function(data){
+      setBtnState(false,'');
+      setStatus('✅ 저장 완료 — 문서번호: '+currentDocNo);
+      isDirty=false;
+    },
+    function(errMsg){
+      setBtnState(false,'');
+      alert('저장 오류: '+errMsg);
+      setStatus('❌ 저장 실패');
+    }
+  );
+}
+function setBtnState(loading,msg){
+  var btn=document.getElementById('btn-save-top');
+  if(loading){btn.textContent=msg||'처리 중...';btn.disabled=true;}
+  else{btn.textContent='💾 저장';btn.disabled=false;}
+}
+
+/* ── 조회 ── */
+function queryDocs(){
+  var url=API_URL
+    +'?key='+encodeURIComponent(API_KEY)
+    +'&action=get5SList'
+    +'&startDate='+encodeURIComponent(document.getElementById('s-start').value.trim())
+    +'&endDate='+encodeURIComponent(document.getElementById('s-end').value.trim())
+    +'&docNo='+encodeURIComponent(document.getElementById('s-docno').value.trim())
+    +'&manager='+encodeURIComponent((document.getElementById('s-manager')||{value:''}).value)
+    +'&cat='+encodeURIComponent((document.getElementById('s-cat')||{value:''}).value)
+    +'&status='+encodeURIComponent(document.getElementById('s-status').value)
+    +'&callback=cbQueryDocs';
+  setStatus('조회 중...');
+  loadJsonp(url,'cbQueryDocs');
+}
+window.cbQueryDocs=function(data){
+  if(data.status!=='ok'){alert('조회 오류: '+(data.message||''));return;}
+  var list=data.docList||[];
+  document.getElementById('result-count').textContent=list.length+'건';
+  var tbody=document.getElementById('result-tbody');
+  tbody.innerHTML='';
+  list.forEach(function(d){
+    var tr=document.createElement('tr');
+    var tc='max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;';
+    tr.innerHTML=
+      '<td>'+d.문서번호+'</td>'
+      +'<td>'+(d.발견일||'—')+'</td>'
+      +'<td>'+d.작업일+'</td>'
+      +'<td>'+d.담당자+'</td>'
+      +'<td style="font-size:10px;color:#555;">'+(d.부서||'—')+'</td>'
+      +'<td>'+d.구분+'</td>'
+      +'<td>'+d.항목+'</td>'
+      +'<td style="'+tc+'" title="'+(d.장소||'')+'">'+(d.장소||'—')+'</td>'
+      +'<td style="'+tc+'" title="'+(d.내용_전||'')+'">'+(d.내용_전||'—')+'</td>'
+      +'<td style="'+tc+'" title="'+(d.내용_후||'')+'">'+(d.내용_후||'—')+'</td>'
+      +'<td style="'+tc+'" title="'+(d.문제점||'')+'">'+(d.문제점||'—')+'</td>'
+      +'<td style="'+tc+'" title="'+(d.개선효과||'')+'">'+(d.개선효과||'—')+'</td>'
+      +'<td>'+(d.사진전==='Y'?'✅':'—')+'</td>'
+      +'<td>'+(d.사진후==='Y'?'✅':'—')+'</td>'
+      +'<td>'+badgeHtml(d.완료여부)+'</td>'
+      +'<td>'+d.작성일+'</td>'
+      +'<td><button class="btn-load" onclick="loadDoc(\'' + d.문서번호 + '\')">불러오기</button></td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('result-panel').classList.add('show');
+  setStatus('조회 완료 — '+list.length+'건');
+};
+function hideResult(){document.getElementById('result-panel').classList.remove('show');}
+
+/* ── 문서 불러오기 ── */
+function loadDoc(docNo){
+  setStatus('문서 불러오는 중...');
+  loadJsonp(API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SDoc&docNo='+encodeURIComponent(docNo)+'&callback=cbLoadDoc','cbLoadDoc');
+}
+window.cbLoadDoc=function(data){
+  if(data.status!=='ok'){alert('불러오기 오류: '+(data.message||''));return;}
+  var meta=data.meta||{}, sets=data.sets||[];
+  restoreWorkday(meta.작업일||'');
+  document.getElementById('hdr-manager').value=meta.담당자||'';
+  document.getElementById('hdr-status').value=meta.완료여부||'진행중';
+  currentDocNo=meta.문서번호||'';
+  document.getElementById('foot-docno').textContent='문서번호: '+currentDocNo+' | A4 가로';
+
+  if(sets.length>0){
+    var set=sets[0];
+    var locParts=(set.위치||'').split(' > ');
+    var cat=locParts[0]||'', sub=locParts[1]||'';
+    document.getElementById('set-cat').value=cat;
+    updateSub();
+    if(sub)document.getElementById('set-sub').value=sub;
+    document.getElementById('desc-front').value=set.내용_전||'';
+    document.getElementById('desc-back').value=set.내용_후||'';
+    if(set.사진_전&&set.사진_전.length>5)restorePhotoUrl('front',set.사진_전);
+    else clearUrl('front');
+    if(set.사진_후&&set.사진_후.length>5)restorePhotoUrl('back',set.사진_후);
+    else clearUrl('back');
+    document.getElementById('desc-problem').value=set.문제점||'';
+    document.getElementById('desc-effect').value=set.개선효과||'';
+  }
+  restoreFindday(meta.발견일||'');
+  var locEl=document.getElementById('hdr-location');
+  if(locEl) locEl.value=meta.장소||'';
+  // 담당자 select 복원
+  var manSel=document.getElementById('hdr-manager');
+  if(manSel && meta.담당자){
+    // 옵션에서 일치하는 값 선택
+    var found=false;
+    for(var i=0;i<manSel.options.length;i++){
+      if(manSel.options[i].value===meta.담당자){manSel.selectedIndex=i;found=true;break;}
+    }
+    // 옵션에 없으면 임시 추가
+    if(!found){
+      var tmpOpt=document.createElement('option');
+      tmpOpt.value=meta.담당자; tmpOpt.textContent=meta.담당자;
+      manSel.appendChild(tmpOpt); manSel.value=meta.담당자;
+    }
+    onManagerChange();
+  }
+  var dd=document.getElementById('hdr-docno-disp');
+  if(dd) dd.textContent=currentDocNo;
+  isDirty=false; hideResult();
+  setStatus('문서 불러오기 완료 — '+currentDocNo);
+};
+
+/* ── 이력 조회 탭 ── */
+function queryViewDocs(){
+  var url=API_URL
+    +'?key='+encodeURIComponent(API_KEY)
+    +'&action=get5SList'
+    +'&startDate='+encodeURIComponent(document.getElementById('s-start').value.trim())
+    +'&endDate='+encodeURIComponent(document.getElementById('s-end').value.trim())
+    +'&docNo='+encodeURIComponent(document.getElementById('s-docno').value.trim())
+    +'&manager='+encodeURIComponent((document.getElementById('s-manager')||{value:''}).value)
+    +'&cat='+encodeURIComponent((document.getElementById('s-cat')||{value:''}).value)
+    +'&status='+encodeURIComponent(document.getElementById('s-status').value)
+    +'&callback=cbViewDocs';
+  loadJsonp(url,'cbViewDocs');
+}
+window.cbViewDocs=function(data){
+  if(data.status!=='ok')return;
+  lastViewData=data;
+  var list=data.docList||[];
+  document.getElementById('view-count').textContent=list.length+'건';
+  var tbody=document.getElementById('view-tbody'); tbody.innerHTML='';
+  list.forEach(function(d){
+    var tr=document.createElement('tr');
+    var tc2='max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;';
+    tr.innerHTML=
+      '<td>'+d.문서번호+'</td>'
+      +'<td>'+(d.발견일||'—')+'</td>'
+      +'<td>'+d.작업일+'</td>'
+      +'<td>'+d.담당자+'</td>'
+      +'<td style="font-size:10px;color:#555;">'+(d.부서||'—')+'</td>'
+      +'<td>'+d.구분+'</td>'
+      +'<td>'+d.항목+'</td>'
+      +'<td style="'+tc2+'" title="'+(d.장소||'')+'">'+(d.장소||'—')+'</td>'
+      +'<td style="'+tc2+'" title="'+(d.내용_전||'')+'">'+(d.내용_전||'—')+'</td>'
+      +'<td style="'+tc2+'" title="'+(d.내용_후||'')+'">'+(d.내용_후||'—')+'</td>'
+      +'<td style="'+tc2+'" title="'+(d.문제점||'')+'">'+(d.문제점||'—')+'</td>'
+      +'<td style="'+tc2+'" title="'+(d.개선효과||'')+'">'+(d.개선효과||'—')+'</td>'
+      +'<td>'+(d.사진전==='Y'?'✅':'—')+'</td>'
+      +'<td>'+(d.사진후==='Y'?'✅':'—')+'</td>'
+      +'<td>'+badgeHtml(d.완료여부)+'</td>'
+      +'<td>'+d.작성일+'</td>'
+      +'<td><button class="btn-load" onclick="openViewDoc(\'' + d.문서번호 + '\')">열기</button></td>';
+    tbody.appendChild(tr);
+  });
+};
+function openViewDoc(docNo){
+  loadJsonp(API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SDoc&docNo='+encodeURIComponent(docNo)+'&callback=cbOpenViewDoc','cbOpenViewDoc');
+}
+window.cbOpenViewDoc=function(data){
+  if(data.status!=='ok'){alert('오류: '+(data.message||''));return;}
+  var meta=data.meta||{}, sets=data.sets||[];
+  document.getElementById('view-doc-title').textContent='📄 '+meta.문서번호+' 미리보기';
+  var set=sets[0]||{};
+  var locParts=(set.위치||'').split(' > ');
+
+  document.getElementById('view-doc-container').innerHTML=[
+    '<div class="doc-wrap" style="margin-top:10px;">',
+      '<div class="doc-title-bar" style="text-align:center;letter-spacing:3px;font-size:14px;">개선 보고서</div>',
+      '<div class="doc-header-1row">',
+        '<div class="hc lbl">발견일</div>',
+        '<div class="hc val" style="font-size:10px;">'+escHtml(meta.발견일||'—')+'</div>',
+        '<div class="hc lbl">작업일</div>',
+        '<div class="hc val" style="font-size:10px;">'+escHtml(meta.작업일||'—')+'</div>',
+        '<div class="hc lbl">문서번호</div>',
+        '<div class="hc val" style="font-size:9px;font-weight:700;color:#1a3a5c;">'+escHtml(meta.문서번호||'—')+'</div>',
+        '<div class="hc lbl">담당자</div>',
+        '<div class="hc val" style="font-weight:700;font-size:10px;">'+escHtml(meta.담당자||'—')+'</div>',
+        '<div class="hc lbl">부서</div>',
+        '<div class="hc val" style="font-size:10px;">'+escHtml(meta.부서||'—')+'</div>',
+        '<div class="hc lbl"><span>완료</span><span>여부</span></div>',
+        '<div class="hc val" style="justify-content:center;">'+badgeHtml(meta.완료여부)+'</div>',
+        '<div class="hc lbl">장소</div>',
+        '<div class="hc val" style="font-size:10px;">'+escHtml(meta.장소||'—')+'</div>',
+      '</div>',
+      '<div class="set-header">',
+        '<div class="set-no">1</div>',
+        '<span class="set-tag">구분</span>',
+        '<span style="font-size:11px;font-weight:700;">'+escHtml(locParts[0]||'')+'</span>',
+        '<span class="set-arr">▶</span>',
+        '<span class="set-tag">항목</span>',
+        '<span style="font-size:11px;font-weight:700;">'+escHtml(locParts[1]||'')+'</span>',
+      '</div>',
+      '<div class="set-photos">',
+        '<div class="photo-box">',
+          '<div class="photo-lbl">📷 개선전 사진</div>',
+          '<div id="vw-wrap-front" style="height:360px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9f9f9;">',
+            '<span style="font-size:11px;color:#ccc;">🔄 불러오는 중...</span>',
+          '</div>',
+        '</div>',
+        '<div class="photo-box">',
+          '<div class="photo-lbl">📷 개선후 사진</div>',
+          '<div id="vw-wrap-back" style="height:360px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9f9f9;">',
+            '<span style="font-size:11px;color:#ccc;">🔄 불러오는 중...</span>',
+          '</div>',
+        '</div>',
+      '</div>',
+      '<div class="set-desc">',
+        '<div class="dc lbl">개선전</div>',
+        '<div class="dc">'+escHtml(set.내용_전||'')+'</div>',
+        '<div class="dc lbl">개선후</div>',
+        '<div class="dc">'+escHtml(set.내용_후||'')+'</div>',
+      '</div>',
+      '<div class="set-desc" style="border-top:none;">',
+        '<div class="dc lbl" style="flex-direction:column;gap:1px;"><span>문제점</span></div>',
+        '<div class="dc">'+escHtml(set.문제점||'')+'</div>',
+        '<div class="dc lbl" style="flex-direction:column;gap:1px;"><span>개선</span><span>효과</span></div>',
+        '<div class="dc">'+escHtml(set.개선효과||'')+'</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+  document.getElementById('view-doc-area').style.display='block';
+
+  // ── 사진 fetchBase64로 로드
+  function loadViewImg(wrapId, url){
+    var wrap=document.getElementById(wrapId);
+    if(!wrap)return;
+    if(!url||url.length<5){
+      wrap.innerHTML='<div style="color:#bbb;font-size:11px;text-align:center;padding:40px;">사진 없음</div>';
+      return;
+    }
+    var conv=convertDriveUrl(url);
+    fetchBase64(conv).then(function(b64){
+      if(b64){
+        wrap.innerHTML='<img src="'+b64+'" style="max-width:100%;max-height:360px;object-fit:contain;">';
+      } else {
+        wrap.innerHTML='<div style="color:#bbb;font-size:11px;text-align:center;padding:40px;">사진 불러오기 실패</div>';
+      }
+    });
+  }
+  loadViewImg('vw-wrap-front', set.사진_전||'');
+  loadViewImg('vw-wrap-back',  set.사진_후||'');
+};
+
+/* ── PDF — A4 가로 1장 ── */
+// URL → Base64 변환 (Promise 방식)
+function fetchBase64(url){
+  return new Promise(function(resolve){
+    if(!url){ resolve(''); return; }
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType='blob';
+    xhr.onload=function(){
+      if(xhr.status===200){
+        var reader=new FileReader();
+        reader.onloadend=function(){ resolve(reader.result); };
+        reader.readAsDataURL(xhr.response);
+      } else { resolve(''); }
+    };
+    xhr.onerror=function(){ resolve(''); };
+    xhr.send();
+  });
+}
+
+function exportPDF(){
+  var btn=document.getElementById('btn-pdf');
+  var orig=btn.textContent;
+  btn.textContent='사진 변환 중...'; btn.disabled=true;
+
+  var urlFront=convertDriveUrl(document.getElementById('url-front').value.trim());
+  var urlBack =convertDriveUrl(document.getElementById('url-back').value.trim());
+
+  Promise.all([fetchBase64(urlFront), fetchBase64(urlBack)])
+  .then(function(results){
+    var b64f=results[0], b64b=results[1];
+    btn.textContent='PDF 생성 중...';
+
+    var prevF=document.getElementById('prev-front');
+    var prevB=document.getElementById('prev-back');
+    var phF  =document.getElementById('ph-front');
+    var phB  =document.getElementById('ph-back');
+
+    if(phF) phF.style.display='none';
+    if(phB) phB.style.display='none';
+    if(prevF){
+      prevF.src = b64f || '';
+      prevF.style.cssText='max-width:100%;max-height:370px;object-fit:contain;display:'+(b64f?'block':'none')+';margin:auto;';
+    }
+    if(prevB){
+      prevB.src = b64b || '';
+      prevB.style.cssText='max-width:100%;max-height:370px;object-fit:contain;display:'+(b64b?'block':'none')+';margin:auto;';
+    }
+
+    // ★ PDF 캡처 전 — URL입력칸 + 버튼 숨기기
+    var hideEls = document.getElementById('doc-container').querySelectorAll('.url-inp, .photo-btns');
+    hideEls.forEach(function(el){ el.setAttribute('data-pdf-hidden','1'); el.style.visibility='hidden'; el.style.height='0'; el.style.overflow='hidden'; el.style.marginTop='0'; el.style.padding='0'; });
+
+    // 렌더링 대기 후 캡처
+    setTimeout(function(){
+      var target=document.getElementById('doc-container');
+      html2canvas(target,{
+        scale:2,
+        backgroundColor:'#ffffff',
+        useCORS:true,
+        allowTaint:true,
+        logging:false
+      })
+      .then(function(canvas){
+        // ★ 캡처 완료 후 원상복구
+        document.getElementById('doc-container').querySelectorAll('[data-pdf-hidden]').forEach(function(el){
+          el.removeAttribute('data-pdf-hidden');
+          el.style.visibility='';
+          el.style.height='';
+          el.style.overflow='';
+          el.style.marginTop='';
+          el.style.padding='';
+        });
+        try{
+          var imgData=canvas.toDataURL('image/png');
+          var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+          var pw=pdf.internal.pageSize.getWidth();
+          var ph=pdf.internal.pageSize.getHeight();
+          var mg=6;
+          var ratio=Math.min((pw-mg*2)/canvas.width,(ph-mg*2)/canvas.height);
+          var rw=canvas.width*ratio, rh=canvas.height*ratio;
+          pdf.addImage(imgData,'PNG',(pw-rw)/2,mg,rw,rh);
+          pdf.save('5S개선사진_'+currentDocNo+'.pdf');
+        }catch(e2){
+          alert('PDF 저장 오류: '+e2.message);
+        }
+      })
+      .catch(function(e){
+        // 오류 시에도 원상복구
+        document.getElementById('doc-container').querySelectorAll('[data-pdf-hidden]').forEach(function(el){
+          el.removeAttribute('data-pdf-hidden');
+          el.style.visibility=''; el.style.height=''; el.style.overflow=''; el.style.marginTop=''; el.style.padding='';
+        });
+        alert('PDF 캡처 오류: '+e.message);
+      })
+      .finally(function(){ btn.textContent=orig; btn.disabled=false; });
+    }, 800);
+  });
+}
+
+function exportViewPDF(){
+  var target=document.getElementById('view-doc-container');
+  var btn=document.querySelector('.btn-act-pdf');
+  var orig=btn.textContent;
+  btn.textContent='이미지 변환 중...'; btn.disabled=true;
+
+  // view-doc-container 안의 모든 img를 Promise.all로 Base64 변환
+  var imgs=Array.from(target.querySelectorAll('img'));
+  if(imgs.length===0){ captureViewPDF(target,btn,orig); return; }
+
+  var promises=imgs.map(function(img){
+    var src=img.getAttribute('src')||'';
+    if(!src||src.indexOf('data:')===0) return Promise.resolve(null);
+    return fetchBase64(src).then(function(b64){
+      if(b64) img.src=b64;
+      return b64;
+    });
+  });
+
+  Promise.all(promises).then(function(){
+    setTimeout(function(){ captureViewPDF(target,btn,orig); }, 300);
+  }).catch(function(){ captureViewPDF(target,btn,orig); });
+}
+function captureViewPDF(target, btn, orig){
+  html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true,allowTaint:true})
+  .then(function(canvas){
+    var imgData=canvas.toDataURL('image/png');
+    var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight(), mg=6;
+    var ratio=Math.min((pw-mg*2)/canvas.width,(ph-mg*2)/canvas.height);
+    var rw=canvas.width*ratio, rh=canvas.height*ratio;
+    pdf.addImage(imgData,'PNG',(pw-rw)/2,mg,rw,rh);
+    var docTitle=document.getElementById('view-doc-title').textContent.replace('📄 ','').replace(' 미리보기','');
+    pdf.save('5S개선이력_'+docTitle+'.pdf');
+  })
+  .catch(function(e){alert('PDF 오류: '+e.message);})
+  .finally(function(){btn.textContent=orig; btn.disabled=false;});
+}
+
+/* ── CSV ── */
+function exportCSV(){
+  if(!lastViewData||!lastViewData.rows){alert('먼저 조회를 진행해 주세요.');return;}
+  var cols=['문서번호','작업일','담당자','세트번호','구분','항목','위치','내용_전','내용_후','완료여부','사진전여부','사진후여부','작성일'];
+  var lines=[cols.join(',')];
+  lastViewData.rows.forEach(function(r){
+    lines.push(cols.map(function(c){
+      var v=String(r[c]!==undefined?r[c]:'');
+      if(v.indexOf(',')>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0)v='"'+v.replace(/"/g,'""')+'"';
+      return v;
+    }).join(','));
+  });
+  var blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='5S관리대장_이력.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── 유틸 ── */
+function badgeHtml(s){
+  if(s==='완료')return '<span class="badge-done">완료</span>';
+  if(s==='진행중')return '<span class="badge-ing">진행중</span>';
+  if(s==='미완료')return '<span class="badge-no">미완료</span>';
+  return s||'';
+}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function setStatus(msg){document.getElementById('status-msg').textContent=msg;}
+</script>
+</body>
+</html>
