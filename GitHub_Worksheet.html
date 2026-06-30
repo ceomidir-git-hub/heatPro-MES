@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업일보</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    font-size: 14px;
+    background: #dde3ea;
+    padding: 24px 16px 40px;
+    color: #111;
+    min-height: 100vh;
+  }
+
+  /* ── 로딩 모달 ── */
+  #load-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 99999;
+  }
+  .load-box {
+    background: #fff;
+    border-radius: 10px;
+    padding: 40px 48px;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    min-width: 360px;
+  }
+  .load-box .load-icon { font-size: 48px; margin-bottom: 16px; }
+  .load-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #1a3a5c; }
+  .load-box p  { font-size: 13px; color: #666; margin-bottom: 24px; line-height: 1.6; }
+  .load-box .load-filename {
+    display: inline-block;
+    background: #eaf1fb; border: 1.5px solid #1a3a5c;
+    border-radius: 4px; padding: 4px 14px;
+    font-size: 13px; font-weight: 700; color: #1a3a5c;
+    margin-bottom: 24px;
+  }
+  #file-pick-btn {
+    display: inline-block;
+    padding: 11px 32px;
+    background: #1a3a5c; color: #fff;
+    border: none; border-radius: 5px;
+    font-size: 15px; font-weight: 700;
+    font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+    cursor: pointer; letter-spacing: 1px;
+    transition: background 0.15s;
+  }
+  #file-pick-btn:hover { background: #25527d; }
+  #load-status { font-size: 13px; color: #888; margin-top: 14px; min-height: 18px; }
+  #load-status.err { color: #c0392b; }
+  #load-status.ok  { color: #27ae60; font-weight: 700; }
+
+  /* ── 상단 데이터 소스 표시 ── */
+  #data-source-bar {
+    display: none;
+    background: #eaf1fb;
+    border: 1.5px solid #1a3a5c;
+    border-radius: 5px;
+    padding: 7px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #1a3a5c;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  #data-source-bar span { flex: 1; }
+  #reload-btn {
+    font-size: 12px; font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+    padding: 3px 10px; border: 1.5px solid #1a3a5c; border-radius: 3px;
+    background: #fff; color: #1a3a5c; cursor: pointer; font-weight: 600;
+    transition: background 0.15s;
+  }
+  #reload-btn:hover { background: #1a3a5c; color: #fff; }
+
+  /* Page */
+  .page {
+    background: #fff;
+    width: 100%;
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 30px 30px 36px;
+    border: 1px solid #aaa;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+  }
+
+  /* Title */
+  .title-row { margin-bottom: 20px; text-align: center; }
+  .main-title { font-size: 28px; font-weight: 700; letter-spacing: 12px; padding: 8px 0; }
+
+  /* Section title */
+  .section-title {
+    font-size: 15px; font-weight: 700; margin: 16px 0 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title input[type="date"] {
+    border: none; border-bottom: 1.5px solid #444;
+    font-family: inherit; font-size: 14px; background: transparent;
+    outline: none; padding: 1px 2px; width: 140px; cursor: pointer;
+  }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+  th, td { border: 1.5px solid #444; padding: 5px 8px; vertical-align: middle; }
+  th {
+    background: #dce3ec; font-weight: 700; text-align: center;
+    font-size: 14px; white-space: nowrap;
+  }
+  td { font-size: 14px; }
+  td.label {
+    background: #dce3ec; font-weight: 700; text-align: center; white-space: nowrap;
+  }
+  td.no-cell {
+    text-align: center; font-weight: 700; background: #dce3ec; width: 38px;
+  }
+
+  /* Inputs */
+  input[type="text"], input[type="number"], input[type="date"], textarea {
+    border: none; border-bottom: 1px solid #aaa; width: 100%;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    font-size: 14px; background: transparent; padding: 2px 3px;
+    outline: none; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus,
+  input[type="date"]:focus, textarea:focus {
+    border-bottom: 1.5px solid #1a3a5c; background: #f4f8ff;
+  }
+  input[type="date"] { min-width: 110px; cursor: pointer; }
+  textarea {
+    resize: vertical; min-height: 50px;
+    border: none; border-bottom: 1px solid #aaa;
+  }
+  textarea:focus { border-bottom: 1.5px solid #1a3a5c; background: #f4f8ff; }
+
+  /* Checkboxes */
+  .cb-group {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-right: 6px; white-space: nowrap; cursor: pointer;
+  }
+  .cb-group label { font-size: 14px; cursor: pointer; }
+  input[type="checkbox"] { width: 13px; height: 13px; cursor: pointer; accent-color: #1a3a5c; }
+  .cb-slash { font-size: 14px; margin: 0 3px; color: #666; }
+
+  .worker-cell { display: flex; align-items: center; gap: 6px; }
+  .worker-cell input { flex: 1; }
+  .worker-cell span { white-space: nowrap; font-size: 15px; color: #555; }
+
+  .preset { display: flex; align-items: center; gap: 4px; }
+  .preset span { white-space: nowrap; font-size: 15px; color: #444; font-weight: 600; }
+  .preset input { flex: 1; min-width: 0; }
+
+  .sensor-bad-row { display: flex; align-items: center; gap: 4px; }
+  .sensor-bad-row label { font-size: 15px; white-space: nowrap; }
+  .sensor-bad-row input[type="text"] { flex: 1; min-width: 0; }
+
+  /* 커스텀 드롭다운 */
+  .dd-wrap { position: relative; width: 100%; }
+  .dd-input {
+    width: 100%; border: none; border-bottom: 1px solid #aaa;
+    background: transparent; font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+    font-size: 14px; padding: 2px 20px 2px 3px; outline: none;
+    cursor: pointer; caret-color: transparent; transition: border-color .15s;
+  }
+  .dd-input:focus { border-bottom: 1.5px solid #1a3a5c; background: #f4f8ff; }
+  .dd-input.disabled { background: #f5f5f5; color: #bbb; cursor: not-allowed; }
+  .dd-arrow {
+    position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; color: #888; pointer-events: none;
+  }
+  .dd-list {
+    display: none; position: absolute;
+    top: calc(100% + 2px); left: 0;
+    min-width: 100%; max-width: 320px;
+    background: #fff; border: 1.5px solid #1a3a5c;
+    border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    z-index: 9000; max-height: 200px; overflow-y: auto;
+  }
+  .dd-list.open { display: block; }
+  .dd-item {
+    padding: 7px 12px; font-size: 13px; cursor: pointer;
+    white-space: nowrap; border-bottom: 1px solid #eee;
+    font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+  }
+  .dd-item:last-child { border-bottom: none; }
+  .dd-item:hover { background: #eaf1fb; color: #1a3a5c; font-weight: 600; }
+  .dd-item.selected { background: #d0e4fa; color: #1a3a5c; font-weight: 700; }
+
+  /* 표준 버튼 */
+  .th-with-btn {
+    display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; white-space: nowrap;
+  }
+  .std-btn {
+    display: inline-block; padding: 2px 8px;
+    font-size: 11px; font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    font-weight: 700; color: #1a3a5c; background: #eaf1fb;
+    border: 1.5px solid #1a3a5c; border-radius: 3px; cursor: pointer;
+    letter-spacing: 1px; transition: background 0.15s, color 0.15s; vertical-align: middle;
+  }
+  .std-btn:hover { background: #1a3a5c; color: #fff; }
+
+  /* Button row */
+  .btn-row {
+    display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+  }
+  .btn {
+    padding: 9px 26px; font-size: 15px;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    border: 1.5px solid #333; background: #fff; cursor: pointer;
+    border-radius: 3px; font-weight: 600; transition: all 0.15s; letter-spacing: 1px;
+  }
+  .btn:hover { background: #e8edf5; }
+  .btn.reset { border-color: #888; color: #555; }
+  .btn.reset:hover { background: #f3f3f3; border-color: #555; }
+  .btn.pdf-btn  { border-color: #6b3fa0; color: #6b3fa0; }
+  .btn.pdf-btn:hover { background: #f3eeff; }
+  .btn.print-btn { border-color: #555; color: #333; }
+  .btn.save-btn {
+    background: #1a3a5c; color: #fff; border-color: #1a3a5c;
+    box-shadow: 0 2px 8px rgba(26,58,92,0.18);
+  }
+  .btn.save-btn:hover { background: #25527d; }
+  .btn.db-save-btn {
+    background: #217346; color: #fff; border-color: #217346;
+    box-shadow: 0 2px 8px rgba(33,115,70,0.18);
+  }
+  .btn.db-save-btn:hover { background: #2a9158; }
+  .btn.db-export-btn {
+    background: #c55a11; color: #fff; border-color: #c55a11;
+    box-shadow: 0 2px 8px rgba(197,90,17,0.18);
+  }
+  .btn.db-export-btn:hover { background: #e06c1a; }
+  .db-badge {
+    display: inline-block; background: rgba(255,255,255,0.25);
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    padding: 1px 7px; margin-left: 5px; vertical-align: middle;
+  }
+
+  /* Toast */
+  #toast {
+    display: none; position: fixed; bottom: 36px; left: 50%;
+    transform: translateX(-50%); background: #1a3a5c; color: #fff;
+    padding: 12px 28px; border-radius: 30px; font-size: 15px; font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 9999; animation: fadeIn 0.2s;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* ── DB 조회 바 ── */
+  .nav-btn {
+    padding: 5px 14px;
+    background: #eaf1fb; border: 1.5px solid #1a3a5c;
+    border-radius: 3px; font-size: 15px; color: #1a3a5c;
+    cursor: pointer; font-weight: 700;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+  }
+  .nav-btn:hover:not(:disabled) { background: #1a3a5c; color: #fff; }
+  .nav-btn:disabled { opacity: 0.32; cursor: not-allowed; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border: none; padding: 10px; }
+    .btn-row { display: none; }
+    #data-source-bar { display: none !important; }
+    #query-bar { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ RAW DATA 로딩 모달 (Google Sheets 연동) ══ -->
+<div id="load-modal">
+  <div class="load-box">
+    <div class="load-icon">📡</div>
+    <h2>RAW DATA 불러오기</h2>
+    <p>Google 스프레드시트에서<br>기초 데이터(직원/고객사/재질/품명품번/설비)를 불러옵니다.</p>
+    <div class="load-filename">Github Raw Data + Worksheet Db</div><br>
+    <button id="file-pick-btn" onclick="loadRawDataFromSheet()">
+      🔄 불러오기
+    </button>
+    <div id="load-status"></div>
+  </div>
+</div>
+
+<!-- ══ 데이터 소스 표시 바 ══ -->
+<div id="data-source-bar" style="display:none; max-width:940px; margin:0 auto 10px;">
+  <span id="source-label">📊 데이터 소스: —</span>
+  <button id="reload-btn" onclick="showLoadModal()">🔄 다시 불러오기</button>
+</div>
+
+<!-- ══ DB 조회 바 ══ -->
+<div id="query-bar" style="display:none; max-width:940px; margin:0 auto 10px; background:#fff; border:1.5px solid #217346; border-radius:5px; padding:10px 16px; align-items:center; gap:12px; flex-wrap:wrap;">
+  <span style="font-weight:700; color:#217346; font-size:14px; white-space:nowrap;">📋 DB 조회</span>
+  <span style="font-size:13px; color:#555; white-space:nowrap;">작업일</span>
+  <input type="date" id="query-date-input"
+    style="border:1.5px solid #aaa; border-radius:3px; padding:5px 8px;
+           font-family:'Noto Sans KR','Malgun Gothic',sans-serif; font-size:14px;
+           outline:none; cursor:pointer; background:#fff;">
+  <button onclick="queryByDate()"
+    style="padding:6px 18px; background:#217346; color:#fff; border:none; border-radius:3px;
+           font-size:14px; font-weight:700; cursor:pointer; letter-spacing:1px;
+           font-family:'Noto Sans KR','Malgun Gothic',sans-serif;">🔍 조회</button>
+  <div id="query-nav" style="display:none; align-items:center; gap:8px;">
+    <button id="prev-btn" class="nav-btn" onclick="navigateRecord(-1)" disabled>◀</button>
+    <span id="query-counter" style="font-size:14px; font-weight:700; color:#333; min-width:64px; text-align:center; white-space:nowrap;"></span>
+    <button id="next-btn" class="nav-btn" onclick="navigateRecord(1)">▶</button>
+  </div>
+  <span id="query-result-msg" style="font-size:13px; color:#888;"></span>
+</div>
+
+<div class="page" id="report-form">
+
+  <!-- 제목 -->
+  <div class="title-row">
+    <div class="main-title">작 업 일 보</div>
+  </div>
+
+  <!-- 1. 기본관리항목 -->
+  <div class="section-title">1. 기본관리항목</div>
+  <table>
+    <colgroup>
+      <col style="width:13%"><col style="width:20.3%">
+      <col style="width:13%"><col style="width:20.3%">
+      <col style="width:13%"><col style="width:20.4%">
+    </colgroup>
+    <tr>
+      <td class="label">작업일</td>
+      <td><input type="date" id="work-date"></td>
+      <td class="label">주/야간</td>
+      <td style="text-align:center">
+        <span class="cb-group"><input type="checkbox" id="day-shift"><label for="day-shift">주간</label></span>
+        <span class="cb-group"><input type="checkbox" id="night-shift"><label for="night-shift">야간</label></span>
+      </td>
+      <td class="label">작업자</td>
+      <td>
+        <div class="worker-cell">
+          <div class="dd-wrap" style="flex:1">
+            <input class="dd-input" id="worker" placeholder="선택" readonly onclick="toggleDd('dd-worker')">
+            <span class="dd-arrow">▾</span>
+            <div class="dd-list" id="dd-worker"></div>
+          </div>
+          <span>(인)</span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">고객사</td>
+      <td>
+        <div class="dd-wrap">
+          <input class="dd-input" id="customer" placeholder="선택▾" readonly onclick="toggleDd('dd-customer')">
+          <span class="dd-arrow">▾</span>
+          <div class="dd-list" id="dd-customer"></div>
+        </div>
+      </td>
+      <td class="label">품명</td>
+      <td>
+        <div class="dd-wrap">
+          <input class="dd-input disabled" id="product-name" placeholder="고객사 먼저 선택" readonly onclick="toggleDd('dd-product-name')">
+          <span class="dd-arrow">▾</span>
+          <div class="dd-list" id="dd-product-name"></div>
+        </div>
+      </td>
+      <td class="label">품번</td>
+      <td>
+        <div class="dd-wrap">
+          <input class="dd-input disabled" id="product-no" placeholder="품명 먼저 선택" readonly onclick="toggleDd('dd-product-no')">
+          <span class="dd-arrow">▾</span>
+          <div class="dd-list" id="dd-product-no"></div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">도면</td>
+      <td style="text-align:center">
+        <span class="cb-group"><input type="checkbox" id="draw-yes"><label for="draw-yes">유</label></span>
+        <span class="cb-group"><input type="checkbox" id="draw-no"><label for="draw-no">무</label></span>
+      </td>
+      <td class="label">재질</td>
+      <td>
+        <div class="dd-wrap">
+          <input class="dd-input" id="material" placeholder="선택▾" readonly onclick="toggleDd('dd-material')">
+          <span class="dd-arrow">▾</span>
+          <div class="dd-list" id="dd-material"></div>
+        </div>
+      </td>
+      <td class="label">소재상태</td>
+      <td style="text-align:center">
+        <span class="cb-group"><input type="checkbox" id="mat-ok"><label for="mat-ok">양호</label></span>
+        <span class="cb-group"><input type="checkbox" id="mat-bad"><label for="mat-bad">불량</label></span>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">설비명</td>
+      <td>
+        <div class="dd-wrap">
+          <input class="dd-input" id="equip-name" placeholder="선택▾" readonly onclick="toggleDd('dd-equip-name')">
+          <span class="dd-arrow">▾</span>
+          <div class="dd-list" id="dd-equip-name"></div>
+        </div>
+      </td>
+      <td class="label">설비번호</td>
+      <td><input type="text" id="equip-no" readonly
+            style="background:#f5f7fa;color:#333;cursor:default;"
+            placeholder="설비명 선택 시 자동입력"></td>
+      <td class="label">설비상태</td>
+      <td style="text-align:center">
+        <span class="cb-group"><input type="checkbox" id="equip-ok"><label for="equip-ok">양호</label></span>
+        <span class="cb-group"><input type="checkbox" id="equip-bad"><label for="equip-bad">이상</label></span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 2. 생산수량현황 -->
+  <div class="section-title">2. 생산수량현황</div>
+  <table>
+    <tr>
+      <th>계획수량</th><th>투입수량</th><th>양품수량</th>
+      <th>불량수량</th><th>재작업수량</th><th>가동시간</th><th>비가동시간</th>
+      <th>템퍼링작업</th><th>교정작업</th>
+    </tr>
+    <tr>
+      <td><input type="number" id="plan-qty" min="0"></td>
+      <td><input type="number" id="input-qty" min="0"></td>
+      <td><input type="number" id="good-qty" min="0"></td>
+      <td><input type="number" id="bad-qty" min="0"></td>
+      <td><input type="number" id="rework-qty" min="0"></td>
+      <td><input type="text" id="op-time"></td>
+      <td><input type="text" id="non-op-time"></td>
+      <td style="text-align:center">
+        <div><span class="cb-group"><input type="checkbox" id="temper-do"><label for="temper-do">실시</label></span></div>
+        <div><span class="cb-group"><input type="checkbox" id="temper-skip"><label for="temper-skip">미실시</label></span></div>
+      </td>
+      <td style="text-align:center">
+        <div><span class="cb-group"><input type="checkbox" id="correct-do"><label for="correct-do">실시</label></span></div>
+        <div><span class="cb-group"><input type="checkbox" id="correct-skip"><label for="correct-skip">미실시</label></span></div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 3. 주요공정 파라미터 -->
+  <div class="section-title">3. 주요공정 파라미터</div>
+  <table>
+    <!-- 설정값 헤더 → 6열: 경도값 -->
+    <tr>
+      <th style="width:70px">항목</th>
+      <th><span class="th-with-btn">전압(V)<button class="std-btn" onclick="setStd('volt-set','12.5')">표준</button></span></th>
+      <th><span class="th-with-btn">전류(A)<button class="std-btn" onclick="setStd('amp-set','8.25')">표준</button></span></th>
+      <th><span class="th-with-btn">출력(kW)<button class="std-btn" onclick="setStd('kw-set','1.25')">표준</button></span></th>
+      <th><span class="th-with-btn">주파수(kHz)<button class="std-btn" onclick="setStd('khz-set','120')">표준</button></span></th>
+      <th><span class="th-with-btn">NO2<button class="std-btn" onclick="setStd('no2-set','')">표준</button></span></th>
+      <th>경도값</th>
+    </tr>
+    <!-- 설정값 입력 → 6열: P1 / 입력 -->
+    <tr>
+      <td class="label">설정값</td>
+      <td><div class="preset"><span>st 12.5/</span><input type="text" id="volt-set"></div></td>
+      <td><div class="preset"><span>st 8.25/</span><input type="text" id="amp-set"></div></td>
+      <td><div class="preset"><span>st 1.25/</span><input type="text" id="kw-set"></div></td>
+      <td><div class="preset"><span>st 120/</span><input type="text" id="khz-set"></div></td>
+      <td style="text-align:center;"><input type="text" id="no2-set" placeholder="NO3" style="text-align:center;"></td>
+      <td style="padding:3px 5px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+          <span style="font-size:11px;color:#1a3a5c;font-weight:600;white-space:nowrap;">P1 /</span>
+          <input type="text" id="p1-val" style="flex:1;text-align:center;">
+        </div>
+      </td>
+    </tr>
+    <!-- 가열조건 헤더 → 6열: P2 / 입력 -->
+    <tr>
+      <th>항목</th><th>가열시간(sec)</th><th>이동속도(mm/s)</th>
+      <th>코일-제품간격(mm)</th><th>회전수(RPM)</th>
+      <th>NO3</th>
+      <td style="padding:3px 5px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+          <span style="font-size:11px;color:#1a3a5c;font-weight:600;white-space:nowrap;">P2 /</span>
+          <input type="text" id="p2-val" style="flex:1;text-align:center;">
+        </div>
+      </td>
+    </tr>
+    <!-- 가열조건 입력 → 6열: P3 / 입력 -->
+    <tr>
+      <td class="label">가열조건</td>
+      <td><input type="text" id="heat-time"></td>
+      <td><input type="text" id="move-speed"></td>
+      <td><input type="text" id="coil-gap"></td>
+      <td><input type="text" id="rpm"></td>
+      <td style="text-align:center;"><input type="text" id="no3-set" placeholder="NO4" style="text-align:center;"></td>
+      <td style="padding:3px 5px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+          <span style="font-size:11px;color:#1a3a5c;font-weight:600;white-space:nowrap;">P3 /</span>
+          <input type="text" id="p3-val" style="flex:1;text-align:center;">
+        </div>
+      </td>
+    </tr>
+    <!-- 냉각조건 헤더 → 6열: 표면경도 -->
+    <tr>
+      <th>항목</th><th>냉각수압력(bar)</th><th>냉각수온도(℃)</th>
+      <th>냉각시간(sec)</th><th>LOT NO</th>
+      <th>NO5</th>
+      <th>표면경도</th>
+    </tr>
+    <!-- 냉각조건 입력 → 6열: 입력칸 -->
+    <tr>
+      <td class="label">냉각조건</td>
+      <td><input type="text" id="cool-bar"></td>
+      <td><input type="text" id="cool-temp"></td>
+      <td><input type="text" id="cool-time"></td>
+      <td><input type="text" id="lot-no"></td>
+      <td style="text-align:center;"><input type="text" id="no5-set" placeholder="NO6" style="text-align:center;"></td>
+      <td style="padding:3px 5px;">
+        <input type="text" id="surface-hard" style="width:100%;text-align:center;">
+      </td>
+    </tr>
+    <!-- 조건값 헤더 → 6열: 심부경도 -->
+    <tr>
+      <th>항목</th><th>템퍼링온도(℃)</th><th>템퍼링시간(sec)</th>
+      <th>템퍼링경도(HRC:48~52)</th><th>교정값(mm)</th>
+      <th>NO7</th>
+      <th>심부경도</th>
+    </tr>
+    <!-- 조건값 입력 → 6열: 입력칸 -->
+    <tr>
+      <td class="label">조건값</td>
+      <td><input type="text" id="temper-temp"></td>
+      <td><input type="text" id="temper-time"></td>
+      <td><input type="text" id="temper-hard"></td>
+      <td><input type="text" id="correct-val"></td>
+      <td style="text-align:center;"><input type="text" id="no7-set" placeholder="NO8" style="text-align:center;"></td>
+      <td style="padding:3px 5px;">
+        <input type="text" id="depth-hard" style="width:100%;text-align:center;">
+      </td>
+    </tr>
+  </table>
+
+  <!-- 4. 설비 및 코일점검 -->
+  <div class="section-title">4. 설비 및 코일점검</div>
+  <table>
+    <tr>
+      <th style="width:68px">코일번호</th>
+      <th style="width:110px">코일 세척</th>
+      <th style="width:120px">변형/스파크흔</th>
+      <th style="width:100px">냉각수농도(%)</th>
+      <th style="width:100px">냉각수 오염도</th>
+      <th>센서(온도/압력) 상태</th>
+    </tr>
+    <tr>
+      <td><input type="text" id="coil-no"></td>
+      <td>
+        <div><span class="cb-group"><input type="checkbox" id="wash-done"><label for="wash-done">완료</label></span></div>
+        <div><span class="cb-group"><input type="checkbox" id="wash-skip"><label for="wash-skip">미시행</label></span></div>
+      </td>
+      <td>
+        <div><span class="cb-group"><input type="checkbox" id="deform-no"><label for="deform-no">이상없음</label></span></div>
+        <div><span class="cb-group"><input type="checkbox" id="deform-yes"><label for="deform-yes">이상있음</label></span></div>
+      </td>
+      <td><input type="text" id="cool-conc" placeholder="예) 5%"></td>
+      <td>
+        <div><span class="cb-group"><input type="checkbox" id="water-ok"><label for="water-ok">양호</label></span></div>
+        <div><span class="cb-group"><input type="checkbox" id="water-rep"><label for="water-rep">요교체</label></span></div>
+      </td>
+      <td>
+        <div><span class="cb-group"><input type="checkbox" id="sensor-ok"><label for="sensor-ok">정상</label></span></div>
+        <div class="sensor-bad-row">
+          <input type="checkbox" id="sensor-bad">
+          <label for="sensor-bad">이상(내용:</label>
+          <input type="text" id="sensor-detail" placeholder="">
+          <span style="font-size:13px">)</span>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 5. 비가동 유무 -->
+  <div class="section-title">5. 비가동 유무</div>
+  <table>
+    <tr>
+      <th style="width:38px">No.</th>
+      <th>비가동 유형</th>
+      <th style="width:80px">비가동Hr</th>
+      <th style="width:72px">부품교체</th>
+      <th style="width:72px">SPARE품</th>
+      <th>조치/비고</th>
+    </tr>
+    <tr>
+      <td class="no-cell">1</td>
+      <td><input type="text" id="non-type1"></td>
+      <td><input type="text" id="non-hr1"></td>
+      <td><input type="text" id="part-rep1"></td>
+      <td><input type="text" id="spare1"></td>
+      <td><input type="text" id="action1"></td>
+    </tr>
+  </table>
+
+  <!-- 6. 소재입고검사 -->
+  <div class="section-title">6. 소재입고검사</div>
+  <table>
+    <tr>
+      <th style="width:120px">입고일</th>
+      <th style="width:70px">입고수량</th>
+      <th style="width:60px">외관</th>
+      <th style="width:80px">도면(사양)</th>
+      <th style="width:110px">열처리(QT)</th>
+      <th style="width:120px">출고일</th>
+      <th style="width:70px">출고수량</th>
+      <th style="width:80px">발청작업</th>
+      <th style="width:80px">검사결과</th>
+    </tr>
+    <tr>
+      <td style="padding:2px 3px;"><input type="date" id="inspect-date" style="width:100%;font-size:12px;padding:1px 2px;"></td>
+      <td><input type="number" id="insp-qty" min="0"></td>
+      <td style="text-align:center;">
+        <span class="cb-group"><input type="checkbox" id="insp-outer-ok"><label for="insp-outer-ok">양호</label></span>
+        <span class="cb-group"><input type="checkbox" id="insp-outer-bad"><label for="insp-outer-bad">불량</label></span>
+      </td>
+      <td style="text-align:center;">
+        <span class="cb-group"><input type="checkbox" id="insp-draw-ok"><label for="insp-draw-ok">확인</label></span>
+        <span class="cb-group"><input type="checkbox" id="insp-draw-no"><label for="insp-draw-no">미확인</label></span>
+      </td>
+      <td style="text-align:center;">
+        <span class="cb-group"><input type="checkbox" id="qt-do"><label for="qt-do">실시</label></span>
+        <span class="cb-group"><input type="checkbox" id="qt-skip"><label for="qt-skip">미실시</label></span>
+      </td>
+      <td style="padding:2px 3px;"><input type="date" id="tag-date" style="width:100%;font-size:12px;padding:1px 2px;"></td>
+      <td><input type="number" id="tag-qty" min="0"></td>
+      <td style="text-align:center;">
+        <span class="cb-group"><input type="checkbox" id="trade-write"><label for="trade-write">발청작업</label></span>
+      </td>
+      <td style="text-align:center;">
+        <span class="cb-group"><input type="checkbox" id="insp-result-ok"><label for="insp-result-ok">양호</label></span>
+        <span class="cb-group"><input type="checkbox" id="insp-result-bad"><label for="insp-result-bad">불량</label></span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 7. 특이 사항 -->
+  <table style="margin-top:8px">
+    <tr>
+      <td class="label" style="width:72px;vertical-align:top;padding-top:8px">7. 특이 사항</td>
+      <td><textarea id="special-note" placeholder="특이 사항을 입력하세요."></textarea></td>
+    </tr>
+  </table>
+
+  <!-- 버튼 -->
+  <div class="btn-row">
+    <button class="btn reset" onclick="resetForm()">초기화</button>
+    <button class="btn db-save-btn" onclick="saveToDbSheet()">💾 DB 저장</button>
+    <button class="btn save-btn" onclick="saveToExcel()">📥 엑셀 저장</button>
+  </div>
+</div>
+
+<div id="toast">✅ 엑셀 파일이 다운로드 되었습니다!</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// 동적 데이터 (Google Sheets에서 로드)
+// ══════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY = '@qgis2026';
+
+let EMPLOYEES    = [];
+let CUSTOMERS    = [];
+let MATERIALS    = [];
+let EQUIPMENT_LIST = [];
+let PRODUCT_DATA   = {};
+let queryResults = [];
+let queryIndex   = 0;
+let pendingSourceLabel = '';
+
+// ── Google Sheets에서 RAW DATA 불러오기 (GET, fetch) ──
+async function loadRawDataFromSheet() {
+  const status = document.getElementById('load-status');
+  const btn = document.getElementById('file-pick-btn');
+
+  status.className = '';
+  status.textContent = '⏳ Google 시트에서 불러오는 중...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch(API_URL + '?key=' + encodeURIComponent(API_KEY), { method: 'GET' });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    EMPLOYEES      = data.employees || [];
+    CUSTOMERS      = data.customers || [];
+    MATERIALS      = data.materials || [];
+    EQUIPMENT_LIST = data.equipment || [];
+    PRODUCT_DATA   = data.products  || {};
+
+    const custSet = new Set(CUSTOMERS);
+    Object.keys(PRODUCT_DATA).forEach(c => { if (!custSet.has(c)) CUSTOMERS.push(c); });
+
+    applyDataToForm();
+
+    status.className = 'ok';
+    status.textContent = '✅ 데이터 로드 완료!';
+
+    pendingSourceLabel = '📊 데이터 소스: Google Sheets' +
+      '  |  직원 ' + EMPLOYEES.length + '명 · 고객사 ' + CUSTOMERS.length +
+      '곳 · 재질 ' + MATERIALS.length + '종 · 설비 ' + EQUIPMENT_LIST.length + '개' +
+      '  |  DB 누적 ' + (data.dbCount || 0) + '건';
+
+    setTimeout(closeLoadModal, 500);
+  } catch (err) {
+    status.className = 'err';
+    status.textContent = '❌ 불러오기 실패: ' + err.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── 드롭다운 데이터 적용 ─────────────────────────
+function applyDataToForm() {
+  initWorkerDd();
+  initMaterialDd();
+  initEquipDd();
+  initCustomerDd();
+}
+
+function closeLoadModal() {
+  document.getElementById('load-modal').style.display = 'none';
+  const bar = document.getElementById('data-source-bar');
+  bar.style.display = 'flex';
+  document.getElementById('source-label').textContent = pendingSourceLabel;
+  document.getElementById('query-bar').style.display = 'flex';
+}
+
+function showLoadModal() {
+  document.getElementById('load-status').textContent = '';
+  document.getElementById('load-status').className = '';
+  document.getElementById('load-modal').style.display = 'flex';
+}
+
+// 페이지 로드 시 자동으로 RAW DATA 불러오기
+window.addEventListener('load', () => {
+  loadRawDataFromSheet();
+});
+
+// ══════════════════════════════════════════════════
+// 드롭다운 공통 로직
+// ══════════════════════════════════════════════════
+let openDdId = null;
+
+function closeDd() {
+  if (openDdId) {
+    document.getElementById(openDdId)?.classList.remove('open');
+    openDdId = null;
+  }
+}
+
+function toggleDd(ddId) {
+  const inp = document.getElementById(ddId.replace('dd-',''));
+  if (inp && inp.classList.contains('disabled')) return;
+  if (openDdId === ddId) { closeDd(); return; }
+  closeDd();
+  const el = document.getElementById(ddId);
+  if (el) { el.classList.add('open'); openDdId = ddId; }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dd-wrap')) closeDd();
+});
+
+function buildList(ddId, items, onSelect) {
+  const ul = document.getElementById(ddId);
+  if (!ul) return;
+  ul.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'dd-item';
+    div.textContent = item;
+    div.onclick = e => { e.stopPropagation(); onSelect(item); closeDd(); };
+    ul.appendChild(div);
+  });
+}
+
+function initWorkerDd() {
+  buildList('dd-worker', EMPLOYEES, val => {
+    document.getElementById('worker').value = val;
+  });
+}
+
+function initMaterialDd() {
+  buildList('dd-material', MATERIALS, v => {
+    document.getElementById('material').value = v;
+  });
+}
+
+function initEquipDd() {
+  const names = EQUIPMENT_LIST.map(e => e.name);
+  buildList('dd-equip-name', names, v => {
+    document.getElementById('equip-name').value = v;
+    const found = EQUIPMENT_LIST.find(e => e.name === v);
+    document.getElementById('equip-no').value = found ? found.no : '';
+  });
+}
+
+function initCustomerDd() {
+  buildList('dd-customer', CUSTOMERS, val => {
+    document.getElementById('customer').value = val;
+    document.getElementById('product-name').value = '';
+    document.getElementById('product-name').placeholder = '선택▾';
+    document.getElementById('product-name').classList.remove('disabled');
+    document.getElementById('product-no').value = '';
+    document.getElementById('product-no').placeholder = '품명 먼저 선택';
+    document.getElementById('product-no').classList.add('disabled');
+
+    const names = Object.keys(PRODUCT_DATA[val] || {});
+    buildList('dd-product-name', names, pname => {
+      document.getElementById('product-name').value = pname;
+      document.getElementById('product-no').value = '';
+      document.getElementById('product-no').placeholder = '선택▾';
+      document.getElementById('product-no').classList.remove('disabled');
+      const customer = document.getElementById('customer').value;
+      const nums = (PRODUCT_DATA[customer] || {})[pname] || [];
+      buildList('dd-product-no', nums, pno => {
+        document.getElementById('product-no').value = pno;
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════
+// 폼 연동 로직
+// ══════════════════════════════════════════════════
+function setStd(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.value = value;
+    el.focus();
+    el.style.borderBottom = '1.5px solid #1a3a5c';
+    setTimeout(() => { el.style.borderBottom = ''; }, 800);
+  }
+}
+
+function syncInspDraw() {
+  const pno     = document.getElementById('product-no').value.trim();
+  const drawYes = document.getElementById('draw-yes');
+  const drawNo  = document.getElementById('draw-no');
+
+  if (!pno) {
+    drawYes.checked = false; drawNo.checked = false;
+  } else if (pno === '미확인') {
+    drawYes.checked = false; drawNo.checked = true;
+  } else {
+    drawYes.checked = true; drawNo.checked = false;
+  }
+}
+
+// 오늘 날짜 기본값
+const todayStr = new Date().toISOString().split('T')[0];
+document.getElementById('work-date').value = todayStr;
+document.getElementById('query-date-input').value = todayStr;
+document.getElementById('day-shift').checked = true;
+
+// ── 드롭다운 초기화 ──────────────────────────────
+function resetDdFields() {
+  ['worker','customer','product-name','product-no','material','equip-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('equip-no').value    = '';
+  document.getElementById('insp-qty').value    = '';
+  document.getElementById('insp-outer-ok').checked  = false;
+  document.getElementById('insp-outer-bad').checked = false;
+  document.getElementById('insp-draw-ok').checked   = false;
+  document.getElementById('insp-draw-no').checked   = false;
+  document.getElementById('draw-yes').checked  = false;
+  document.getElementById('draw-no').checked   = false;
+  document.getElementById('product-name').classList.add('disabled');
+  document.getElementById('product-name').placeholder = '고객사 먼저 선택';
+  document.getElementById('product-no').classList.add('disabled');
+  document.getElementById('product-no').placeholder = '품명 먼저 선택';
+}
+
+function resetForm() {
+  if (!confirm('모든 입력 내용을 초기화하시겠습니까?')) return;
+  document.querySelectorAll('input[type="text"], input[type="number"]').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="date"]').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+  document.querySelectorAll('textarea').forEach(el => el.value = '');
+  document.getElementById('work-date').value    = todayStr;
+  document.getElementById('day-shift').checked  = true;
+  resetDdFields();
+}
+
+// ══════════════════════════════════════════════════
+// 체크박스 → 텍스트 / 값 헬퍼
+// ══════════════════════════════════════════════════
+function cb(id) { return document.getElementById(id)?.checked ? '✔' : ''; }
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function numVal(id) { const s = val(id); if (s === '') return ''; const n = Number(s.replace(/,/g, '')); return isNaN(n) ? s : n; }
+
+// ══════════════════════════════════════════════════
+// PDF 저장
+// ══════════════════════════════════════════════════
+async function saveToPDF() {
+  const btn = document.querySelectorAll('.btn-row');
+  btn.forEach(b => b.style.display = 'none');
+  const bar = document.getElementById('data-source-bar');
+  const barPrev = bar.style.display;
+  bar.style.display = 'none';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const form = document.getElementById('report-form');
+    const canvas = await html2canvas(form, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      scrollX: 0, scrollY: -window.scrollY
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const ratio = canvas.height / canvas.width;
+    const imgH  = pdfW * ratio;
+
+    if (imgH <= pdfH) {
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfW, imgH);
+    } else {
+      let remaining = canvas.height;
+      const pageH   = Math.floor(canvas.width * (pdfH / pdfW));
+      let page = 0;
+      while (remaining > 0) {
+        const sliceH = Math.min(pageH, remaining);
+        const sc     = document.createElement('canvas');
+        sc.width = canvas.width; sc.height = sliceH;
+        sc.getContext('2d').drawImage(canvas, 0, page*pageH, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if (page > 0) pdf.addPage();
+        pdf.addImage(sc.toDataURL('image/png'), 'PNG', 0, 0, pdfW, sliceH*(pdfW/canvas.width));
+        remaining -= sliceH; page++;
+      }
+    }
+    const dateStr = val('work-date') || todayStr;
+    pdf.save(`작업일보_${dateStr}.pdf`);
+    showToast('✅ PDF 파일이 다운로드 되었습니다!');
+  } catch(e) {
+    alert('PDF 변환 중 오류가 발생했습니다: ' + e.message);
+  } finally {
+    btn.forEach(b => b.style.display = '');
+    bar.style.display = barPrev;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// 엑셀 저장
+// ══════════════════════════════════════════════════
+function saveToExcel() {
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+  const merges = [];
+  const rows = [];
+  let r = 0;
+
+  function C(r,c){ return XLSX.utils.encode_cell({r,c}); }
+  function M(r1,c1,r2,c2){ merges.push({s:{r:r1,c:c1},e:{r:r2,c:c2}}); }
+  function setH(row, hpt){ rows[row] = { hpt }; }
+  function cell(addr, v, s){ ws[addr] = { v: v===null||v===undefined?'':String(v), t:'s', s }; }
+  function dateSerial(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (isNaN(d)) return null;
+    return Math.round((d.getTime() - new Date(Date.UTC(1899,11,30)).getTime()) / 86400000);
+  }
+  function dateCell(addr, str, s) {
+    const serial = dateSerial(str);
+    if (serial) {
+      ws[addr] = { v: serial, t: 'n', z: 'yyyy-mm-dd', s: s };
+    } else {
+      cell(addr, str, s);
+    }
+  }
+
+  const B = {
+    top:{style:'thin',color:{rgb:'555555'}},   bottom:{style:'thin',color:{rgb:'555555'}},
+    left:{style:'thin',color:{rgb:'555555'}},  right:{style:'thin',color:{rgb:'555555'}}
+  };
+  const BM = {
+    top:{style:'medium',color:{rgb:'333333'}}, bottom:{style:'medium',color:{rgb:'333333'}},
+    left:{style:'medium',color:{rgb:'333333'}},right:{style:'medium',color:{rgb:'333333'}}
+  };
+  const S = {
+    title:  { font:{bold:true,sz:20,name:'Malgun Gothic'}, alignment:{horizontal:'center',vertical:'center'} },
+    secHdr: { font:{bold:true,sz:11,name:'Malgun Gothic'}, fill:{fgColor:{rgb:'C5D9F1'},patternType:'solid'},
+              alignment:{horizontal:'left',vertical:'center'}, border:BM },
+    lbl:  (w=true) => ({ font:{bold:true,sz:11,name:'Malgun Gothic'}, fill:{fgColor:{rgb:'DCE3EC'},patternType:'solid'},
+              alignment:{horizontal:'center',vertical:'center',wrapText:w}, border:B }),
+    dat:  (al='left',w=true) => ({ font:{sz:11,name:'Malgun Gothic'},
+              alignment:{horizontal:al,vertical:'center',wrapText:w}, border:B }),
+    stamp:  { font:{bold:true,sz:11,name:'Malgun Gothic'}, fill:{fgColor:{rgb:'DCE3EC'},patternType:'solid'},
+              alignment:{horizontal:'center',vertical:'center'}, border:B },
+    stampV: { font:{sz:11,name:'Malgun Gothic'}, border:B, alignment:{horizontal:'center',vertical:'center'} },
+    empty:  { border:B }
+  };
+
+  ws['!cols'] = [
+    {wch:9},{wch:14},{wch:9},{wch:14},{wch:10},{wch:14},
+    {wch:9},{wch:14},{wch:10},{wch:9},{wch:10},{wch:12}
+  ];
+
+  // 제목
+  cell(C(r,0),'작  업  일  보', S.title); M(r,0,r,8);
+  cell(C(r,9),'담당', S.stamp); M(r,9,r,10);
+  cell(C(r,11),'대표', S.stamp);
+  setH(r,36); r++;
+
+  for(let c=0;c<9;c++) cell(C(r,c),'',{border:{}});
+  cell(C(r,9),'', S.stampV); M(r,9,r,10);
+  cell(C(r,11),'', S.stampV);
+  setH(r,32); r++;
+
+  // 1. 기본관리항목
+  cell(C(r,0),'1. 기본관리항목', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const shift = [cb('day-shift')&&'주간', cb('night-shift')&&'야간'].filter(Boolean).join('  ')||'□ 주간  □ 야간';
+  cell(C(r,0),'작  업  일', S.lbl());
+  dateCell(C(r,1), val('work-date'), S.dat('center')); M(r,1,r,2);
+  cell(C(r,3),'주 / 야간', S.lbl());
+  cell(C(r,4), shift, S.dat('center')); M(r,4,r,6);
+  cell(C(r,7),'작  업  자', S.lbl()); M(r,7,r,8);
+  cell(C(r,9), val('worker')+' (인)', S.dat('center')); M(r,9,r,11);
+  setH(r,20); r++;
+
+  cell(C(r,0),'고  객  사', S.lbl());
+  cell(C(r,1), val('customer'), S.dat()); M(r,1,r,2);
+  cell(C(r,3),'품  명', S.lbl());
+  cell(C(r,4), val('product-name'), S.dat()); M(r,4,r,6);
+  cell(C(r,7),'품  번', S.lbl()); M(r,7,r,8);
+  cell(C(r,9), val('product-no'), S.dat()); M(r,9,r,11);
+  setH(r,20); r++;
+
+  const drawV=[cb('draw-yes')&&'유',cb('draw-no')&&'무'].filter(Boolean).join(' / ')||'□ 유 / □ 무';
+  const matV =[cb('mat-ok')&&'양호',cb('mat-bad')&&'불량'].filter(Boolean).join(' / ')||'□ 양호 / □ 불량';
+  cell(C(r,0),'도  면', S.lbl());
+  cell(C(r,1), drawV, S.dat('center')); M(r,1,r,2);
+  cell(C(r,3),'재  질', S.lbl());
+  cell(C(r,4), val('material'), S.dat('center')); M(r,4,r,6);
+  cell(C(r,7),'소재상태', S.lbl()); M(r,7,r,8);
+  cell(C(r,9), matV, S.dat('center')); M(r,9,r,11);
+  setH(r,20); r++;
+
+  const eqV=[cb('equip-ok')&&'양호',cb('equip-bad')&&'이상'].filter(Boolean).join(' / ')||'□ 양호 / □ 이상';
+  cell(C(r,0),'설  비  명', S.lbl());
+  cell(C(r,1), val('equip-name'), S.dat()); M(r,1,r,2);
+  cell(C(r,3),'설비번호', S.lbl());
+  cell(C(r,4), val('equip-no'), S.dat('center')); M(r,4,r,6);
+  cell(C(r,7),'설비상태', S.lbl()); M(r,7,r,8);
+  cell(C(r,9), eqV, S.dat('center')); M(r,9,r,11);
+  setH(r,20); r++;
+
+  // 2. 생산수량현황
+  cell(C(r,0),'2. 생산수량현황', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const q2h=['계획수량','투입수량','양품수량','불량수량','재작업수량','가동시간','비가동시간','템퍼링작업','교정작업'];
+  const q2id=['plan-qty','input-qty','good-qty','bad-qty','rework-qty','op-time','non-op-time'];
+  const q2s=[1,2,1,2,2,1,1,1,1];
+  let cc=0;
+  q2h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(q2s[i]>1)M(r,cc,r,cc+q2s[i]-1); cc+=q2s[i]; });
+  setH(r,18); r++;
+  cc=0;
+  const temperV  = [cb('temper-do')&&'실시', cb('temper-skip')&&'미실시'].filter(Boolean).join('/') || '';
+  const correctV = [cb('correct-do')&&'실시', cb('correct-skip')&&'미실시'].filter(Boolean).join('/') || '';
+  [...q2id.map(id=>val(id)), temperV, correctV].forEach((v,i)=>{
+    cell(C(r,cc),v,S.dat('center')); if(q2s[i]>1)M(r,cc,r,cc+q2s[i]-1); cc+=q2s[i];
+  });
+  setH(r,22); r++;
+
+  // 3. 주요공정 파라미터
+  cell(C(r,0),'3. 주요공정 파라미터', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const p1h=['항  목','전압(V)','전류(A)','출력(kW)','주파수(kHz)'];
+  const p1s=[2,2,3,3,2];
+  cc=0;
+  p1h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(p1s[i]>1)M(r,cc,r,cc+p1s[i]-1); cc+=p1s[i]; });
+  setH(r,18); r++;
+
+  cell(C(r,0),'설  정  값', S.lbl()); M(r,0,r,1);
+  cc=2;
+  [['volt-set'],['amp-set'],['kw-set'],['khz-set']].forEach(([id],i)=>{
+    cell(C(r,cc),val(id),S.dat('center')); M(r,cc,r,cc+p1s[i+1]-1); cc+=p1s[i+1];
+  });
+  setH(r,22); r++;
+
+  const p2h=['항  목','가열시간(sec)','이동속도(mm/s)','코일-제품간격(mm)','회전수(RPM)'];
+  const p2s=[2,2,3,3,2];
+  cc=0;
+  p2h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(p2s[i]>1)M(r,cc,r,cc+p2s[i]-1); cc+=p2s[i]; });
+  setH(r,18); r++;
+
+  cell(C(r,0),'가  열  조  건', S.lbl()); M(r,0,r,1);
+  cc=2;
+  [['heat-time'],['move-speed'],['coil-gap'],['rpm']].forEach(([id],i)=>{
+    cell(C(r,cc),val(id),S.dat('center')); M(r,cc,r,cc+p2s[i+1]-1); cc+=p2s[i+1];
+  });
+  setH(r,22); r++;
+
+  const p3h=['항  목','냉각수압력(bar)','냉각수온도(℃)','냉각시간(sec)','LOT NO'];
+  const p3s=[2,2,3,3,2];
+  cc=0;
+  p3h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(p3s[i]>1)M(r,cc,r,cc+p3s[i]-1); cc+=p3s[i]; });
+  setH(r,18); r++;
+
+  cell(C(r,0),'냉  각  조  건', S.lbl()); M(r,0,r,1);
+  cc=2;
+  [['cool-bar'],['cool-temp'],['cool-time'],['lot-no']].forEach(([id],i)=>{
+    cell(C(r,cc),val(id),S.dat('center')); M(r,cc,r,cc+p3s[i+1]-1); cc+=p3s[i+1];
+  });
+  setH(r,22); r++;
+
+  const p4h=['항  목','템퍼링온도(℃)','템퍼링시간(sec)','템퍼링경도(HRC:48~52)','교정값(mm)'];
+  const p4s=[2,2,3,3,2];
+  cc=0;
+  p4h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(p4s[i]>1)M(r,cc,r,cc+p4s[i]-1); cc+=p4s[i]; });
+  setH(r,18); r++;
+
+  cell(C(r,0),'조  건  값', S.lbl()); M(r,0,r,1);
+  cc=2;
+  [['temper-temp'],['temper-time'],['temper-hard'],['correct-val']].forEach(([id],i)=>{
+    cell(C(r,cc),val(id),S.dat('center')); M(r,cc,r,cc+p4s[i+1]-1); cc+=p4s[i+1];
+  });
+  setH(r,22); r++;
+
+  // 4. 설비 및 코일점검
+  cell(C(r,0),'4. 설비 및 코일점검', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const c4h=['코일번호','코일 세척','변형/스파크흔','냉각수농도(%)','냉각수 오염도','센서(온도/압력) 상태'];
+  const c4s=[2,2,2,2,2,2];
+  cc=0;
+  c4h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); M(r,cc,r,cc+c4s[i]-1); cc+=c4s[i]; });
+  setH(r,18); r++;
+
+  const washV=[cb('wash-done')&&'완료',cb('wash-skip')&&'미시행'].filter(Boolean).join(' / ')||'□ 완료 / □ 미시행';
+  const defV =[cb('deform-no')&&'이상없음',cb('deform-yes')&&'이상있음'].filter(Boolean).join(' / ')||'□ 이상없음 / □ 이상있음';
+  const watV =[cb('water-ok')&&'양호',cb('water-rep')&&'요교체'].filter(Boolean).join(' / ')||'□ 양호 / □ 요교체';
+  const senV =[cb('sensor-ok')&&'정상',cb('sensor-bad')&&('이상('+val('sensor-detail')+')')].filter(Boolean).join(' / ')||'□ 정상 / □ 이상';
+  [val('coil-no'), washV, defV, val('cool-conc'), watV, senV].forEach((v,i)=>{
+    cell(C(r,i*2),v,S.dat('center')); M(r,i*2,r,i*2+1);
+  });
+  setH(r,32); r++;
+
+  // 5. 비가동 유무
+  cell(C(r,0),'5. 비가동 유무', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const n5h=['No.','비가동 유형','비가동Hr','부품교체','SPARE품','조치/비고'];
+  const n5s=[1,5,2,2,1,1];
+  cc=0;
+  n5h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(n5s[i]>1)M(r,cc,r,cc+n5s[i]-1); cc+=n5s[i]; });
+  setH(r,18); r++;
+
+  [['1','non-type1','non-hr1','part-rep1','spare1','action1']].forEach(([no,...ids])=>{
+    cc=0;
+    [no,...ids.map(id=>val(id))].forEach((v,i)=>{
+      cell(C(r,cc), v, i===0?S.lbl():S.dat('center'));
+      if(n5s[i]>1)M(r,cc,r,cc+n5s[i]-1); cc+=n5s[i];
+    });
+    setH(r,22); r++;
+  });
+
+  // 6. 소재입고검사
+  cell(C(r,0),'6. 소재입고검사', S.secHdr); M(r,0,r,11); setH(r,18); r++;
+
+  const n6h=['입고일','입고수량','외  관','도면(사양)','열처리(QT)','출고일','출고수량','발청작업','검사결과'];
+  const n6s=[2,1,1,2,2,2,1,1,1];
+  cc=0;
+  n6h.forEach((h,i)=>{ cell(C(r,cc),h,S.lbl()); if(n6s[i]>1)M(r,cc,r,cc+n6s[i]-1); cc+=n6s[i]; });
+  setH(r,18); r++;
+
+  const qtV   = [cb('qt-do')&&'실시',   cb('qt-skip')&&'미실시'].filter(Boolean).join(' / ')  ||'□ 실시 / □ 미실시';
+  const tagQtyV = val('tag-qty') || '';
+  const tradeV1 = cb('trade-write') ? '발청작업' : '';
+  const tradeV2 = [cb('insp-result-ok')&&'양호', cb('insp-result-bad')&&'불량'].filter(Boolean).join('/') || '';
+  const outerV = [cb('insp-outer-ok')&&'양호', cb('insp-outer-bad')&&'불량'].filter(Boolean).join('/') || '';
+  const drawV2 = [cb('insp-draw-ok')&&'확인', cb('insp-draw-no')&&'미확인'].filter(Boolean).join('/') || '';
+  [val('inspect-date'),val('insp-qty'),outerV,drawV2,qtV,val('tag-date'),tagQtyV,tradeV1,tradeV2].forEach((v,i)=>{
+    const colAddr = C(r, cc=n6s.slice(0,i).reduce((a,b)=>a+b,0));
+    if (i === 0 || i === 5) dateCell(colAddr, v, S.dat('center'));
+    else cell(colAddr, v, S.dat('center'));
+    if(n6s[i]>1)M(r,cc,r,cc+n6s[i]-1);
+  });
+  setH(r,22); r++;
+
+  // 7. 특이사항
+  cell(C(r,0),'7. 특이 사항', S.lbl()); M(r,0,r,1);
+  cell(C(r,2), val('special-note'),
+    {...S.dat('left'), alignment:{horizontal:'left',vertical:'top',wrapText:true}});
+  M(r,2,r,11); setH(r,60); r++;
+
+  ws['!ref']    = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r-1,c:11}});
+  ws['!merges'] = merges;
+  ws['!rows']   = rows;
+
+  XLSX.utils.book_append_sheet(wb, ws, '작업일보');
+
+  const dateStr  = val('work-date')    || todayStr;
+  const customer = val('customer')     || '고객사없음';
+  const prodName = val('product-name') || '품명없음';
+  const prodNo   = val('product-no')   || '품번없음';
+  XLSX.writeFile(wb, `${dateStr}_${customer}_${prodName}_${prodNo}.xlsx`);
+  showToast('✅ 엑셀 파일이 다운로드 되었습니다!');
+}
+
+// ══════════════════════════════════════════════════
+// 헬퍼
+// ══════════════════════════════════════════════════
+function cbText(yesId, yesLabel, noId, noLabel) {
+  if (document.getElementById(yesId)?.checked) return yesLabel;
+  if (noId && document.getElementById(noId)?.checked) return noLabel;
+  return '';
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2800);
+}
+
+// ══════════════════════════════════════════════════
+// DB 저장 (Google Sheets "DB DATA 2026" 시트에 누적/수정)
+// ══════════════════════════════════════════════════
+async function saveToDbSheet() {
+  const fieldMap = {
+    '작업일':            val('work-date'),
+    '입고일':            val('inspect-date'),
+    '고객사':            val('customer'),
+    '품명':              val('product-name'),
+    '품번':              val('product-no'),
+    '주/야간':           [document.getElementById('day-shift')?.checked   && '주간',
+                          document.getElementById('night-shift')?.checked && '야간'].filter(Boolean).join('/') || '',
+    '작업자':            val('worker'),
+    '도면':              cbText('draw-yes','유','draw-no','무'),
+    '재질':              val('material'),
+    '소재상태':          cbText('mat-ok','양호','mat-bad','불량'),
+    '설비명':            val('equip-name'),
+    '설비번호':          val('equip-no'),
+    '설비상태':          cbText('equip-ok','양호','equip-bad','이상'),
+    '계획수량':          numVal('plan-qty'),
+    '투입수량':          numVal('input-qty'),
+    '양품수량':          numVal('good-qty'),
+    '불량수량':          numVal('bad-qty'),
+    '재작업수량':        numVal('rework-qty'),
+    '가동시간':          numVal('op-time'),
+    '비가동시간':        numVal('non-op-time'),
+    '템퍼링작업':        cbText('temper-do','실시','temper-skip','미실시'),
+    '교정작업':          cbText('correct-do','실시','correct-skip','미실시'),
+    '전압(V)':           numVal('volt-set'),
+    '전류(A)':           numVal('amp-set'),
+    '출력(kW)':          numVal('kw-set'),
+    '주파수(kHz)':       numVal('khz-set'),
+    '가열시간(sec)':     numVal('heat-time'),
+    '이동속도(mm/s)':    numVal('move-speed'),
+    '코일-제품간격(mm)': numVal('coil-gap'),
+    '회전수(RPM)':       numVal('rpm'),
+    '냉각수압력(bar)':   numVal('cool-bar'),
+    '냉각수온도(℃)':    numVal('cool-temp'),
+    '냉각시간(sec)':     numVal('cool-time'),
+    'LOT NO':            val('lot-no'),
+    '템퍼링온도(℃)':    numVal('temper-temp'),
+    '템퍼링시간(sec)':   numVal('temper-time'),
+    '템퍼링경도(HRC)':   numVal('temper-hard'),
+    '교정값(mm)':        numVal('correct-val'),
+    'P1':                val('p1-val'),
+    'P2':                val('p2-val'),
+    'P3':                val('p3-val'),
+    '표면경도':          val('surface-hard'),
+    '심부경도':          val('depth-hard'),
+    '코일번호':          val('coil-no'),
+    '코일세척':          cbText('wash-done','완료','wash-skip','미시행'),
+    '변형/스파크흔':     cbText('deform-no','이상없음','deform-yes','이상있음'),
+    '냉각수농도(%)':     numVal('cool-conc'),
+    '냉각수오염도':      cbText('water-ok','양호','water-rep','요교체'),
+    '센서상태':          document.getElementById('sensor-ok')?.checked  ? '정상' :
+                         document.getElementById('sensor-bad')?.checked ? '이상' : '',
+    '센서이상내용':      val('sensor-detail'),
+    '비가동유형':        val('non-type1'),
+    '비가동Hr':          numVal('non-hr1'),
+    '부품교체':          val('part-rep1'),
+    'SPARE품':           val('spare1'),
+    '조치/비고':         val('action1'),
+    '입고수량':          numVal('insp-qty'),
+    '외관':              cbText('insp-outer-ok','양호','insp-outer-bad','불량'),
+    '도면(사양)':        cbText('insp-draw-ok','확인','insp-draw-no','미확인'),
+    '열처리(QT)':        cbText('qt-do','실시','qt-skip','미실시'),
+    '출고일':            val('tag-date'),
+    '출고수량':          numVal('tag-qty'),
+    '발청작업':          cb('trade-write') ? '발청작업' : '',
+    '검사결과':          [document.getElementById('insp-result-ok')?.checked&&'양호',
+                          document.getElementById('insp-result-bad')?.checked&&'불량'].filter(Boolean).join('/') || '',
+    '특이사항':          val('special-note'),
+  };
+
+  if (!fieldMap['작업일']) {
+    alert('작업일을 입력해 주세요.');
+    return;
+  }
+
+  const btn = document.querySelector('.btn.db-save-btn');
+  const prevText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 저장 중...'; }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'save', key: API_KEY, record: fieldMap })
+    });
+    const data = await res.json();
+
+    if (data.result === 'error') throw new Error(data.message || '알 수 없는 오류');
+
+    if (data.result === 'updated') {
+      showToast('✅ DB 수정 완료! (No.' + data.no + ')');
+    } else {
+      showToast('✅ DB 저장 완료! (누적 No.' + data.no + ')');
+    }
+  } catch (e) {
+    alert('❌ 저장 오류: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevText; }
+  }
+}
+
+
+// ══════════════════════════════════════════════════
+// DB 조회 기능 (POST 방식 — Code.gs doPost action=query)
+// ══════════════════════════════════════════════════
+function xlsxDateToStr(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (v instanceof Date) {
+    const y = v.getUTCFullYear();
+    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(v.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof v === 'number') {
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+  }
+  const s = String(v).trim();
+  const m1 = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if (m1) {
+    return `${m1[1]}-${m1[2].padStart(2,'0')}-${m1[3].padStart(2,'0')}`;
+  }
+  return s;
+}
+
+async function queryByDate() {
+  const dateVal = document.getElementById('query-date-input').value;
+  const msgEl   = document.getElementById('query-result-msg');
+  const navEl   = document.getElementById('query-nav');
+
+  if (!dateVal) { showToast('⚠️ 조회할 날짜를 선택하세요.'); return; }
+
+  msgEl.style.color = '#888';
+  msgEl.textContent = '⏳ 조회 중...';
+  navEl.style.display = 'none';
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'query', key: API_KEY, date: dateVal })
+    });
+    const data = await res.json();
+    if (data.result === 'error') throw new Error(data.message || '알 수 없는 오류');
+
+    queryResults = data.rows || [];
+
+    if (queryResults.length === 0) {
+      msgEl.style.color = '#c0392b';
+      msgEl.textContent = `"${dateVal}" 결과 없음`;
+      alert(`"${dateVal}" 날짜의 작업일보 데이터가 없습니다.`);
+      return;
+    }
+
+    msgEl.style.color = '#27ae60';
+    msgEl.textContent = `${queryResults.length}건 조회됨`;
+    navEl.style.display = 'flex';
+    queryIndex = 0;
+    updateQueryNav();
+    loadRecordToForm(queryResults[0]);
+
+  } catch (e) {
+    msgEl.style.color = '#c0392b';
+    msgEl.textContent = '❌ 조회 오류: ' + e.message;
+  }
+}
+
+function updateQueryNav() {
+  const total = queryResults.length;
+  document.getElementById('query-counter').textContent = `${queryIndex + 1} / ${total}건`;
+  document.getElementById('prev-btn').disabled = queryIndex <= 0;
+  document.getElementById('next-btn').disabled = queryIndex >= total - 1;
+}
+
+function navigateRecord(dir) {
+  const newIdx = queryIndex + dir;
+  if (newIdx < 0 || newIdx >= queryResults.length) return;
+  queryIndex = newIdx;
+  updateQueryNav();
+  loadRecordToForm(queryResults[queryIndex]);
+}
+
+function loadRecordToForm(rec) {
+  function sv(id, v) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (v instanceof Date) { el.value = xlsxDateToStr(v); return; }
+    el.value = (v === null || v === undefined) ? '' : String(v === 0 ? 0 : (v || '')).trim();
+  }
+  function numSv(id, v) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (v === null || v === undefined || v === '') { el.value = ''; return; }
+    const n = Number(String(v).replace(/,/g,''));
+    el.value = isNaN(n) ? String(v) : (n === 0 ? '0' : String(n));
+  }
+  function ck(id, val, match) {
+    const el = document.getElementById(id);
+    if (el) el.checked = String(val || '').trim() === match;
+  }
+
+  document.querySelectorAll('input[type="text"]:not([readonly]), input[type="number"]').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+  document.querySelectorAll('textarea').forEach(el => el.value = '');
+  ['equip-no'].forEach(id => sv(id, ''));
+
+  // 1. 기본관리항목
+  sv('work-date', xlsxDateToStr(rec['작업일']));
+  const shiftVal = String(rec['주/야간'] || '').trim();
+  const dayEl = document.getElementById('day-shift');
+  const nightEl = document.getElementById('night-shift');
+  if (dayEl)   dayEl.checked   = shiftVal.includes('주간');
+  if (nightEl) nightEl.checked = shiftVal.includes('야간');
+  sv('worker', rec['작업자']);
+
+  sv('customer', rec['고객사']);
+  sv('product-name', rec['품명']);
+  sv('product-no', rec['품번']);
+  if (rec['품명']) document.getElementById('product-name').classList.remove('disabled');
+  if (rec['품번']) document.getElementById('product-no').classList.remove('disabled');
+
+  ck('draw-yes', rec['도면'], '유');
+  ck('draw-no',  rec['도면'], '무');
+  sv('material', rec['재질']);
+  ck('mat-ok',  rec['소재상태'], '양호');
+  ck('mat-bad', rec['소재상태'], '불량');
+
+  sv('equip-name', rec['설비명']);
+  sv('equip-no',   rec['설비번호']);
+  ck('equip-ok',  rec['설비상태'], '양호');
+  ck('equip-bad', rec['설비상태'], '이상');
+
+  // 2. 생산수량현황
+  numSv('plan-qty',    rec['계획수량']);
+  numSv('input-qty',   rec['투입수량']);
+  numSv('good-qty',    rec['양품수량']);
+  numSv('bad-qty',     rec['불량수량']);
+  numSv('rework-qty',  rec['재작업수량']);
+  sv('op-time',     rec['가동시간']);
+  sv('non-op-time', rec['비가동시간']);
+  ck('temper-do',   rec['템퍼링작업'], '실시');
+  ck('temper-skip', rec['템퍼링작업'], '미실시');
+  ck('correct-do',   rec['교정작업'], '실시');
+  ck('correct-skip', rec['교정작업'], '미실시');
+
+  // 3. 주요공정 파라미터
+  numSv('volt-set',   rec['전압(V)']);
+  numSv('amp-set',    rec['전류(A)']);
+  numSv('kw-set',     rec['출력(kW)']);
+  numSv('khz-set',    rec['주파수(kHz)']);
+  numSv('heat-time',  rec['가열시간(sec)']);
+  numSv('move-speed', rec['이동속도(mm/s)']);
+  numSv('coil-gap',   rec['코일-제품간격(mm)']);
+  numSv('rpm',        rec['회전수(RPM)']);
+  numSv('cool-bar',   rec['냉각수압력(bar)']);
+  numSv('cool-temp',  rec['냉각수온도(℃)']);
+  numSv('cool-time',  rec['냉각시간(sec)']);
+  sv('lot-no',        rec['LOT NO']);
+  numSv('temper-temp', rec['템퍼링온도(℃)']);
+  numSv('temper-time', rec['템퍼링시간(sec)']);
+  numSv('temper-hard', rec['템퍼링경도(HRC)']);
+  numSv('correct-val', rec['교정값(mm)']);
+  sv('p1-val',       rec['P1']);
+  sv('p2-val',       rec['P2']);
+  sv('p3-val',       rec['P3']);
+  sv('surface-hard', rec['표면경도']);
+  sv('depth-hard',   rec['심부경도']);
+
+  // 4. 설비 및 코일점검
+  sv('coil-no', rec['코일번호']);
+  ck('wash-done', rec['코일세척'], '완료');
+  ck('wash-skip', rec['코일세척'], '미시행');
+  ck('deform-no',  rec['변형/스파크흔'], '이상없음');
+  ck('deform-yes', rec['변형/스파크흔'], '이상있음');
+  numSv('cool-conc', rec['냉각수농도(%)']);
+  ck('water-ok',  rec['냉각수오염도'], '양호');
+  ck('water-rep', rec['냉각수오염도'], '요교체');
+  const sensorSt = String(rec['센서상태'] || '').trim();
+  if (sensorSt === '정상') {
+    document.getElementById('sensor-ok').checked = true;
+  } else if (sensorSt === '이상') {
+    document.getElementById('sensor-bad').checked = true;
+    sv('sensor-detail', rec['센서이상내용']);
+  }
+
+  // 5. 비가동 유무
+  sv('non-type1', rec['비가동유형']);
+  numSv('non-hr1',   rec['비가동Hr']);
+  sv('part-rep1', rec['부품교체']);
+  sv('spare1',    rec['SPARE품']);
+  sv('action1',   rec['조치/비고']);
+
+  // 6. 소재입고검사
+  sv('inspect-date', xlsxDateToStr(rec['입고일']));
+  numSv('insp-qty',   rec['입고수량']);
+  ck('insp-outer-ok',  rec['외관'],     '양호');
+  ck('insp-outer-bad', rec['외관'],     '불량');
+  ck('insp-draw-ok',   rec['도면(사양)'], '확인');
+  ck('insp-draw-no',   rec['도면(사양)'], '미확인');
+  ck('qt-do',      rec['열처리(QT)'],    '실시');
+  ck('qt-skip',    rec['열처리(QT)'],    '미실시');
+  sv('tag-date',    xlsxDateToStr(rec['출고일']));
+  numSv('tag-qty',     rec['출고수량']);
+  ck('trade-write', rec['발청작업'], '발청작업');
+  ck('insp-result-ok',  rec['검사결과'], '양호');
+  ck('insp-result-bad', rec['검사결과'], '불량');
+
+  // 7. 특이사항
+  sv('special-note', rec['특이사항']);
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('✅ ' + (queryIndex + 1) + '번째 데이터 불러오기 완료');
+}
+</script>
+</body>
+</html>
