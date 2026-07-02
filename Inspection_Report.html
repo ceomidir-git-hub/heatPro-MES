@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>열처리 가공제품 검사성적서 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR','Malgun Gothic',sans-serif;font-size:12px;background:#dde3ea;padding:16px 12px 40px;color:#111;min-height:100vh;}
+
+/* ── 툴바 ── */
+#toolbar{width:100%;max-width:820px;margin:0 auto 10px;background:#fff;border-bottom:2px solid #1a3a5c;padding:6px 12px;display:flex;flex-direction:column;gap:5px;border-radius:4px 4px 0 0;}
+/* 1행: 조회 영역 */
+.tb-row1{display:flex;align-items:center;gap:3px;flex-wrap:nowrap;}
+/* 2행: 액션 버튼 */
+.tb-row2{display:flex;align-items:center;gap:6px;}
+.tb-btn{padding:5px 13px;font-size:11px;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;border-radius:3px;cursor:pointer;font-weight:600;letter-spacing:0.5px;border:1.5px solid #1a3a5c;background:#fff;color:#1a3a5c;white-space:nowrap;transition:background .15s,color .15s;}
+.tb-btn:hover{background:#1a3a5c;color:#fff;}
+.tb-btn.green{background:#217346;color:#fff;border-color:#217346;}
+.tb-btn.green:hover{background:#2a9158;}
+.tb-btn.purple{background:#6b3fa0;color:#fff;border-color:#6b3fa0;}
+.tb-btn.purple:hover{background:#8050b8;}
+.tb-btn:disabled{opacity:.4;cursor:not-allowed;}
+.nbtn{padding:3px 8px;font-size:12px;border:1.5px solid #1a3a5c;border-radius:3px;background:#eaf1fb;color:#1a3a5c;cursor:pointer;font-weight:700;height:26px;line-height:1;transition:background .15s,color .15s;}
+.nbtn:hover:not(:disabled){background:#1a3a5c;color:#fff;}
+.nbtn:disabled{opacity:.35;cursor:not-allowed;}
+.tb-label{font-size:10px;color:#555;white-space:nowrap;}
+.tb-inp{border:1.5px solid #aaa;border-radius:3px;padding:3px 4px;font-size:10px;height:26px;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;}
+#q-date{width:112px;}
+#q-lot{width:68px;}
+#q-customer{width:62px;}
+#q-product{width:58px;}
+#q-dwg{width:62px;}
+#query-msg{font-size:10px;color:#888;}
+#counter{font-size:10px;color:#1a3a5c;font-weight:700;min-width:52px;text-align:center;}
+
+/* ── 시트 ── */
+.sheet{width:100%;max-width:820px;margin:0 auto;background:#fff;border:1px solid #000;font-family:'Malgun Gothic',sans-serif;font-size:10px;}
+.sheet table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.sheet td,.sheet th{border:1px solid #000;padding:2px 3px;text-align:center;vertical-align:middle;}
+.company{font-size:22px;font-weight:bold;}
+.title-txt{font-size:16px;font-weight:bold;letter-spacing:6px;}
+.vt{writing-mode:vertical-rl;text-orientation:mixed;font-weight:bold;font-size:9px;white-space:nowrap;}
+.ycell{background:#fffbe6;}
+.inp{background:#fffbe6;border:none;width:100%;font-family:'Malgun Gothic',sans-serif;font-size:10px;padding:1px 3px;outline:none;}
+.inp:focus{background:#fff8cc;outline:1px solid #c8a200;}
+.inp.left{text-align:left;}
+.inp.center{text-align:center;}
+.inp.num{text-align:center;}
+.inp-date{background:#fffbe6;border:none;font-family:'Malgun Gothic',sans-serif;font-size:10px;outline:none;width:auto;}
+.inp-date:focus{outline:1px solid #c8a200;}
+.sel{background:#fffbe6;border:none;width:100%;font-family:'Malgun Gothic',sans-serif;font-size:9px;outline:none;text-align:center;}
+.sel:focus{outline:1px solid #c8a200;}
+
+/* ── 토스트 ── */
+#toast{display:none;position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1a3a5c;color:#fff;padding:11px 26px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;}
+
+/* ── 인쇄 ── */
+@media print{
+  body{background:#fff;padding:0;}
+  #toolbar{display:none!important;}
+  .sheet{max-width:100%;}
+  .inp,.inp-date,.sel{background:transparent!important;border:none!important;outline:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .ycell{background:transparent!important;}
+  .inp::placeholder{color:transparent!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ 툴바 ══ -->
+<div id="toolbar">
+
+  <!-- 1행: 조회 영역 -->
+  <div class="tb-row1">
+    <span class="tb-label">날짜</span>
+    <input type="date" id="q-date" class="tb-inp" onchange="syncDate('q')">
+    <span class="tb-label">LOT NO</span>
+    <input type="text" id="q-lot" class="tb-inp">
+    <span class="tb-label">고객사</span>
+    <input type="text" id="q-customer" class="tb-inp">
+    <span class="tb-label">품명</span>
+    <input type="text" id="q-product" class="tb-inp">
+    <span class="tb-label">품번</span>
+    <input type="text" id="q-dwg" class="tb-inp">
+    <button class="nbtn" onclick="queryByDate()">🔍 조회</button>
+    <button class="nbtn" id="prev-btn" onclick="navigate(-1)" disabled>◀</button>
+    <span id="counter">—</span>
+    <button class="nbtn" id="next-btn" onclick="navigate(1)" disabled>▶</button>
+    <span id="query-msg"></span>
+  </div>
+
+  <!-- 2행: 액션 버튼 -->
+  <div class="tb-row2">
+    <button class="tb-btn" onclick="resetForm()">↺ 초기화</button>
+    <button class="tb-btn green" onclick="saveToDb()">💾 성적서 저장</button>
+    <button class="tb-btn purple" onclick="exportPDF()">📄 PDF 변환</button>
+  </div>
+
+</div>
+
+<!-- ══ 성적서 본문 ══ -->
+<div class="sheet" id="doc-container">
+
+<!-- ① 회사명 -->
+<div style="border-bottom:1px solid #000;padding:5px 6px;text-align:center;">
+  <div class="company">QGIS 큐지스</div>
+  <div style="font-size:9px;color:#555;">경남 함안군 칠원읍 무기로41 &nbsp; TEL : (055) 586-2052</div>
+</div>
+
+<!-- ② 제목 + 작성일 -->
+<div style="border-bottom:1px solid #000;padding:4px 6px;min-height:40px;display:flex;align-items:center;justify-content:center;position:relative;">
+  <div style="text-align:center;">
+    <div class="title-txt">열 처 리 가 공 제 품 검 사 성 적 서</div>
+    <div style="font-size:8px;color:#555;letter-spacing:1px;">HEAT TREATMENT MANUFACTURED GOODS REPORT OF INSPECTION</div>
+  </div>
+  <div style="position:absolute;right:6px;bottom:4px;display:flex;align-items:center;gap:3px;">
+    <span style="font-size:9px;">작성일 :</span>
+    <input type="date" id="f-date" class="inp-date" style="width:106px;" onchange="syncDate('f')">
+  </div>
+</div>
+
+<!-- ③ 시방서(좌) + 그래프(우) -->
+<div style="display:flex;border-bottom:1px solid #000;">
+
+  <!-- 왼쪽 45% -->
+  <div style="flex:0 0 45%;border-right:1px solid #000;display:flex;">
+    <div style="width:24px;border-right:1px solid #000;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <div class="vt">시&nbsp;방&nbsp;서<br>Specifications</div>
+    </div>
+    <table style="border:none;width:100%;border-collapse:collapse;">
+      <colgroup><col style="width:48%"><col style="width:52%"></colgroup>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;border-top:none;font-size:9px;background:#f0f0f0;font-weight:700;">LOT NO<br><span style="font-size:8px;font-weight:400;">(발행번호)</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;border-top:none;padding:1px;"><input class="inp left" id="f-lot" placeholder="①"></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;font-size:9px;background:#f0f0f0;font-weight:700;">열처리방법<br><span style="font-size:8px;font-weight:400;">HEAT TREATMENT METHOD</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;padding:1px;"><select class="sel" id="f-method"><option value="">②</option><option value="고주파열처리">고주파열처리</option></select></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;font-size:9px;background:#f0f0f0;font-weight:700;">거래처<br><span style="font-size:8px;font-weight:400;">CUSTOMER</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;padding:1px;"><input class="inp left" id="f-customer" placeholder="③"></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;font-size:9px;background:#f0f0f0;font-weight:700;">품명<br><span style="font-size:8px;font-weight:400;">DESCRIPTION</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;padding:1px;"><input class="inp left" id="f-product" placeholder="④"></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;font-size:9px;background:#f0f0f0;font-weight:700;">품번<br><span style="font-size:8px;font-weight:400;">D.W.G NO</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;padding:1px;"><input class="inp left" id="f-dwg" placeholder="⑤"></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;font-size:9px;background:#f0f0f0;font-weight:700;">재질<br><span style="font-size:8px;font-weight:400;">MATERIAL</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;padding:1px;"><input class="inp left" id="f-material" placeholder="⑥"></td>
+      </tr>
+      <tr style="height:24px;">
+        <td style="border:1px solid #000;border-left:none;border-bottom:none;font-size:9px;background:#f0f0f0;font-weight:700;">수량<br><span style="font-size:8px;font-weight:400;">LOTSIZE</span></td>
+        <td class="ycell" style="border:1px solid #000;border-right:none;border-bottom:none;padding:1px;"><input class="inp left" id="f-lotsize" placeholder="⑦"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 오른쪽 55% 그래프 -->
+  <div style="flex:0 0 55%;padding:4px 5px;">
+
+    <!-- 그래프 라벨 (단위에 따라 동적) -->
+    <div id="graph-label" style="font-size:9px;font-weight:bold;margin-bottom:1px;">HRC</div>
+    <svg id="main-svg" width="100%" height="110" viewBox="0 0 450 110" xmlns="http://www.w3.org/2000/svg">
+      <!-- Y축 / X축 -->
+      <line x1="32" y1="10" x2="32" y2="90" stroke="#000" stroke-width="0.8"/>
+      <line x1="32" y1="90" x2="445" y2="90" stroke="#000" stroke-width="0.8"/>
+      <!-- 동적 Y축 눈금 -->
+      <g id="y-axis"></g>
+      <!-- X축 P.01~P.08 -->
+      <text x="32"  y="102" font-size="7" text-anchor="middle">P.01</text>
+      <text x="91"  y="102" font-size="7" text-anchor="middle">P.02</text>
+      <text x="150" y="102" font-size="7" text-anchor="middle">P.03</text>
+      <text x="209" y="102" font-size="7" text-anchor="middle">P.04</text>
+      <text x="268" y="102" font-size="7" text-anchor="middle">P.05</text>
+      <text x="327" y="102" font-size="7" text-anchor="middle">P.06</text>
+      <text x="386" y="102" font-size="7" text-anchor="middle">P.07</text>
+      <text x="445" y="102" font-size="7" text-anchor="middle">P.08</text>
+      <!-- 수직 격자 -->
+      <line x1="91"  y1="10" x2="91"  y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="150" y1="10" x2="150" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="209" y1="10" x2="209" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="268" y1="10" x2="268" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="327" y1="10" x2="327" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="386" y1="10" x2="386" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <!-- 동적 꺾은선 -->
+      <polyline id="main-line" points="" fill="none" stroke="#000" stroke-width="1.5"/>
+      <g id="main-pts"></g>
+      <g id="main-lbl"></g>
+      <text x="32" y="110" font-size="8" fill="#777">측정 POINT →</text>
+    </svg>
+
+    <!-- Hv 그래프 -->
+    <div style="font-size:9px;font-weight:bold;margin:3px 0 1px;">Hv</div>
+    <svg id="hv-svg" width="100%" height="118" viewBox="0 0 450 118" xmlns="http://www.w3.org/2000/svg">
+      <line x1="32" y1="10" x2="32" y2="90" stroke="#000" stroke-width="0.8"/>
+      <line x1="32" y1="90" x2="445" y2="90" stroke="#000" stroke-width="0.8"/>
+      <line x1="32" y1="10" x2="445" y2="10" stroke="#ddd" stroke-width="0.4"/>
+      <text x="28" y="13" font-size="7" text-anchor="end" fill="#555">800</text>
+      <line x1="32" y1="30" x2="445" y2="30" stroke="#ddd" stroke-width="0.4"/>
+      <text x="28" y="33" font-size="7" text-anchor="end" fill="#555">600</text>
+      <line x1="32" y1="50" x2="445" y2="50" stroke="#ddd" stroke-width="0.4"/>
+      <text x="28" y="53" font-size="7" text-anchor="end" fill="#555">400</text>
+      <line x1="32" y1="70" x2="445" y2="70" stroke="#ddd" stroke-width="0.4"/>
+      <text x="28" y="73" font-size="7" text-anchor="end" fill="#555">200</text>
+      <text x="28" y="93" font-size="7" text-anchor="end" fill="#555">0</text>
+      <text x="32"  y="100" font-size="6" text-anchor="middle">0.3</text>
+      <text x="78"  y="100" font-size="6" text-anchor="middle">0.5</text>
+      <text x="124" y="100" font-size="6" text-anchor="middle">0.6</text>
+      <text x="170" y="100" font-size="6" text-anchor="middle">0.8</text>
+      <text x="216" y="100" font-size="6" text-anchor="middle">0.9</text>
+      <text x="262" y="100" font-size="6" text-anchor="middle">1.2</text>
+      <text x="308" y="100" font-size="6" text-anchor="middle">1.4</text>
+      <text x="354" y="100" font-size="6" text-anchor="middle">1.5</text>
+      <text x="400" y="100" font-size="6" text-anchor="middle">1.8</text>
+      <text x="445" y="100" font-size="6" text-anchor="middle">2.0</text>
+      <text x="32"  y="110" font-size="7" fill="#777">Depth(mm)</text>
+      <text x="120" y="110" font-size="8" fill="#777">→</text>
+      <line x1="78"  y1="10" x2="78"  y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="124" y1="10" x2="124" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="170" y1="10" x2="170" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="216" y1="10" x2="216" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="262" y1="10" x2="262" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="308" y1="10" x2="308" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="354" y1="10" x2="354" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <line x1="400" y1="10" x2="400" y2="90" stroke="#eee" stroke-width="0.4"/>
+      <polyline id="hv-line" points="" fill="none" stroke="#1a3a5c" stroke-width="1.5"/>
+      <g id="hv-pts"></g>
+    </svg>
+
+    <!-- 단위 선택: HRC / Hv / Hs -->
+    <div style="display:flex;align-items:center;gap:6px;margin-top:3px;font-size:9px;color:#555;">
+      <span>측정단위:</span>
+      <label style="display:flex;align-items:center;gap:2px;cursor:pointer;">
+        <input type="radio" name="unit" id="unit-hrc" value="hrc" checked onchange="onUnitChange()"> HRC
+      </label>
+      <label style="display:flex;align-items:center;gap:2px;cursor:pointer;">
+        <input type="radio" name="unit" id="unit-hv" value="hv" onchange="onUnitChange()"> Hv
+      </label>
+      <label style="display:flex;align-items:center;gap:2px;cursor:pointer;">
+        <input type="radio" name="unit" id="unit-hs" value="hs" onchange="onUnitChange()"> Hs
+      </label>
+      <span id="unit-hint" style="color:#aaa;font-size:8px;">→ HRC 그래프에 반영</span>
+    </div>
+  </div>
+</div>
+
+<!-- ④ HEAT TREATMENT CYCLE 헤더 -->
+<table style="border-top:none;border-bottom:none;">
+  <colgroup>
+    <col style="width:7%"><col style="width:28%"><col style="width:30%">
+    <col style="width:25%"><col style="width:10%">
+  </colgroup>
+  <tr style="height:22px;">
+    <th style="border-left:none;font-size:9px;">도면</th>
+    <th style="font-size:9px;">HEAT TREATMENT CYCLE</th>
+    <th style="font-size:9px;">DESCRIPTION</th>
+    <th style="font-size:9px;">CHARGE NO.</th>
+    <th style="font-size:9px;border-right:none;">Q'TY</th>
+  </tr>
+</table>
+
+<!-- ⑤ 사이클 SVG + 5행 -->
+<table style="border-top:none;border-bottom:none;">
+  <colgroup>
+    <col style="width:7%"><col style="width:28%"><col style="width:30%">
+    <col style="width:25%"><col style="width:10%">
+  </colgroup>
+  <tr style="height:26px;">
+    <td rowspan="5" style="border-left:none;"></td>
+    <td rowspan="5" style="padding:0;">
+      <svg width="100%" height="130" viewBox="45 10 450 160">
+        <text x="240" y="28" text-anchor="middle" font-size="19" font-weight="bold">160℃±10</text>
+        <line x1="156" y1="45" x2="324" y2="45" stroke="black"/>
+        <line x1="86"  y1="145" x2="156" y2="45" stroke="black"/>
+        <line x1="394" y1="145" x2="324" y2="45" stroke="black"/>
+        <line x1="86"  y1="145" x2="394" y2="145" stroke="black"/>
+        <line x1="156" y1="45"  x2="156" y2="145" stroke="black"/>
+        <line x1="324" y1="45"  x2="324" y2="145" stroke="black"/>
+        <text x="240" y="105" text-anchor="middle" font-size="19" font-weight="bold">← 1h →</text>
+        <text x="406" y="155" font-size="19" font-weight="bold">공냉</text>
+      </svg>
+    </td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-desc1"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-chg1"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><input class="inp num" id="f-qty1" type="number"></td>
+  </tr>
+  <tr style="height:26px;">
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-desc2"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-chg2"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><input class="inp num" id="f-qty2" type="number"></td>
+  </tr>
+  <tr style="height:26px;">
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-desc3"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-chg3"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><input class="inp num" id="f-qty3" type="number"></td>
+  </tr>
+  <tr style="height:26px;">
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-desc4"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-chg4"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><input class="inp num" id="f-qty4" type="number"></td>
+  </tr>
+  <tr style="height:26px;">
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-desc5"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp left" id="f-chg5"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><input class="inp num" id="f-qty5" type="number"></td>
+  </tr>
+</table>
+
+<!-- ⑥ 검사항목 -->
+<table style="border-top:none;border-bottom:none;">
+  <colgroup>
+    <col style="width:16%"><col style="width:2%"><col style="width:2%">
+    <col style="width:7%"><col style="width:2%"><col style="width:2%">
+    <col style="width:5%">
+    <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+    <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+    <col style="width:6%">
+  </colgroup>
+  <tr style="height:20px;">
+    <th rowspan="2" colspan="3" style="font-size:9px;border-left:none;">검 사 항 목<br>ITEMS OF INSPECTION</th>
+    <th rowspan="2" colspan="3" style="font-size:9px;">관리기준(규격)<br>STANDARD OF ADMINISTRATION</th>
+    <th rowspan="2" style="font-size:8px;">SIZE OF<br>SAMPLE</th>
+    <th colspan="8" style="font-size:9px;">측 정 치 (DATA)</th>
+    <th rowspan="2" style="font-size:8px;border-right:none;">판 정<br>(DECISION)</th>
+  </tr>
+  <tr style="height:16px;">
+    <th style="font-size:8px;">P.01</th><th style="font-size:8px;">P.02</th><th style="font-size:8px;">P.03</th>
+    <th style="font-size:8px;">P.04</th><th style="font-size:8px;">P.05</th><th style="font-size:8px;">P.06</th>
+    <th style="font-size:8px;">P.07</th><th style="font-size:8px;">P.08</th>
+  </tr>
+  <!-- 1: 표면경도 -->
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">표 면 경 도<br>(SURFACEHARDNESS)</td>
+    <td colspan="3" class="ycell" style="padding:1px;">
+      <input class="inp center" id="f-std1" placeholder="⑧" oninput="detectUnit()">
+    </td>
+    <td style="font-size:9px;">현물</td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p01" placeholder="⑨" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p02" placeholder="⑩" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p03" placeholder="⑪" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p04" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p05" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p06" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p07" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;"><input class="inp num" id="p08" oninput="updateMainGraph()"></td>
+    <td class="ycell" style="padding:1px;border-right:none;">
+      <select class="sel" id="f-jdg1"><option value="⑫">⑫</option><option>합 격</option><option>불 합 격</option></select>
+    </td>
+  </tr>
+  <!-- 2~6 -->
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">(유효·전)경화깊이<br>HARDENINGDEPTH(㎜)</td>
+    <td colspan="3" class="ycell" style="padding:1px;"><input class="inp center" id="f-std2" placeholder="⑬"></td>
+    <td style="font-size:9px;">시편</td>
+    <td colspan="8" class="ycell" style="padding:1px;text-align:left;"><input class="inp left" id="f-res2" placeholder="⑭" style="width:99%;"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><select class="sel" id="f-jdg2"><option value="⑮">⑮</option><option>합 격</option><option>불 합 격</option></select></td>
+  </tr>
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">심 부 경 도<br>(CORE HARDNESS)</td>
+    <td colspan="3" class="ycell" style="padding:1px;"><input class="inp center" id="f-std3" placeholder="⑯"></td>
+    <td style="font-size:9px;">시편</td>
+    <td colspan="8" class="ycell" style="padding:1px;text-align:left;"><input class="inp left" id="f-res3" placeholder="⑰" style="width:99%;"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><select class="sel" id="f-jdg3"><option value="⑱">⑱</option><option>합 격</option><option>불 합 격</option></select></td>
+  </tr>
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">(표면·심부) 조직<br>STRUCTURE</td>
+    <td colspan="3" class="ycell" style="padding:1px;"><select class="sel" id="f-std4"><option value="">⑲</option><option value="육안">육안</option></select></td>
+    <td style="font-size:9px;">시편</td>
+    <td colspan="8" class="ycell" style="padding:1px;text-align:left;"><input class="inp left" id="f-res4" placeholder="⑳" style="width:99%;"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><select class="sel" id="f-jdg4"><option value="㉑">㉑</option><option>합 격</option><option>불 합 격</option></select></td>
+  </tr>
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">변 형<br>DISTORTION</td>
+    <td colspan="3" class="ycell" style="padding:1px;"><select class="sel" id="f-std5"><option value="">㉒</option><option value="육안">육안</option></select></td>
+    <td style="font-size:9px;">현물</td>
+    <td colspan="8" class="ycell" style="padding:1px;text-align:left;"><input class="inp left" id="f-res5" placeholder="㉓" style="width:99%;"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><select class="sel" id="f-jdg5"><option value="㉔">㉔</option><option>합 격</option><option>불 합 격</option></select></td>
+  </tr>
+  <tr style="height:34px;">
+    <td colspan="3" style="font-size:9px;border-left:none;">균 열<br>(CRACK)</td>
+    <td colspan="3" class="ycell" style="padding:1px;"><select class="sel" id="f-std6"><option value="">㉕</option><option value="육안">육안</option></select></td>
+    <td style="font-size:9px;">현물</td>
+    <td colspan="8" class="ycell" style="padding:1px;text-align:left;"><input class="inp left" id="f-res6" placeholder="㉖" style="width:99%;"></td>
+    <td class="ycell" style="padding:1px;border-right:none;"><select class="sel" id="f-jdg6"><option value="㉗">㉗</option><option>합 격</option><option>불 합 격</option></select></td>
+  </tr>
+  <!-- 특이사항/비고/종합판정 -->
+  <tr style="height:30px;">
+    <td colspan="10" rowspan="2" style="text-align:left;vertical-align:top;padding:4px;border-left:none;">
+      <div style="font-size:8px;margin-bottom:2px;font-weight:700;">※ 특이사항</div>
+      <input class="inp left" id="f-note" placeholder="㉘" style="width:99%;background:#fffbe6;">
+    </td>
+    <td colspan="3" style="font-size:9px;">비 고<br>(REMARK)</td>
+    <td colspan="3" style="font-size:9px;border-right:none;">본 성적서 사본은 무효임</td>
+  </tr>
+  <tr style="height:66px;">
+    <td colspan="3" style="font-size:9px;">종합판정</td>
+    <!-- ✅ 원본 도장 이미지 (합격+QGIS 원형) -->
+    <td colspan="3" style="border-right:none;padding:2px;">
+      <img src="data:image/png;base64,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"
+           style="max-height:62px;max-width:90%;object-fit:contain;display:block;margin:0 auto;"
+           alt="합격 도장">
+    </td>
+  </tr>
+</table>
+
+<!-- ⑦ INSPECTED BY / APPROVED BY -->
+<table style="border-top:none;">
+  <colgroup>
+    <col style="width:15%"><col style="width:20%"><col style="width:8%">
+    <col style="width:15%"><col style="width:20%"><col style="width:8%"><col style="width:14%">
+  </colgroup>
+  <tr style="height:38px;">
+    <td style="border-left:none;font-size:9px;">INSPECTED BY :</td>
+    <td class="ycell" style="padding:1px;"><select class="sel" id="f-inspected"><option value="">㉙</option><option value="김종렬">김종렬</option></select></td>
+    <td style="font-size:9px;">인</td>
+    <td style="font-size:9px;">APPROVED BY :</td>
+    <td class="ycell" style="padding:1px;"><select class="sel" id="f-approved"><option value="">㉚</option><option value="최석현">최석현</option></select></td>
+    <td style="font-size:9px;">인</td>
+    <td style="border-right:none;"></td>
+  </tr>
+</table>
+
+</div>
+<div id="toast"></div>
+
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY='@qgis2026';
+var queryResults=[];
+var queryIndex=0;
+
+/* ── 초기값 ── */
+window.addEventListener('load',function(){
+  var today=new Date().toISOString().split('T')[0];
+  document.getElementById('q-date').value=today;
+  document.getElementById('f-date').value=today;
+  drawYAxis('hrc',[]);
+});
+
+/* ── 헬퍼 ── */
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function nv(id){var s=v(id).trim();return s===''?null:parseFloat(s);}
+function sv(id,val){var el=document.getElementById(id);if(el)el.value=(val===null||val===undefined)?'':String(val);}
+function ss(id,val){var el=document.getElementById(id);if(el)el.value=val||'';}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2800);}
+
+/* ── ③ 날짜 양방향 동기화 ── */
+function syncDate(src){
+  if(src==='f'){
+    document.getElementById('q-date').value=document.getElementById('f-date').value;
+  } else {
+    document.getElementById('f-date').value=document.getElementById('q-date').value;
+  }
+}
+
+/* ── ⑦⑧ 표면경도 관리기준 → 단위 자동 감지 ── */
+function detectUnit(){
+  var std=v('f-std1').toUpperCase();
+  var hrcEl=document.getElementById('unit-hrc');
+  var hvEl =document.getElementById('unit-hv');
+  var hsEl =document.getElementById('unit-hs');
+  if(!hrcEl||!hvEl||!hsEl) return;
+  if(std.indexOf('HRC')>=0){
+    hrcEl.checked=true;
+  } else if(std.indexOf('HS')>=0){
+    hsEl.checked=true;
+  } else if(std.indexOf('HV')>=0){
+    hvEl.checked=true;
+  }
+  onUnitChange();
+  updateMainGraph();
+}
+
+/* ── ⑤⑥ 단위 전환 ── */
+function onUnitChange(){
+  var u=document.querySelector('input[name=unit]:checked');
+  if(!u) return;
+  var unit=u.value;
+  var hints={hrc:'→ HRC 그래프에 반영',hv:'→ Hv 그래프에 반영',hs:'→ Hs 그래프에 반영'};
+  var labels={hrc:'HRC',hv:'Hv',hs:'Hs'};
+  var hintEl=document.getElementById('unit-hint');
+  var lblEl =document.getElementById('graph-label');
+  if(hintEl) hintEl.textContent=hints[unit]||'';
+  if(lblEl)  lblEl.textContent=labels[unit]||unit.toUpperCase();
+  updateMainGraph();
+}
+
+/* ── 그래프 좌표 ── */
+/* X 좌표: P.01~P.08 오른쪽 한 칸 이동 */
+var MAIN_XS=[32,91,150,209,268,327,386,445];
+var GRAPH_TOP=10, GRAPH_BOT=90, GRAPH_H=80;
+
+/* ⑨ Y축 동적 범위 최적화 */
+function calcRange(vals,unit){
+  var filtered=vals.filter(function(v){return v!==null;});
+  if(filtered.length===0){
+    if(unit==='hs') return {min:0,max:100,step:20};
+    if(unit==='hv') return {min:0,max:800,step:200};
+    return {min:45,max:65,step:5};
+  }
+  var mn=Math.min.apply(null,filtered);
+  var mx=Math.max.apply(null,filtered);
+  var pad=(mx-mn)*0.15||5;
+  var rmin=Math.floor((mn-pad)/5)*5;
+  var rmax=Math.ceil((mx+pad)/5)*5;
+  if(rmin===rmax){rmin-=5;rmax+=5;}
+  var step=Math.ceil((rmax-rmin)/4/5)*5||5;
+  return {min:rmin,max:rmax,step:step};
+}
+
+function valToY(val,range){
+  return GRAPH_BOT-(val-range.min)/(range.max-range.min)*GRAPH_H;
+}
+
+/* ⑨ Y축 눈금 동적 그리기 */
+function drawYAxis(unit,vals){
+  var range=calcRange(vals,unit);
+  var g=document.getElementById('y-axis');
+  if(!g) return;
+  var html='';
+  for(var tick=range.min;tick<=range.max;tick+=range.step){
+    var y=valToY(tick,range);
+    if(y<GRAPH_TOP-2||y>GRAPH_BOT+2) continue;
+    html+='<line x1="32" y1="'+y.toFixed(1)+'" x2="445" y2="'+y.toFixed(1)+'" stroke="#ddd" stroke-width="0.4"/>';
+    html+='<text x="28" y="'+(y+3).toFixed(1)+'" font-size="7" text-anchor="end" fill="#555">'+tick+'</text>';
+  }
+  g.innerHTML=html;
+  return range;
+}
+
+/* ⑩ 메인 그래프(HRC/Hs) 업데이트 */
+function updateMainGraph(){
+  var u=document.querySelector('input[name=unit]:checked');
+  var unit=u?u.value:'hrc';
+  if(unit==='hv'){clearMainGraph();return;}
+
+  var ids=['p01','p02','p03','p04','p05','p06','p07','p08'];
+  var vals=ids.map(function(id){return nv(id);});
+  var range=drawYAxis(unit,vals);
+  if(!range) return;
+
+  var pts=[],circles='',labels='';
+  vals.forEach(function(val,i){
+    if(val===null) return;
+    var x=MAIN_XS[i];
+    var y=valToY(val,range);
+    if(y<GRAPH_TOP) y=GRAPH_TOP;
+    if(y>GRAPH_BOT) y=GRAPH_BOT;
+    pts.push(x+','+y.toFixed(1));
+    circles+='<circle cx="'+x+'" cy="'+y.toFixed(1)+'" r="3" fill="#000"/>';
+    labels+='<text x="'+x+'" y="'+(y-5).toFixed(1)+'" font-size="8" text-anchor="middle" font-weight="bold" fill="#000">'+val+'</text>';
+  });
+  var lineEl=document.getElementById('main-line');
+  var ptsEl =document.getElementById('main-pts');
+  var lblEl =document.getElementById('main-lbl');
+  if(lineEl) lineEl.setAttribute('points',pts.join(' '));
+  if(ptsEl)  ptsEl.innerHTML=circles;
+  if(lblEl)  lblEl.innerHTML=labels;
+}
+
+function clearMainGraph(){
+  var lineEl=document.getElementById('main-line');
+  var ptsEl =document.getElementById('main-pts');
+  var lblEl =document.getElementById('main-lbl');
+  if(lineEl) lineEl.setAttribute('points','');
+  if(ptsEl)  ptsEl.innerHTML='';
+  if(lblEl)  lblEl.innerHTML='';
+}
+
+/* ── 초기화 ── */
+function resetForm(){
+  if(!confirm('모든 입력 내용을 초기화하시겠습니까?')) return;
+  document.querySelectorAll('.inp').forEach(function(el){el.value='';});
+  document.querySelectorAll('.sel').forEach(function(el){el.value='';});
+  document.querySelectorAll('.inp-date').forEach(function(el){el.value='';});
+  clearMainGraph();
+  document.getElementById('hv-line').setAttribute('points','');
+  document.getElementById('hv-pts').innerHTML='';
+  document.getElementById('f-std4').value='육안';
+  document.getElementById('f-std5').value='육안';
+  document.getElementById('f-std6').value='육안';
+  document.getElementById('unit-hrc').checked=true;
+  onUnitChange();
+  var today=new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value=today;
+  document.getElementById('q-date').value=today;
+  drawYAxis('hrc',[]);
+  queryResults=[];queryIndex=0;
+  document.getElementById('counter').textContent='—';
+  document.getElementById('prev-btn').disabled=true;
+  document.getElementById('next-btn').disabled=true;
+  document.getElementById('query-msg').textContent='';
+}
+
+/* ── ④ 조회 ── */
+async function queryByDate(){
+  var dateVal    =document.getElementById('q-date').value;
+  var lotVal     =document.getElementById('q-lot').value.trim();
+  var customerVal=document.getElementById('q-customer').value.trim();
+  var productVal =document.getElementById('q-product').value.trim();
+  var dwgVal     =document.getElementById('q-dwg').value.trim();
+  var msgEl      =document.getElementById('query-msg');
+  if(!dateVal&&!lotVal&&!customerVal&&!productVal&&!dwgVal){
+    showToast('⚠️ 조회 조건을 하나 이상 입력하세요.');return;
+  }
+  msgEl.style.color='#888';msgEl.textContent='⏳ 조회 중...';
+  try{
+    var res=await fetch(API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'queryInspection',key:API_KEY,date:dateVal,lot:lotVal,customer:customerVal,product:productVal,dwg:dwgVal})
+    });
+    var data=await res.json();
+    if(data.result==='error') throw new Error(data.message);
+    queryResults=data.rows||[];
+    if(queryResults.length===0){
+      msgEl.style.color='#c0392b';msgEl.textContent='결과 없음';
+      document.getElementById('counter').textContent='—';
+      document.getElementById('prev-btn').disabled=true;
+      document.getElementById('next-btn').disabled=true;
+      return;
+    }
+    queryIndex=0;
+    updateNav();
+    loadRecord(queryResults[0]);
+  }catch(e){
+    msgEl.style.color='#c0392b';msgEl.textContent='❌ '+e.message;
+  }
+}
+
+function updateNav(){
+  var total=queryResults.length;
+  document.getElementById('counter').textContent=(queryIndex+1)+' / '+total+'건';
+  document.getElementById('prev-btn').disabled=(queryIndex<=0);
+  document.getElementById('next-btn').disabled=(queryIndex>=total-1);
+  document.getElementById('query-msg').style.color='#217346';
+  document.getElementById('query-msg').textContent=total+'건 조회됨';
+}
+
+function navigate(dir){
+  var newIdx=queryIndex+dir;
+  if(newIdx<0||newIdx>=queryResults.length) return;
+  queryIndex=newIdx;
+  updateNav();
+  loadRecord(queryResults[queryIndex]);
+}
+
+/* ── 레코드 로드 (시방서+검사항목 DB 연동) ── */
+function loadRecord(rec){
+  /* ① 작성일 (DB DATA 2026 작업일) */
+  sv('f-date',     rec['write_date']||rec['작성일']||'');
+  if(rec['write_date']||rec['작성일'])
+    document.getElementById('q-date').value=rec['write_date']||rec['작성일']||'';
+
+  /* ① LOT NO */
+  sv('f-lot',      rec['lot_no']||'');
+
+  /* ② 열처리방법 (풀다운) */
+  ss('f-method',   rec['ht_method']||'');
+
+  /* ③ 거래처 — DB DATA 2026 자동입력 */
+  sv('f-customer', rec['customer']||'');
+
+  /* ④ 품명 — DB DATA 2026 자동입력 */
+  sv('f-product',  rec['product_name']||'');
+
+  /* ⑤ 품번 — DB DATA 2026 자동입력 */
+  sv('f-dwg',      rec['dwg_no']||'');
+
+  /* ⑥ 재질 — DB DATA 2026 자동입력 */
+  sv('f-material', rec['material']||'');
+
+  /* ⑦ 수량 — DB DATA 2026 양품+불량 합산 자동입력 */
+  sv('f-lotsize',  rec['lot_size']||'');
+
+  /* 사이클표 */
+  for(var i=1;i<=5;i++){
+    sv('f-desc'+i, rec['cycle_desc'+i]||'');
+    sv('f-chg'+i,  rec['cycle_chg'+i]||'');
+    sv('f-qty'+i,  rec['cycle_qty'+i]||'');
+  }
+
+  /* ⑧ 표면경도 관리기준 */
+  sv('f-std1', rec['insp_std1']||'');
+
+  /* ⑨⑩⑪ P.01~P.03 + P.04~P.08 */
+  sv('p01',rec['insp_p01']||''); sv('p02',rec['insp_p02']||'');
+  sv('p03',rec['insp_p03']||''); sv('p04',rec['insp_p04']||'');
+  sv('p05',rec['insp_p05']||''); sv('p06',rec['insp_p06']||'');
+  sv('p07',rec['insp_p07']||''); sv('p08',rec['insp_p08']||'');
+
+  /* ⑫ 표면경도 판정 */
+  ss('f-jdg1', rec['insp_jdg1']||'');
+
+  /* ⑬ 경화깊이 관리기준 — DB DATA 2026 자동입력 */
+  sv('f-std2', rec['insp_std2']||'');
+  /* ⑭ 경화깊이 결과 / ⑮ 판정 */
+  sv('f-res2', rec['insp_result2']||'');
+  ss('f-jdg2', rec['insp_jdg2']||'');
+
+  /* ⑯ 심부경도 관리기준 — DB DATA 2026 자동입력 */
+  sv('f-std3', rec['insp_std3']||'');
+  /* ⑰ 심부경도 결과 / ⑱ 판정 */
+  sv('f-res3', rec['insp_result3']||'');
+  ss('f-jdg3', rec['insp_jdg3']||'');
+
+  /* ⑲ 조직 관리기준(풀다운) / ⑳ 결과 / ㉑ 판정 */
+  ss('f-std4', rec['insp_std4']||'');
+  sv('f-res4', rec['insp_result4']||'');
+  ss('f-jdg4', rec['insp_jdg4']||'');
+
+  /* ㉒ 변형 관리기준(풀다운) / ㉓ 결과 / ㉔ 판정 */
+  ss('f-std5', rec['insp_std5']||'');
+  sv('f-res5', rec['insp_result5']||'');
+  ss('f-jdg5', rec['insp_jdg5']||'');
+
+  /* ㉕ 균열 관리기준(풀다운) / ㉖ 결과 / ㉗ 판정 */
+  ss('f-std6', rec['insp_std6']||'');
+  sv('f-res6', rec['insp_result6']||'');
+  ss('f-jdg6', rec['insp_jdg6']||'');
+
+  /* ㉘ 특이사항 */
+  sv('f-note',     rec['special_note']||'');
+
+  /* ㉙ INSPECTED BY (풀다운) / ㉚ APPROVED BY (풀다운) */
+  ss('f-inspected', rec['inspected_by']||'');
+  ss('f-approved',  rec['approved_by']||'');
+
+  /* 측정단위 라디오 설정 */
+  var mu=rec['measure_unit']||'hrc';
+  var uEl=document.getElementById('unit-'+mu);
+  if(uEl) uEl.checked=true;
+
+  /* ⑧ 관리기준 감지 → 라디오 자동선택 + 그래프 업데이트 */
+  detectUnit();
+  updateMainGraph();
+
+  showToast('✅ '+(queryIndex+1)+'번째 성적서 불러오기 완료');
+}
+
+/* ── 성적서 저장 ── */
+async function saveToDb(){
+  if(!v('f-lot')){alert('LOT NO를 입력해 주세요.');return;}
+  /* 원문자 필터링 함수: ①~㉚ 값이면 빈칸으로 변환 */
+  /* 원문자 필터링: ①~㉚ 값이면 빈칸으로 변환 */
+  var SYMS=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
+    '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳',
+    '㉑','㉒','㉓','㉔','㉕','㉖','㉗','㉘','㉙','㉚'];
+  function cleanVal(val){
+    var s=String(val||'').trim();
+    return SYMS.indexOf(s)>=0?'':s;
+  }
+  var record={
+    '작성일':cleanVal(v('f-date')),
+    'lot_no':cleanVal(v('f-lot')),
+    'ht_method':cleanVal(v('f-method')),
+    'customer':cleanVal(v('f-customer')),
+    'product_name':cleanVal(v('f-product')),
+    'dwg_no':cleanVal(v('f-dwg')),
+    'material':cleanVal(v('f-material')),
+    'lot_size':cleanVal(v('f-lotsize')),
+    'measure_unit':(document.querySelector('input[name=unit]:checked')||{}).value||'hrc',
+    'insp_std1':cleanVal(v('f-std1')),
+    'insp_p01':nv('p01')||0,'insp_p02':nv('p02')||0,'insp_p03':nv('p03')||0,
+    'insp_p04':nv('p04')||0,'insp_p05':nv('p05')||0,'insp_p06':nv('p06')||0,
+    'insp_p07':nv('p07')||0,'insp_p08':nv('p08')||0,
+    'insp_jdg1':cleanVal(v('f-jdg1')),
+    'special_note':cleanVal(v('f-note')),
+    'inspected_by':cleanVal(v('f-inspected')),
+    'approved_by':cleanVal(v('f-approved'))
+  };
+  for(var i=1;i<=5;i++){record['cycle_desc'+i]=v('f-desc'+i);record['cycle_chg'+i]=v('f-chg'+i);record['cycle_qty'+i]=nv('f-qty'+i)||0;}
+  for(var j=2;j<=6;j++){record['insp_std'+j]=v('f-std'+j);record['insp_result'+j]=v('f-res'+j);record['insp_jdg'+j]=v('f-jdg'+j);}
+  var btn=document.querySelector('.tb-btn.green');
+  var prev=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳ 저장 중...';}
+  try{
+    var res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveInspection',key:API_KEY,record:record})});
+    var data=await res.json();
+    if(data.result==='error') throw new Error(data.message);
+    showToast('✅ 성적서 저장 완료! ('+(data.mode==='insert'?'신규등록':'업데이트')+') LOT:'+data.lot_no);
+  }catch(e){alert('❌ 저장 오류: '+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent=prev;}}
+}
+
+/* ── PDF 변환 ── */
+/* 원문자 목록 (입력 안 된 경우 PDF에서 숨김) */
+var PLACEHOLDER_SYMBOLS=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
+  '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳',
+  '㉑','㉒','㉓','㉔','㉕','㉖','㉗','㉘','㉙','㉚'];
+
+async function exportPDF(){
+  var btn=document.querySelector('.tb-btn.purple');
+  var prev=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='📄 변환 중...';}
+  var toolbar=document.getElementById('toolbar');
+  toolbar.style.display='none';
+
+  /* ① 캡처 전: 노란색 → 흰색 */
+  var yellowCells=document.querySelectorAll('.ycell');
+  var yellowInps =document.querySelectorAll('.inp,.inp-date');
+  var yellowSels =document.querySelectorAll('.sel');
+
+  yellowCells.forEach(function(el){el.style.background='#ffffff';});
+  yellowInps.forEach(function(el){
+    el.style.background='#ffffff';
+    el.style.outline='none';
+    el.style.border='none';
+  });
+  yellowSels.forEach(function(el){
+    el.style.background='#ffffff';
+    el.style.outline='none';
+    el.style.border='none';
+  });
+
+  /* ② 캡처 전: 입력 안 된 원문자 숨김 처리 */
+  /* input: 값이 없으면 placeholder(원문자) 투명 처리 */
+  var hiddenInps=[];
+  document.querySelectorAll('.inp').forEach(function(el){
+    if(!el.value || el.value.trim()===''){
+      el.style.color='transparent';
+      hiddenInps.push(el);
+    }
+  });
+
+  /* select: 선택값이 원문자이면(=미선택) 텍스트 투명 처리 */
+  var hiddenSels=[];
+  document.querySelectorAll('.sel').forEach(function(el){
+    var val=el.value||'';
+    var isSymbol=PLACEHOLDER_SYMBOLS.indexOf(val)>=0;
+    var isEmpty=val==='';
+    if(isSymbol||isEmpty){
+      el.style.color='transparent';
+      hiddenSels.push(el);
+    }
+  });
+
+  /* input-date: 빈칸이면 투명 */
+  var hiddenDates=[];
+  document.querySelectorAll('.inp-date').forEach(function(el){
+    if(!el.value||el.value.trim()===''){
+      el.style.color='transparent';
+      hiddenDates.push(el);
+    }
+  });
+
+  try{
+    var target=document.getElementById('doc-container');
+    var target_width=target.scrollWidth;
+    var canvas=await html2canvas(target,{
+      scale:2,backgroundColor:'#ffffff',
+      useCORS:true,allowTaint:true,logging:false,
+      windowWidth:target_width,
+      width:target_width,
+      scrollX:0,scrollY:0
+    });
+    var imgData=canvas.toDataURL('image/png');
+    var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),mg=5;
+    var ratio=Math.min((pw-mg*2)/canvas.width,(ph-mg*2)/canvas.height);
+    pdf.addImage(imgData,'PNG',(pw-canvas.width*ratio)/2,mg,canvas.width*ratio,canvas.height*ratio);
+    pdf.save('검사성적서_'+(v('f-lot')||'성적서')+'_'+(v('f-date')||new Date().toISOString().split('T')[0])+'.pdf');
+    showToast('✅ PDF 저장 완료!');
+  }catch(e){
+    alert('PDF 변환 오류: '+e.message);
+  }finally{
+    /* ③ 캡처 후: 모두 원상복원 */
+    yellowCells.forEach(function(el){el.style.background='';});
+    yellowInps.forEach(function(el){
+      el.style.background='';el.style.outline='';el.style.border='';
+    });
+    yellowSels.forEach(function(el){
+      el.style.background='';el.style.outline='';el.style.border='';
+    });
+    hiddenInps.forEach(function(el){el.style.color='';});
+    hiddenSels.forEach(function(el){el.style.color='';});
+    hiddenDates.forEach(function(el){el.style.color='';});
+    toolbar.style.display='';
+    if(btn){btn.disabled=false;btn.textContent=prev;}
+  }
+}
+</script>
+</body>
+</html>
