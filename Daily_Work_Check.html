@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일작업현황 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --blue:#1a56db; --blue-dark:#123a99; --gray-bg:#f3f4f6; --border:#d1d5db;
+    --text:#111827; --sub:#6b7280; --red:#dc2626; --green:#059669; --dirty:#fff7d6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Malgun Gothic','Segoe UI',sans-serif; background:var(--gray-bg);
+    color:var(--text); min-height:100vh;
+  }
+  .container{ max-width:1280px; margin:0 auto; padding:20px; width:100%; }
+
+  header{ margin-bottom:16px; }
+  header h1{ font-size:20px; margin:0 0 2px 0; color:var(--blue-dark); text-align:left; }
+  header h1 .title-suffix{ font-size:0.5em; font-weight:400; color:var(--sub); margin-left:6px; }
+  header .sub{ font-size:12px; color:var(--sub); }
+
+  .filter-bar{
+    background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:12px;
+  }
+  .filter-item{ display:flex; flex-direction:column; gap:4px; }
+  .filter-item label{ font-size:12px; color:var(--sub); }
+  .filter-item input, .filter-item select{
+    padding:6px 8px; border:1px solid var(--border); border-radius:5px; font-size:13px; background:#fff;
+  }
+  .filter-item.range{ flex-direction:row; align-items:center; gap:6px; }
+  .filter-item.range > div{ display:flex; flex-direction:column; gap:4px; }
+  .filter-sep{ color:var(--sub); padding-top:18px; }
+
+  .btn{
+    padding:7px 14px; border-radius:5px; border:1px solid var(--border); background:#fff;
+    font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{ background:#f3f4f6; }
+  .btn-primary{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .btn-primary:hover{ background:var(--blue-dark); }
+  .btn-save{ background:var(--green); border-color:var(--green); color:#fff; }
+  .btn-save:hover{ opacity:0.9; }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .action-bar{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    margin-bottom:10px;
+  }
+  .summary{ font-size:13px; color:var(--sub); }
+  .summary b{ color:var(--text); }
+  .action-buttons{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  #doc-container{ background:#fff; border-radius:8px; padding:16px; border:1px solid var(--border); }
+  .doc-title{ text-align:center; font-size:17px; font-weight:700; margin-bottom:10px; color:var(--blue-dark); }
+
+  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; min-width:1150px; border-collapse:collapse; font-size:12px; }
+  thead th{
+    position:sticky; top:0; background:var(--blue); color:#fff; font-weight:600;
+    padding:7px 4px; border:1px solid #234; text-align:center; white-space:nowrap;
+  }
+  tbody td{ padding:4px 3px; border:1px solid var(--border); text-align:center; white-space:nowrap; }
+  tbody tr:nth-child(even){ background:#fafafa; }
+  tbody tr.dirty{ background:var(--dirty) !important; }
+  tfoot td{
+    padding:7px 4px; border:1px solid var(--border); text-align:center; font-weight:700;
+    background:#eef2ff; color:var(--blue-dark);
+  }
+  td input, td select{
+    width:100%; border:1px solid transparent; background:transparent; text-align:center;
+    font-size:12px; padding:3px 2px; border-radius:3px; font-family:inherit;
+  }
+  td input:focus, td select:focus{ border-color:var(--blue); background:#fff; outline:none; }
+  td.readonly{ color:#374151; background:#f9fafb; }
+  td.num input{ text-align:right; }
+
+  #loadingOverlay{
+    position:fixed; inset:0; background:rgba(255,255,255,0.75); display:none;
+    align-items:center; justify-content:center; font-size:15px; color:var(--blue-dark); z-index:999;
+  }
+  .empty-msg{ text-align:center; color:var(--sub); padding:30px; font-size:13px; }
+
+  @media (max-width:768px){
+    header h1{ font-size:16px; }
+    .filter-bar{ flex-direction:column; align-items:stretch; }
+    table{ font-size:11px; }
+  }
+
+  /* PDF 캡처용(화면에는 노출 안 됨) */
+  #printRoot{ position:fixed; left:-99999px; top:0; background:#fff; }
+  #printRoot table{ border-collapse:collapse; }
+  #printRoot th, #printRoot td{ border:1px solid #888; padding:5px 4px; font-size:13px; text-align:center; white-space:nowrap; }
+  #printRoot thead th{ background:#1a56db; color:#fff; }
+  #printRoot tfoot td{ background:#eef2ff; font-weight:700; }
+  #printRoot .print-title{ font-size:18px; font-weight:700; text-align:center; margin-bottom:8px; color:#123a99; }
+  #printRoot .print-page{ font-size:10px; text-align:right; color:#666; margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1 id="pageTitle">생산실적 상세현황</h1>
+    <div class="sub">HeatPro MES · 일작업현황</div>
+  </header>
+
+  <div class="filter-bar">
+    <div class="filter-item range">
+      <div>
+        <label>작업기간(시작)</label>
+        <input type="date" id="fFrom">
+      </div>
+      <span class="filter-sep">~</span>
+      <div>
+        <label>작업기간(종료)</label>
+        <input type="date" id="fTo">
+      </div>
+    </div>
+    <div class="filter-item">
+      <label>고객사</label>
+      <select id="fCustomer"><option value="">전체</option></select>
+    </div>
+    <div class="filter-item">
+      <label>품명</label>
+      <select id="fProduct"><option value="">전체</option></select>
+    </div>
+    <div class="filter-item">
+      <label>품번</label>
+      <select id="fPartNo"><option value="">전체</option></select>
+    </div>
+    <div class="filter-item">
+      <label>재질</label>
+      <select id="fMaterial"><option value="">전체</option></select>
+    </div>
+    <button class="btn btn-primary" id="btnSearch">🔍 조회</button>
+    <button class="btn" id="btnReset">초기화</button>
+  </div>
+
+  <div class="action-bar">
+    <div class="summary" id="summaryText">조회 버튼을 눌러 데이터를 불러오세요.</div>
+    <div class="action-buttons">
+      <button class="btn btn-save" id="btnSave">💾 저장</button>
+      <button class="btn" id="btnCsv">⬇ CSV 다운로드</button>
+      <button class="btn" id="btnPdf">🖨 PDF 다운로드</button>
+    </div>
+  </div>
+
+  <div id="doc-container">
+    <div class="doc-title" id="docTitle">생산실적 상세현황</div>
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th style="min-width:40px;">번호</th>
+            <th style="min-width:80px;">입고일</th>
+            <th style="min-width:80px;">작업일</th>
+            <th style="min-width:90px;">고객사</th>
+            <th style="min-width:90px;">품명</th>
+            <th style="min-width:110px;">품번</th>
+            <th style="min-width:70px;">재질</th>
+            <th style="min-width:80px;">열처리(QT)</th>
+            <th style="min-width:65px;">투입수량</th>
+            <th style="min-width:65px;">양품수량</th>
+            <th style="min-width:65px;">불량수량</th>
+            <th style="min-width:70px;">재작업수량</th>
+            <th style="min-width:65px;">가동시간</th>
+            <th style="min-width:70px;">비가동시간</th>
+            <th style="min-width:70px;">코일번호</th>
+            <th style="min-width:75px;">템퍼링작업</th>
+            <th style="min-width:70px;">교정작업</th>
+            <th style="min-width:80px;">출하일</th>
+            <th style="min-width:100px;">특이사항</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="19" class="empty-msg">조회 버튼을 눌러 데이터를 불러오세요.</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="8">합&nbsp;&nbsp;계</td>
+            <td id="sumInput">0</td>
+            <td id="sumGood">0</td>
+            <td id="sumBad">0</td>
+            <td id="sumRework">0</td>
+            <td id="sumOp">0.0</td>
+            <td id="sumNonOp">0.0</td>
+            <td colspan="5"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay">⏳ 처리 중입니다...</div>
+<div id="printRoot"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   설정
+   ══════════════════════════════════════════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY = '@qgis2026';
+
+const COLS = [
+  { key:'입고일',     label:'입고일',   type:'date',   editable:true },
+  { key:'작업일',     label:'작업일',   type:'text',   editable:false },
+  { key:'고객사',     label:'고객사',   type:'text',   editable:false },
+  { key:'품명',       label:'품명',     type:'text',   editable:false },
+  { key:'품번',       label:'품번',     type:'text',   editable:false },
+  { key:'재질',       label:'재질',     type:'text',   editable:true },
+  { key:'열처리(QT)', label:'열처리(QT)', type:'text', editable:true },
+  { key:'투입수량',   label:'투입수량', type:'number', editable:true, step:1 },
+  { key:'양품수량',   label:'양품수량', type:'number', editable:true, step:1 },
+  { key:'불량수량',   label:'불량수량', type:'number', editable:true, step:1 },
+  { key:'재작업수량', label:'재작업수량', type:'number', editable:true, step:1 },
+  { key:'가동시간',   label:'가동시간', type:'number', editable:true, step:0.1 },
+  { key:'비가동시간', label:'비가동시간', type:'number', editable:true, step:0.1 },
+  { key:'코일번호',   label:'코일번호', type:'text',   editable:true },
+  { key:'템퍼링작업', label:'템퍼링작업', type:'select', editable:true, options:['미실시','실시'] },
+  { key:'교정작업',   label:'교정작업', type:'select', editable:true, options:['미실시','실시'] },
+  { key:'출고일',     label:'출하일',   type:'date',   editable:false },
+  { key:'특이사항',   label:'특이사항', type:'text',   editable:true }
+];
+const NUM_KEYS = ['투입수량','양품수량','불량수량','재작업수량','가동시간','비가동시간'];
+
+let currentRows = [];   // 현재 화면에 로드된 원본 데이터(스냅샷)
+let masterProducts = {}; // { 고객사: { 품명: [품번,...] } }
+
+/* ══════════════════════════════════════════════
+   유틸
+   ══════════════════════════════════════════════ */
+function showLoading(msg){
+  const el = document.getElementById('loadingOverlay');
+  el.textContent = msg || '⏳ 처리 중입니다...';
+  el.style.display = 'flex';
+}
+function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
+
+function jsonp(url){
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    const script = document.createElement('script');
+    let done = false;
+    window[cbName] = function(data){
+      done = true; resolve(data);
+      delete window[cbName]; script.remove();
+    };
+    script.onerror = function(){
+      if (!done) reject(new Error('네트워크 오류(JSONP)'));
+      delete window[cbName]; script.remove();
+    };
+    script.src = url + (url.indexOf('?')>=0 ? '&' : '?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+    setTimeout(() => { if(!done){ reject(new Error('요청 시간 초과')); delete window[cbName]; script.remove(); } }, 20000);
+  });
+}
+
+function toNum(v){ const n = Number(String(v==null?'':v).replace(/,/g,'')); return isNaN(n) ? 0 : n; }
+function fmt(n){ return Number(n||0).toLocaleString(); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function monthRange(){
+  const d = new Date();
+  const y = d.getFullYear(), m = d.getMonth();
+  const first = new Date(y, m, 1);
+  const last  = new Date(y, m+1, 0);
+  const f = x => x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+  return { from: f(first), to: f(last) };
+}
+
+/* ══════════════════════════════════════════════
+   초기화 — 기준정보(고객사/재질/품명품번) 로드
+   ══════════════════════════════════════════════ */
+async function loadMasterData(){
+  try{
+    const data = await jsonp(API_URL + '?key=' + encodeURIComponent(API_KEY));
+    const customers = Array.from(new Set((data.customers||[]).map(s=>String(s).trim()).filter(Boolean))).sort();
+    const materials  = Array.from(new Set((data.materials||[]).map(s=>String(s).trim()).filter(Boolean))).sort();
+    masterProducts = data.products || {};
+
+    fillSelect('fCustomer', customers);
+    fillSelect('fMaterial', materials);
+    refreshProductSelect();
+    refreshPartNoSelect();
+  }catch(err){
+    console.error(err);
+  }
+}
+function fillSelect(id, list){
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">전체</option>' + list.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+  sel.value = cur;
+}
+function refreshProductSelect(){
+  const customer = document.getElementById('fCustomer').value;
+  let names = new Set();
+  if (customer && masterProducts[customer]) {
+    Object.keys(masterProducts[customer]).forEach(n=>names.add(n));
+  } else {
+    Object.keys(masterProducts).forEach(c=>{
+      Object.keys(masterProducts[c]||{}).forEach(n=>names.add(n));
+    });
+  }
+  fillSelect('fProduct', Array.from(names).sort());
+}
+function refreshPartNoSelect(){
+  const customer = document.getElementById('fCustomer').value;
+  const product  = document.getElementById('fProduct').value;
+  let list = new Set();
+  if (customer && masterProducts[customer]) {
+    if (product && masterProducts[customer][product]) {
+      masterProducts[customer][product].forEach(p=>list.add(p));
+    } else {
+      Object.values(masterProducts[customer]).forEach(arr=>arr.forEach(p=>list.add(p)));
+    }
+  } else {
+    Object.keys(masterProducts).forEach(c=>{
+      Object.keys(masterProducts[c]||{}).forEach(n=>{
+        if (!product || n===product) masterProducts[c][n].forEach(p=>list.add(p));
+      });
+    });
+  }
+  fillSelect('fPartNo', Array.from(list).sort());
+}
+document.getElementById('fCustomer').addEventListener('change', ()=>{ refreshProductSelect(); refreshPartNoSelect(); });
+document.getElementById('fProduct').addEventListener('change', refreshPartNoSelect);
+
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ══════════════════════════════════════════════
+   제목 갱신
+   ══════════════════════════════════════════════ */
+function updateTitle(from, to){
+  let title;
+  if (from && to && from.substring(0,7)===to.substring(0,7)) {
+    const yy = from.substring(2,4), mm = parseInt(from.substring(5,7),10);
+    title = `${yy}년 ${mm}월 생산실적 상세현황`;
+  } else if (from && to) {
+    title = `생산실적 상세현황 (${from} ~ ${to})`;
+  } else {
+    title = '생산실적 상세현황';
+  }
+  // 상단 큰 제목(H1): 파일명 접미사(50% 크기, 좌측정렬) 포함
+  document.getElementById('pageTitle').innerHTML =
+    `${escapeHtml(title)}<span class="title-suffix">_Daily_Work_Check.html</span>`;
+  // 표 위 제목: 파일명 없이 그대로(가운데 정렬 유지)
+  document.getElementById('docTitle').textContent = title;
+  document.title = title + ' | HeatPro MES';
+}
+
+/* ══════════════════════════════════════════════
+   조회
+   ══════════════════════════════════════════════ */
+async function searchData(){
+  const from = document.getElementById('fFrom').value;
+  const to   = document.getElementById('fTo').value;
+  const customer = document.getElementById('fCustomer').value;
+  const product  = document.getElementById('fProduct').value;
+  const partNo   = document.getElementById('fPartNo').value;
+  const material = document.getElementById('fMaterial').value;
+
+  updateTitle(from, to);
+  showLoading('조회 중입니다...');
+  try{
+    const qs = new URLSearchParams({
+      key: API_KEY, action:'workStatus',
+      from: from||'', to: to||'', customer: customer||'', product: product||'',
+      partNo: partNo||'', material: material||''
+    }).toString();
+    const data = await jsonp(API_URL + '?' + qs);
+    if (data.error) { alert('조회 오류: ' + data.error); return; }
+    currentRows = (data.rows||[]).map(r => Object.assign({}, r));
+    renderTable();
+  }catch(err){
+    alert('조회 중 오류가 발생했습니다: ' + err.message);
+  }finally{
+    hideLoading();
+  }
+}
+
+/* ══════════════════════════════════════════════
+   테이블 렌더링
+   ══════════════════════════════════════════════ */
+function renderTable(){
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  if (!currentRows.length) {
+    tbody.innerHTML = '<tr><td colspan="19" class="empty-msg">조회된 데이터가 없습니다.</td></tr>';
+    updateSummary();
+    return;
+  }
+  currentRows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.no = row['No'];
+    tr.dataset.origWorkDate = row['작업일'];
+    tr.dataset.origCustomer = row['고객사'];
+    tr.dataset.origProduct  = row['품명'];
+    tr.dataset.origPartNo   = row['품번'];
+
+    const tdNo = document.createElement('td');
+    tdNo.textContent = i+1;
+    tdNo.className = 'readonly';
+    tr.appendChild(tdNo);
+
+    COLS.forEach(col => {
+      const td = document.createElement('td');
+      td.dataset.field = col.key;
+      const val = row[col.key];
+      if (!col.editable) {
+        td.textContent = (val===null||val===undefined) ? '' : val;
+        td.className = 'readonly';
+      } else if (col.type==='select') {
+        td.innerHTML = `<select>${col.options.map(o=>`<option value="${o}" ${String(val).trim()===o?'selected':''}>${o}</option>`).join('')}</select>`;
+        td.querySelector('select').addEventListener('change', ()=>markDirty(tr));
+      } else if (col.type==='date') {
+        td.innerHTML = `<input type="date" value="${val||''}">`;
+        td.querySelector('input').addEventListener('change', ()=>markDirty(tr));
+      } else if (col.type==='number') {
+        if (NUM_KEYS.indexOf(col.key)>=0) td.className='num';
+        td.innerHTML = `<input type="number" step="${col.step||1}" value="${val===''||val==null?0:val}">`;
+        td.querySelector('input').addEventListener('input', ()=>{ markDirty(tr); updateSummary(); });
+      } else {
+        td.innerHTML = `<input type="text" value="${escapeAttr(val)}">`;
+        td.querySelector('input').addEventListener('change', ()=>markDirty(tr));
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  updateSummary();
+}
+function markDirty(tr){ tr.classList.add('dirty'); }
+
+function updateSummary(){
+  let sIn=0,sGood=0,sBad=0,sRework=0,sOp=0,sNonOp=0;
+  document.querySelectorAll('#tbody tr').forEach(tr=>{
+    if (!tr.dataset.no) return;
+    sIn     += toNum(getFieldValue(tr,'투입수량'));
+    sGood   += toNum(getFieldValue(tr,'양품수량'));
+    sBad    += toNum(getFieldValue(tr,'불량수량'));
+    sRework += toNum(getFieldValue(tr,'재작업수량'));
+    sOp     += toNum(getFieldValue(tr,'가동시간'));
+    sNonOp  += toNum(getFieldValue(tr,'비가동시간'));
+  });
+  document.getElementById('sumInput').textContent = fmt(sIn);
+  document.getElementById('sumGood').textContent  = fmt(sGood);
+  document.getElementById('sumBad').textContent   = fmt(sBad);
+  document.getElementById('sumRework').textContent= fmt(sRework);
+  document.getElementById('sumOp').textContent    = sOp.toFixed(1);
+  document.getElementById('sumNonOp').textContent = sNonOp.toFixed(1);
+
+  const cnt = document.querySelectorAll('#tbody tr[data-no]').length;
+  const dirtyCnt = document.querySelectorAll('#tbody tr.dirty').length;
+  document.getElementById('summaryText').innerHTML =
+    `총 <b>${cnt}</b>건 조회됨` + (dirtyCnt ? ` · <span style="color:#dc2626;">수정된 항목 ${dirtyCnt}건 (저장 필요)</span>` : '');
+}
+
+function getFieldValue(tr, field){
+  const td = tr.querySelector(`td[data-field="${field}"]`);
+  if (!td) return '';
+  const input = td.querySelector('input, select');
+  if (input) return input.value;
+  return td.textContent;
+}
+
+/* ══════════════════════════════════════════════
+   저장
+   ══════════════════════════════════════════════ */
+async function saveData(){
+  const dirtyRows = Array.from(document.querySelectorAll('#tbody tr.dirty'));
+  if (!dirtyRows.length) { alert('수정된 항목이 없습니다.'); return; }
+  if (!confirm(`수정된 ${dirtyRows.length}건을 저장하시겠습니까?`)) return;
+
+  showLoading('저장 중입니다... (0/' + dirtyRows.length + ')');
+  let successCnt = 0, failList = [];
+
+  for (let i=0;i<dirtyRows.length;i++){
+    const tr = dirtyRows[i];
+    showLoading(`저장 중입니다... (${i+1}/${dirtyRows.length})`);
+    const updateData = {};
+    COLS.filter(c=>c.editable).forEach(c=>{ updateData[c.key] = getFieldValue(tr, c.key); });
+
+    const payload = {
+      key: API_KEY,
+      action: 'updateWorkStatus',
+      no: tr.dataset.no,
+      origWorkDate: tr.dataset.origWorkDate,
+      origCustomer: tr.dataset.origCustomer,
+      origProduct:  tr.dataset.origProduct,
+      origPartNo:   tr.dataset.origPartNo,
+      updateData: updateData
+    };
+    try{
+      const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) });
+      const result = await res.json();
+      if (result.result === 'success') {
+        successCnt++;
+        tr.classList.remove('dirty');
+      } else {
+        failList.push(`No.${tr.dataset.no} : ${result.message || result.error}`);
+      }
+    }catch(err){
+      failList.push(`No.${tr.dataset.no} : ${err.message}`);
+    }
+  }
+  hideLoading();
+  updateSummary();
+
+  if (!failList.length) {
+    alert(`저장 완료 (${successCnt}건)`);
+  } else {
+    alert(`저장 완료 ${successCnt}건 / 실패 ${failList.length}건\n\n[실패 내역]\n` + failList.join('\n') +
+      '\n\n※ 실패 항목은 데이터가 변경되었을 수 있습니다. 조회 버튼으로 새로고침 후 다시 시도해주세요.');
+  }
+}
+
+/* ══════════════════════════════════════════════
+   CSV 다운로드
+   ══════════════════════════════════════════════ */
+function csvEscape(v){
+  const s = String(v==null?'':v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function exportCSV(){
+  const rows = document.querySelectorAll('#tbody tr[data-no]');
+  if (!rows.length) { alert('다운로드할 데이터가 없습니다.'); return; }
+  const headers = ['번호','입고일','작업일','고객사','품명','품번','재질','열처리(QT)','투입수량','양품수량','불량수량','재작업수량','가동시간','비가동시간','코일번호','템퍼링작업','교정작업','출하일','특이사항'];
+  const lines = [headers.map(csvEscape).join(',')];
+  rows.forEach((tr, i) => {
+    const line = [i+1];
+    COLS.forEach(c => line.push(getFieldValue(tr, c.key)));
+    lines.push(line.map(csvEscape).join(','));
+  });
+  const sumLine = ['합계','','','','','','','',
+    document.getElementById('sumInput').textContent.replace(/,/g,''),
+    document.getElementById('sumGood').textContent.replace(/,/g,''),
+    document.getElementById('sumBad').textContent.replace(/,/g,''),
+    document.getElementById('sumRework').textContent.replace(/,/g,''),
+    document.getElementById('sumOp').textContent,
+    document.getElementById('sumNonOp').textContent,
+    '','','','',''];
+  lines.push(sumLine.map(csvEscape).join(','));
+
+  const csvContent = '\ufeff' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const from = document.getElementById('fFrom').value || '';
+  const to   = document.getElementById('fTo').value || '';
+  a.href = url;
+  a.download = `일작업현황_${from}_${to}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ══════════════════════════════════════════════
+   PDF 다운로드 (A4 가로, 컬러, 행 기준 페이지 분할)
+   ══════════════════════════════════════════════ */
+async function exportPDF(){
+  const rows = document.querySelectorAll('#tbody tr[data-no]');
+  if (!rows.length) { alert('다운로드할 데이터가 없습니다.'); return; }
+
+  const btn = document.getElementById('btnPdf');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'PDF 생성 중...';
+  showLoading('PDF 생성 중입니다...');
+
+  try{
+    const titleText = document.getElementById('docTitle').textContent;
+    const printRoot = document.getElementById('printRoot');
+    printRoot.innerHTML = '';
+
+    const PRINT_WIDTH_PX = 1500; // 렌더링 기준 너비(px) — 비율만 사용
+    const pdf = new window.jspdf.jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const pageWidthMM  = pdf.internal.pageSize.getWidth();
+    const pageHeightMM = pdf.internal.pageSize.getHeight();
+    const marginMM = 8;
+    const usableWidthMM  = pageWidthMM - marginMM*2;
+    const usableHeightMM = pageHeightMM - marginMM*2;
+    const usableHeightPX = usableHeightMM * (PRINT_WIDTH_PX / usableWidthMM);
+
+    // 측정용 테이블(전체 행) 생성
+    const measureWrap = document.createElement('div');
+    measureWrap.style.width = PRINT_WIDTH_PX + 'px';
+    measureWrap.innerHTML = `
+      <div class="print-title">${escapeHtml(titleText)}</div>
+      <table style="width:100%;">
+        <thead><tr>${buildPrintHeaderCells()}</tr></thead>
+        <tbody>${Array.from(rows).map((tr,i)=>buildPrintRowHtml(tr,i)).join('')}</tbody>
+      </table>`;
+    printRoot.appendChild(measureWrap);
+
+    const titleEl = measureWrap.querySelector('.print-title');
+    const headEl  = measureWrap.querySelector('thead');
+    const bodyRowEls = Array.from(measureWrap.querySelectorAll('tbody tr'));
+    const titleH = titleEl.getBoundingClientRect().height;
+    const headH  = headEl.getBoundingClientRect().height;
+    const rowHeights = bodyRowEls.map(r => r.getBoundingClientRect().height);
+
+    // 합계행 높이(별도 측정)
+    const sumWrap = document.createElement('div');
+    sumWrap.style.width = PRINT_WIDTH_PX + 'px';
+    sumWrap.innerHTML = `<table style="width:100%;"><tfoot>${buildPrintSumRowHtml()}</tfoot></table>`;
+    printRoot.appendChild(sumWrap);
+    const sumH = sumWrap.querySelector('tfoot').getBoundingClientRect().height;
+
+    // 페이지 분할(행 단위)
+    const pages = [];
+    let cur = [], curH = titleH + headH;
+    rowHeights.forEach((h, idx) => {
+      if (curH + h > usableHeightPX && cur.length) {
+        pages.push(cur); cur = []; curH = titleH + headH;
+      }
+      cur.push(idx); curH += h;
+    });
+    if (cur.length) pages.push(cur);
+    if (!pages.length) pages.push([]);
+
+    // 합계행이 마지막 페이지에 안 들어가면 페이지 추가
+    const lastPageIdxs = pages[pages.length-1];
+    let lastPageH = titleH + headH + lastPageIdxs.reduce((s,i)=>s+rowHeights[i],0);
+    let sumOnNewPage = false;
+    if (lastPageH + sumH > usableHeightPX) sumOnNewPage = true;
+
+    printRoot.removeChild(measureWrap);
+    printRoot.removeChild(sumWrap);
+
+    // 실제 페이지별 렌더 + 캡처
+    for (let p=0; p<pages.length; p++){
+      const idxs = pages[p];
+      const isLast = (p === pages.length-1);
+      const pageDiv = document.createElement('div');
+      pageDiv.style.width = PRINT_WIDTH_PX + 'px';
+      pageDiv.style.background = '#fff';
+      pageDiv.innerHTML = `
+        <div class="print-title">${escapeHtml(titleText)}</div>
+        <table style="width:100%;">
+          <thead><tr>${buildPrintHeaderCells()}</tr></thead>
+          <tbody>${idxs.map(i=>buildPrintRowHtml(rows[i], i)).join('')}</tbody>
+          ${(isLast && !sumOnNewPage) ? `<tfoot>${buildPrintSumRowHtml()}</tfoot>` : ''}
+        </table>
+        <div class="print-page">${pages.length + (sumOnNewPage?1:0) > 1 ? (p+1)+' / '+(pages.length+(sumOnNewPage?1:0))+' 페이지' : ''}</div>`;
+      printRoot.appendChild(pageDiv);
+
+      const canvas = await html2canvas(pageDiv, { scale:2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHmm = canvas.height * usableWidthMM / canvas.width;
+      if (p>0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', marginMM, marginMM, usableWidthMM, imgHmm);
+
+      printRoot.removeChild(pageDiv);
+    }
+
+    // 합계행만 별도 페이지
+    if (sumOnNewPage) {
+      const pageDiv = document.createElement('div');
+      pageDiv.style.width = PRINT_WIDTH_PX + 'px';
+      pageDiv.style.background = '#fff';
+      pageDiv.innerHTML = `
+        <div class="print-title">${escapeHtml(titleText)}</div>
+        <table style="width:100%;">
+          <thead><tr>${buildPrintHeaderCells()}</tr></thead>
+          <tfoot>${buildPrintSumRowHtml()}</tfoot>
+        </table>
+        <div class="print-page">${pages.length+1} / ${pages.length+1} 페이지</div>`;
+      printRoot.appendChild(pageDiv);
+      const canvas = await html2canvas(pageDiv, { scale:2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHmm = canvas.height * usableWidthMM / canvas.width;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', marginMM, marginMM, usableWidthMM, imgHmm);
+      printRoot.removeChild(pageDiv);
+    }
+
+    const from = document.getElementById('fFrom').value || '';
+    const to   = document.getElementById('fTo').value || '';
+    pdf.save(`일작업현황_${from}_${to}.pdf`);
+  }catch(err){
+    alert('PDF 생성 오류: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = orig;
+    hideLoading();
+  }
+}
+
+function buildPrintHeaderCells(){
+  const labels = ['번호','입고일','작업일','고객사','품명','품번','재질','열처리(QT)','투입수량','양품수량','불량수량','재작업수량','가동시간','비가동시간','코일번호','템퍼링작업','교정작업','출하일','특이사항'];
+  return labels.map(l=>`<th>${l}</th>`).join('');
+}
+function buildPrintRowHtml(tr, i){
+  const cells = [i+1];
+  COLS.forEach(c => cells.push(getFieldValue(tr, c.key)));
+  return '<tr>' + cells.map(v=>`<td>${escapeHtml(v)}</td>`).join('') + '</tr>';
+}
+function buildPrintSumRowHtml(){
+  return `<tr>
+    <td colspan="8">합&nbsp;&nbsp;계</td>
+    <td>${document.getElementById('sumInput').textContent}</td>
+    <td>${document.getElementById('sumGood').textContent}</td>
+    <td>${document.getElementById('sumBad').textContent}</td>
+    <td>${document.getElementById('sumRework').textContent}</td>
+    <td>${document.getElementById('sumOp').textContent}</td>
+    <td>${document.getElementById('sumNonOp').textContent}</td>
+    <td colspan="5"></td>
+  </tr>`;
+}
+
+/* ══════════════════════════════════════════════
+   이벤트 바인딩 & 초기 실행
+   ══════════════════════════════════════════════ */
+document.getElementById('btnSearch').addEventListener('click', searchData);
+document.getElementById('btnReset').addEventListener('click', () => {
+  const r = monthRange();
+  document.getElementById('fFrom').value = r.from;
+  document.getElementById('fTo').value = r.to;
+  document.getElementById('fCustomer').value = '';
+  document.getElementById('fProduct').value = '';
+  document.getElementById('fPartNo').value = '';
+  document.getElementById('fMaterial').value = '';
+  refreshProductSelect(); refreshPartNoSelect();
+  searchData();
+});
+document.getElementById('btnSave').addEventListener('click', saveData);
+document.getElementById('btnCsv').addEventListener('click', exportCSV);
+document.getElementById('btnPdf').addEventListener('click', exportPDF);
+
+window.addEventListener('beforeunload', (e) => {
+  if (document.querySelectorAll('#tbody tr.dirty').length) {
+    e.preventDefault(); e.returnValue = '';
+  }
+});
+
+(async function init(){
+  const r = monthRange();
+  document.getElementById('fFrom').value = r.from;
+  document.getElementById('fTo').value = r.to;
+  updateTitle(r.from, r.to);
+  await loadMasterData();
+  await searchData();
+})();
+</script>
+</body>
+</html>
