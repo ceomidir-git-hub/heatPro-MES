@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>제조설비 등록대장</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Malgun Gothic","맑은 고딕",sans-serif;
+}
+
+body{
+    background:#f2f2f2;
+    padding:20px;
+}
+
+.page{
+    width:210mm;
+    min-height:297mm;
+    margin:auto;
+    background:#fff;
+    padding:15mm;
+    box-shadow:0 0 10px rgba(0,0,0,.15);
+}
+
+.title{
+    text-align:center;
+    font-size:26px;
+    font-weight:bold;
+    letter-spacing:8px;
+    margin-bottom:18px;
+}
+
+.info{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+    font-size:14px;
+}
+
+.info input{
+    border:none;
+    border-bottom:1px solid #000;
+    width:130px;
+    text-align:center;
+    font-size:14px;
+}
+
+.refresh-btn{
+    border:1px solid #999;
+    background:#fff;
+    border-radius:4px;
+    padding:3px 10px;
+    font-size:12px;
+    cursor:pointer;
+}
+.refresh-btn:hover{background:#eee;}
+
+.load-status{
+    font-size:11px;
+    color:#888;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+th,td{
+    border:1px solid #000;
+    text-align:center;
+    height:31px;
+    font-size:13px;
+}
+
+th{
+    background:#e8e8e8;
+    font-weight:bold;
+}
+
+td input{
+    width:100%;
+    height:100%;
+    border:none;
+    text-align:center;
+    font-size:13px;
+    outline:none;
+    background:transparent;
+}
+
+.footer{
+    margin-top:8px;
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+}
+
+@media print{
+
+body{
+    background:white;
+    padding:0;
+}
+
+.page{
+    width:100%;
+    min-height:auto;
+    padding:12mm;
+    box-shadow:none;
+}
+
+.refresh-btn, .load-status{ display:none; }
+
+@page{
+    size:A4;
+    margin:0;
+}
+
+}
+</style>
+
+</head>
+<body>
+
+<div class="page">
+
+<div class="title">제 조 설 비 등 록 대 장</div>
+
+<div class="info">
+<span class="load-status" id="loadStatus"></span>
+<button type="button" class="refresh-btn" onclick="loadEquipmentList()">새로고침</button>
+<b>* 작성일&nbsp;</b>
+<input type="date" id="writeDate">
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th style="width:45px;">NO</th>
+<th style="width:95px;">설비번호</th>
+<th>제조설비명</th>
+<th style="width:95px;">용량/능력</th>
+<th style="width:55px;">대수</th>
+<th style="width:90px;">제작사</th>
+<th style="width:100px;">설치일자</th>
+<th style="width:90px;">비고</th>
+</tr>
+</thead>
+
+<tbody id="equipTableBody">
+<tr><td colspan="8">불러오는 중...</td></tr>
+</tbody>
+
+</table>
+
+<div class="footer">
+<div>QP04-QI510-F001</div>
+<div>QGIS</div>
+<div>A4(210×297)mm</div>
+</div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DB 연동: 제조설비번호 시트를 설비번호(key) 기준으로 조회하여
+   테이블을 동적으로 렌더링한다.
+   ※ 백엔드(Apps Script)에 action=getEquipmentList 가 이미
+     존재하는지 여부는 확인되지 않았습니다. 없다면 이 문서 하단에
+     제공한 GAS 함수를 추가해야 합니다.
+   ══════════════════════════════════════════════════════ */
+const API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+const API_KEY='@qgis2026';
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* 설치일자: 엑셀 원본이 "2023.01"(연.월) 형태인 경우가 있어
+   YYYY-MM-DD 형태로 정규화. 일(day) 정보가 없으면 01일로 채움.
+   ※ 이 처리는 표시 편의를 위한 것이며, 실제 "일" 값을 확인/추정한 것은 아님. */
+function normalizeDate(v){
+  if(v===null || v===undefined || v==='') return '';
+  var s=String(v).trim();
+  var m=s.match(/^(\d{4})[.\-\/](\d{1,2})$/);
+  if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-01';
+  var m2=s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+  if(m2) return m2[1]+'-'+m2[2].padStart(2,'0')+'-'+m2[3].padStart(2,'0');
+  return s; // 인식 불가 형식은 원본 그대로 표시 (임의 보정하지 않음)
+}
+
+function renderEquipmentTable(rows){
+  var body=document.getElementById('equipTableBody');
+  if(!rows || rows.length===0){
+    body.innerHTML='<tr><td colspan="8">등록된 설비 데이터가 없습니다.</td></tr>';
+    return;
+  }
+
+  /* 설비번호(코드)를 key로 사용해 중복 제거 (동일 설비번호가 여러 번 오면 마지막 값 우선) */
+  var byKey={};
+  var order=[];
+  rows.forEach(function(r){
+    var key = r.설비번호 || r.code || '';
+    if(!key) return;
+    if(!(key in byKey)) order.push(key);
+    byKey[key]=r;
+  });
+
+  var html='';
+  order.forEach(function(key, idx){
+    var r=byKey[key];
+    var no      = r.NO ?? r.no ?? (idx+1);
+    var name    = r.제조설비명 ?? r.name ?? '';
+    var cap     = r['용량/공칭능력'] ?? r.capacity ?? '';
+    var qty     = r.대수 ?? r.qty ?? '';
+    var maker   = r.제작사 ?? r.maker ?? '';
+    var instDate= normalizeDate(r.설치일자 ?? r.installDate ?? '');
+    var note    = r.비고 ?? r.note ?? '';
+
+    html += '<tr>'
+      + '<td>'+escapeHtml(no)+'</td>'
+      + '<td><input value="'+escapeHtml(key)+'" data-key="'+escapeHtml(key)+'"></td>'
+      + '<td><input value="'+escapeHtml(name)+'"></td>'
+      + '<td><input value="'+escapeHtml(cap)+'"></td>'
+      + '<td><input value="'+escapeHtml(qty)+'"></td>'
+      + '<td><input value="'+escapeHtml(maker)+'"></td>'
+      + '<td><input type="date" value="'+escapeHtml(instDate)+'"></td>'
+      + '<td><input value="'+escapeHtml(note)+'"></td>'
+      + '</tr>';
+  });
+  body.innerHTML=html;
+}
+
+function setLoadStatus(text, isError){
+  var el=document.getElementById('loadStatus');
+  if(!el) return;
+  el.textContent=text;
+  el.style.color = isError ? '#c0392b' : '#888';
+}
+
+function loadEquipmentList(){
+  setLoadStatus('불러오는 중...');
+  var url = API_URL + '?key=' + encodeURIComponent(API_KEY) + '&action=getEquipmentList&callback=cbEquipmentList';
+  var s = document.createElement('script');
+  s.onerror = function(){ setLoadStatus('DB 조회 실패 (네트워크/스크립트 오류)', true); };
+  s.src = url;
+  document.body.appendChild(s);
+}
+
+window.cbEquipmentList = function(data){
+  if(!data || data.status !== 'ok'){
+    setLoadStatus('DB 조회 실패: ' + (data && data.message ? data.message : '알 수 없는 오류'), true);
+    document.getElementById('equipTableBody').innerHTML =
+      '<tr><td colspan="8">조회 실패 — action=getEquipmentList 가 백엔드에 구현되어 있는지 확인이 필요합니다.</td></tr>';
+    return;
+  }
+  renderEquipmentTable(data.rows || []);
+  setLoadStatus('DB 조회 완료 (' + (data.rows ? data.rows.length : 0) + '건)');
+};
+
+/* 작성일: 조회하는 날 기준 해당 월 1일로 자동 세팅 (예: 2026년 7월 조회 -> 2026-07-01) */
+function setWriteDateToFirstOfMonth(){
+  var d = new Date();
+  var ymd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
+  var el = document.getElementById('writeDate');
+  if(el) el.value = ymd;
+}
+
+setWriteDateToFirstOfMonth();
+loadEquipmentList();
+</script>
+
+</body>
+</html>
