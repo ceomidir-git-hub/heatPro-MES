@@ -343,7 +343,10 @@ function processData(rows, month, equip) {
   /* 설비명을 '전체'로 조회한 경우, 같은 작업일에 여러 설비 행이 들어올 수 있으므로
      날짜 기준으로 모두 합산한다 (가동시간 합계 ÷ 부하시간 합계 = 가중 평균 가동률).
      ⭐ 조업시간 = 가동data 시트의 '조업시간' (이미 분단위, 환산 불필요)
-     ⭐ 가동시간 = 가동data 시트의 '가동시간GD' (시간단위 원본값, 분 표기 시에만 ×60) */
+     ⭐⭐ 가동시간 = 2026-07-08 수정: 가동data 시트의 '가동시간GD'(가동율입력 화면에서
+        [저장] 버튼을 눌러야만 채워지는 스냅샷 값) 대신,
+        DB DATA 2026에서 실시간 자동 집계되는 '가동시간'(시간단위 원본값)을 직접 사용.
+        → 저장 버튼을 누르지 않은 날짜도 항상 실제 작업 기록대로 정확히 표시됨. */
   rows.forEach(function (r) {
     var ds = String(r['작업일'] || '');
     var parts = ds.split('-');
@@ -353,7 +356,7 @@ function processData(rows, month, equip) {
     var idx = d - 1;
     var dd = dayData[idx];
     dd.opMin     += Number(r['조업시간']   || 0);
-    dd.opTimeHr  += Number(r['가동시간GD'] || 0);
+    dd.opTimeHr  += Number(r['가동시간']   || 0);
     dd.nonOpMin  += Number(r['비가동시간'] || 0);
     dd.edu   += Number(r['교육']  || 0); dd.const += Number(r['공사']  || 0);
     dd.dev   += Number(r['개발']  || 0); dd.visit += Number(r['방문']  || 0);
