@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가동률 현황 | HeatPro MES</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+
+.top-bar { background: #1a3a5c; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.top-bar h1 { font-size: clamp(13px,1.8vw,18px); font-weight: 700; letter-spacing: 1px; }
+.top-bar .sub { font-size: clamp(10px,1.1vw,12px); opacity: 0.75; }
+
+.search-panel { background: #fff; border-bottom: 2px solid #1a3a5c; padding: 9px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.search-panel label { font-size: 13px; font-weight: 600; color: #1a3a5c; white-space: nowrap; }
+.search-panel select { padding: 5px 10px; border: 1px solid #aaa; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.sep { color: #ccc; font-size: 18px; }
+.btn-search { background: #1a3a5c; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-search:hover { background: #2a5a8c; }
+.btn-pdf { background: #fff; color: #1a3a5c; border: 1.5px solid #1a3a5c; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-pdf:hover { background: #e8ecf5; }
+.btn-pdf:disabled { background: #eee; color: #999; border-color: #ccc; cursor: default; }
+.btn-csv { background: #1d7a3c; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; margin-left: auto; }
+.btn-csv:hover { background: #259a4c; }
+.btn-csv:disabled { background: #999; cursor: default; }
+
+.container { padding: 16px; max-width: 1400px; margin: 0 auto; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+.card-title { background: #1a3a5c; color: #fff; padding: 8px 16px; font-size: clamp(12px,1.4vw,14px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.card-title .target { font-size: 12px; font-weight: 400; opacity: 0.85; }
+.card-body { padding: 12px; }
+.chart-wrap { position: relative; width: 100%; height: clamp(200px,28vw,300px); }
+
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(9px,1vw,11px); min-width: 1170px; table-layout: fixed; }
+th, td { border: 1px solid #ccc; text-align: center; padding: 4px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+thead th { background: #1a3a5c; color: #fff; font-weight: 600; }
+.th-holiday { color: #ff2222 !important; font-weight: 700 !important; }
+.th-none    { background: #cccccc !important; color: #999 !important; }
+.td-holiday { background: #fff5f5 !important; }
+.td-none    { background: #eeeeee !important; color: #bbb !important; }
+td.col-label { background: #f5f7fa; font-weight: 600; color: #1a3a5c; text-align: left; padding-left: 5px; }
+td.col-group { background: #e8ecf5; font-weight: 700; color: #1a3a5c; text-align: center; font-size: 10px; white-space: normal; line-height: 1.3; padding: 2px; }
+td.col-sub   { background: #f5f7fa; color: #1a3a5c; text-align: left; padding-left: 12px; }
+td.total-col { background: #fff8e1 !important; font-weight: 700; }
+tr.row-rate td { color: #185fa5; font-weight: 700; }
+td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weight: 700 !important; }
+
+.legend { display: flex; gap: 16px; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend-dot.holiday { background: #ff2222; }
+.legend-dot.none    { background: #cccccc; }
+
+.status-box { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+.status-box.error { color: #c00; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: #1a3a5c; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>📈 가동률 현황 (Operating Rate Graph)</h1>
+  <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
+</div>
+
+<div class="search-panel">
+  <label>조회 월 :</label>
+  <select id="selMonth">
+    <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+    <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+    <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+    <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+  </select>
+  <span class="sep">|</span>
+  <label>설비명 :</label>
+  <select id="selEquip"><option value="">전체</option></select>
+  <button class="btn-search" onclick="loadData()">조 회</button>
+  <button class="btn-csv" id="btnCsv" onclick="exportCSV()">⬇ CSV</button>
+  <button class="btn-pdf" id="btnPdf" onclick="exportPDF()">⬇ PDF 다운로드</button>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">
+      <span id="chartTitle">가동률 현황</span>
+      <span class="target" id="targetLabel">[목표 : 80%]</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">일별 가동률 현황 상세</div>
+    <div class="card-body">
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot holiday"></span><span>토요일 · 일요일 · 공휴일</span></div>
+        <div class="legend-item"><span class="legend-dot none"></span><span>해당 월 없는 날짜</span></div>
+      </div>
+      <div id="tableArea" class="tbl-wrap">
+        <div class="status-box">조회 월과 설비명을 선택 후 조회하세요.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
+var API_KEY = '@qgis2026';
+var YEAR     = 2026;
+var MAX_DAYS = 31;
+
+/* ── 목표 가동률(%) — 설비/기간에 따라 추후 조정 가능, 이 값만 바꾸면 차트·표에 모두 반영됨 ── */
+var TARGET_RATE = 80;
+
+var myChart  = null;
+var hasData  = false;
+var lastMonth = null;
+var lastDayData = null;
+var lastActualDays = 0;
+var lastEquipLabel = '전체';
+
+var HOLIDAYS = [
+  '2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01',
+  '2026-05-05','2026-05-25','2026-06-06','2026-08-15',
+  '2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'
+];
+
+function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function getDow(y, m, d)      { return new Date(y, m - 1, d).getDay(); }
+function isHoliday(y, m, d) {
+  var dow = getDow(y, m, d);
+  if (dow === 0 || dow === 6) return true;
+  var k = y + '-' + (m < 10 ? '0' + m : '' + m) + '-' + (d < 10 ? '0' + d : '' + d);
+  return HOLIDAYS.indexOf(k) >= 0;
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+/* 행 정의 — buildTable / exportCSV / getVal 공통 사용 */
+var SUB_GROUPS = [
+  { groupLabel: '계획정지', rows: [
+      { key:'edu',   label:'교육' },
+      { key:'const', label:'공사' },
+      { key:'dev',   label:'개발' },
+      { key:'visit', label:'방문' },
+      { key:'etc1',  label:'기타1' }
+  ]},
+  { groupLabel: '설비정지', rows: [
+      { key:'elec', label:'전기' },
+      { key:'cool', label:'냉각' },
+      { key:'coil', label:'코일' },
+      { key:'etc2', label:'기타2' }
+  ]},
+  { groupLabel: '제품', rows: [
+      { key:'cond', label:'조건' },
+      { key:'spec', label:'사양' },
+      { key:'etc3', label:'기타3' }
+  ]}
+];
+
+/* ── CSV 다운로드 (표 데이터만, 차트 제외) ── */
+function exportCSV() {
+  if (!hasData || !lastDayData) { alert('먼저 조회를 진행해 주세요.'); return; }
+
+  var hdr = ['구분', '합계'];
+  for (var d = 1; d <= MAX_DAYS; d++) hdr.push(d + '일');
+  var rowsCsv = [hdr];
+
+  var MAIN_ROWS = [
+    { key: 'opMin',     label: '조업시간(분)' },
+    { key: 'planStop',  label: '계획정지(분)' },
+    { key: 'loadMin',   label: '부하시간(분)' },
+    { key: 'opTimeMin', label: '가동시간(분)' },
+    { key: 'nonOpMin',  label: '비가동시간(분)' },
+    { key: 'rate',      label: '가동률(%)' }
+  ];
+
+  function pushRow(f, isHr) {
+    var total = 0;
+    for (var d2 = 1; d2 <= lastActualDays; d2++) total += getVal(lastDayData[d2 - 1], f.key);
+    var row = [f.label, isHr ? (total / 60).toFixed(1) : total];
+    for (var d3 = 1; d3 <= MAX_DAYS; d3++) {
+      if (d3 > lastActualDays) { row.push(''); continue; }
+      var dd = lastDayData[d3 - 1];
+      if (!dd.hasData) { row.push(''); continue; }
+      var v = getVal(dd, f.key);
+      row.push(isHr ? (v / 60).toFixed(1) : v);
+    }
+    rowsCsv.push(row);
+  }
+
+  MAIN_ROWS.forEach(function (f) { pushRow(f, false); });
+  SUB_GROUPS.forEach(function (g) { g.rows.forEach(function (f) { pushRow(f, false); }); });
+  pushRow({ key: 'opMin',     label: '근무시간(hr)' }, true);
+  pushRow({ key: 'opTimeMin', label: '가동시간(hr)' }, true);
+
+  var csv = rowsCsv.map(function (r) {
+    return r.map(function (cell) {
+      cell = String(cell);
+      if (cell.indexOf(',') >= 0 || cell.indexOf('"') >= 0) cell = '"' + cell.replace(/"/g, '""') + '"';
+      return cell;
+    }).join(',');
+  }).join('\r\n');
+
+  var bom = '\uFEFF';
+  var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '가동률현황_' + YEAR + '년_' + lastMonth + '월_' + lastEquipLabel + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ── PDF 다운로드 (.container 영역을 캡처해서 PDF 파일로 자동 저장) ── */
+function exportPDF() {
+  if (!hasData) { alert('먼저 조회를 진행해 주세요.'); return; }
+
+  var btn = document.getElementById('btnPdf');
+  var origText = btn.textContent;
+  btn.textContent = '생성 중...';
+  btn.disabled = true;
+
+  var target = document.querySelector('.container');
+
+  html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+    .then(function (canvas) {
+      var imgData = canvas.toDataURL('image/png');
+      var jsPDFCtor = window.jspdf.jsPDF;
+      var pdf = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+      var pageW = pdf.internal.pageSize.getWidth();
+      var pageH = pdf.internal.pageSize.getHeight();
+      var margin = 8;
+      var maxW = pageW - margin * 2;
+      var maxH = pageH - margin * 2;
+
+      var ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+      var renderW = canvas.width * ratio;
+      var renderH = canvas.height * ratio;
+      var x = (pageW - renderW) / 2;
+      var y = margin;
+
+      pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+      pdf.save('가동률현황_' + YEAR + '년_' + lastMonth + '월.pdf');
+    })
+    .catch(function (err) { alert('PDF 생성 중 오류가 발생했습니다: ' + err.message); })
+    .finally(function () { btn.textContent = origText; btn.disabled = false; });
+}
+
+window.onload = function () {
+  document.getElementById('targetLabel').textContent = '[목표 : ' + TARGET_RATE + '%]';
+  var sel = document.getElementById('selMonth');
+  sel.value = new Date().getMonth() + 1;
+  loadMeta();
+};
+
+function loadMeta() {
+  var cb = 'cbMeta_' + Date.now();
+  var sc = document.createElement('script');
+  sc.src = API_URL + '?key=' + encodeURIComponent(API_KEY) + '&callback=' + cb;
+  window[cb] = function (data) {
+    document.head.removeChild(sc); delete window[cb];
+    var eqSel = document.getElementById('selEquip');
+    var eqArr = data.equipment || [];
+    eqArr.forEach(function (e) {
+      var name = typeof e === 'object' ? (e.name || e) : e;
+      if (name) eqSel.add(new Option(name, name));
+    });
+  };
+  sc.onerror = function () { document.head.removeChild(sc); delete window[cb]; };
+  document.head.appendChild(sc);
+}
+
+function loadData() {
+  var month = parseInt(document.getElementById('selMonth').value);
+  var equip = document.getElementById('selEquip').value;
+  var eqLabel = equip || '전체';
+
+  document.getElementById('chartTitle').textContent =
+    '가동률 현황 ( ' + month + '월 ) — ' + eqLabel;
+  document.getElementById('tableArea').innerHTML =
+    '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
+
+  var old = document.getElementById('_gs_op');
+  if (old) old.parentNode.removeChild(old);
+
+  var from = YEAR + '-' + pad2(month) + '-01';
+  var days = getDaysInMonth(YEAR, month);
+  var to   = YEAR + '-' + pad2(month) + '-' + pad2(days);
+
+  var cbName = '_cbOp_' + Date.now();
+  window[cbName] = function (json) {
+    if (json.error) { showError(json.error); return; }
+    processData(json.rows || [], month, equip);
+  };
+
+  var sc = document.createElement('script');
+  sc.id  = '_gs_op';
+  sc.src = API_URL + '?action=operatingRate'
+         + '&from='  + from
+         + '&to='    + to
+         + (equip ? '&equipment=' + encodeURIComponent(equip) : '')
+         + '&key=' + encodeURIComponent(API_KEY)
+         + '&callback=' + cbName;
+  sc.onerror = function () { showError('스크립트 로드 실패. 네트워크를 확인하세요.'); };
+  document.body.appendChild(sc);
+}
+
+function showError(msg) {
+  document.getElementById('tableArea').innerHTML =
+    '<div class="status-box error">⚠️ ' + msg + '</div>';
+}
+
+function processData(rows, month, equip) {
+  hasData = true;
+  lastMonth = month;
+  lastEquipLabel = equip || '전체';
+  var actualDays = getDaysInMonth(YEAR, month);
+  lastActualDays = actualDays;
+
+  var dayData = [];
+  for (var i = 0; i < MAX_DAYS; i++) {
+    dayData.push({
+      opMin: 0, opTimeHr: 0, nonOpMin: 0,
+      edu: 0, const: 0, dev: 0, visit: 0, etc1: 0,
+      elec: 0, cool: 0, coil: 0, etc2: 0,
+      cond: 0, spec: 0, etc3: 0,
+      hasData: false
+    });
+  }
+
+  rows.forEach(function (r) {
+    var ds = String(r['작업일'] || '');
+    var parts = ds.split('-');
+    if (parts.length < 3) return;
+    var d = parseInt(parts[2]);
+    if (d < 1 || d > MAX_DAYS) return;
+    var idx = d - 1;
+    var dd = dayData[idx];
+    dd.opMin     += (Number(r['조업시간DB']) || Number(r['조업시간']) || 0);
+    dd.opTimeHr  += Number(r['가동시간']   || 0);
+    dd.nonOpMin  += Number(r['비가동시간'] || 0);
+    dd.edu   += Number(r['교육']  || 0); dd.const += Number(r['공사']  || 0);
+    dd.dev   += Number(r['개발']  || 0); dd.visit += Number(r['방문']  || 0);
+    dd.etc1  += Number(r['기타1'] || 0);
+    dd.elec  += Number(r['전기']  || 0); dd.cool  += Number(r['냉각']  || 0);
+    dd.coil  += Number(r['코일']  || 0); dd.etc2  += Number(r['기타2'] || 0);
+    dd.cond  += Number(r['조건']  || 0); dd.spec  += Number(r['사양']  || 0);
+    dd.etc3  += Number(r['기타3'] || 0);
+    dd.hasData = true;
+  });
+
+  lastDayData = dayData;
+  buildChart(dayData, month, actualDays);
+  buildTable(dayData, month, actualDays);
+}
+
+/* 파생값 계산 — 부하시간 = 조업시간 - 계획정지, 가동률(%) = 가동시간(분) / 부하시간 * 100 */
+function getVal(dd, key) {
+  var planStop  = dd.edu + dd.const + dd.dev + dd.visit + dd.etc1;
+  var loadMin   = dd.opMin - planStop;
+  var opTimeMin = Math.round(dd.opTimeHr * 60); // 가동시간(시간단위 원본) → 분 환산
+  switch (key) {
+    case 'opMin':     return dd.opMin;
+    case 'planStop':  return planStop;
+    case 'loadMin':   return loadMin;
+    case 'opTimeMin': return opTimeMin;
+    case 'nonOpMin':  return dd.nonOpMin;
+    case 'rate':      return loadMin > 0 ? Math.round(opTimeMin / loadMin * 1000) / 10 : 0;
+    case 'edu': case 'const': case 'dev': case 'visit': case 'etc1':
+    case 'elec': case 'cool': case 'coil': case 'etc2':
+    case 'cond': case 'spec': case 'etc3':
+      return dd[key];
+    default: return 0;
+  }
+}
+
+function buildChart(dayData, month, actualDays) {
+  var labels = [], rateArr = [];
+  for (var d = 1; d <= MAX_DAYS; d++) {
+    labels.push(d <= actualDays ? String(d) : '');
+    if (d <= actualDays) {
+      var dd = dayData[d - 1];
+      rateArr.push(dd.hasData ? getVal(dd, 'rate') : null);
+    } else {
+      rateArr.push(null);
+    }
+  }
+
+  if (myChart) { myChart.destroy(); myChart = null; }
+  var ctx = document.getElementById('myChart').getContext('2d');
+
+  myChart = new Chart(ctx, {
+    type: 'line',
+    devicePixelRatio: 2,
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '가동률(%)',
+          data: rateArr,
+          borderColor: '#185fa5',
+          backgroundColor: 'rgba(24,95,165,0.07)',
+          borderWidth: 2,
+          pointRadius: function(ctx) { return ctx.parsed && ctx.parsed.y !== null ? 4 : 0; },
+          pointBackgroundColor: '#185fa5',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          tension: 0,
+          spanGaps: true,
+          segment: {
+            borderDash: function(ctx) {
+              var raw0 = rateArr[ctx.p0DataIndex];
+              var raw1 = rateArr[ctx.p1DataIndex];
+              return (raw0 === null || raw1 === null) ? [4, 4] : undefined;
+            },
+            borderColor: function(ctx) {
+              var raw0 = rateArr[ctx.p0DataIndex];
+              var raw1 = rateArr[ctx.p1DataIndex];
+              return (raw0 === null || raw1 === null) ? '#bbb' : '#185fa5';
+            }
+          }
+        },
+        {
+          label: '목표(' + TARGET_RATE + '%)',
+          data: Array(MAX_DAYS).fill(TARGET_RATE),
+          borderColor: '#cc0000',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      resizeDelay: 0,
+      clip: false,
+      layout: { padding: { top: 24 } },
+      scales: {
+        x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
+        y: {
+          min: 0,
+          max: 120,
+          grid: { color: '#f0f0f0' },
+          ticks: { font: { size: 10 }, callback: function (v) { return v + '%'; } }
+        }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return ctx.dataset.label + ': ' +
+                (ctx.parsed.y !== null ? ctx.parsed.y.toLocaleString() + '%' : '—');
+            }
+          }
+        }
+      }
+    },
+    plugins: [{
+      id: 'rateLabel',
+      afterDatasetsDraw: function (chart) {
+        var ds   = chart.data.datasets[0];
+        var meta = chart.getDatasetMeta(0);
+        var c2   = chart.ctx;
+        c2.save();
+        c2.font      = 'bold 9px Malgun Gothic, sans-serif';
+        c2.fillStyle = '#185fa5';
+        c2.textAlign = 'center';
+        meta.data.forEach(function (pt, i) {
+          var v = ds.data[i];
+          if (v === null || v === undefined) return;
+          c2.fillText(v.toLocaleString() + '%', pt.x, pt.y - 10);
+        });
+        c2.restore();
+      }
+    }]
+  });
+}
+
+function buildTable(dayData, month, actualDays) {
+  var colgroup = '<colgroup>'
+    + '<col style="width:3.76%">'
+    + '<col style="width:6.84%">'
+    + '<col style="width:4.62%">';
+  for (var ci = 1; ci <= MAX_DAYS; ci++) colgroup += '<col style="width:2.735%">';
+  colgroup += '</colgroup>';
+
+  var thRow = '<tr><th colspan="2">구분</th><th>합계</th>';
+  for (var d = 1; d <= MAX_DAYS; d++) {
+    if (d > actualDays) thRow += '<th class="th-none">' + d + '</th>';
+    else if (isHoliday(YEAR, month, d)) thRow += '<th class="th-holiday">' + d + '</th>';
+    else thRow += '<th>' + d + '</th>';
+  }
+  thRow += '</tr>';
+
+  var html = '<table>' + colgroup + '<thead>' + thRow + '</thead><tbody>';
+
+  function mainRow(label, key, opts) {
+    opts = opts || {};
+    var total = 0;
+    if (opts.isRate) {
+      /* 가동률(%)은 비율값이므로 일별 %를 단순 합산하면 안 됨.
+         합계 가동시간(분) ÷ 합계 부하시간 × 100 으로 가중평균 계산 (일별 셀 계산 로직과 동일 원리) */
+      var totalOpTimeMin = 0, totalLoadMin = 0;
+      for (var dr = 1; dr <= actualDays; dr++) {
+        totalOpTimeMin += getVal(dayData[dr - 1], 'opTimeMin');
+        totalLoadMin   += getVal(dayData[dr - 1], 'loadMin');
+      }
+      total = totalLoadMin > 0 ? Math.round(totalOpTimeMin / totalLoadMin * 1000) / 10 : 0;
+    } else {
+      for (var d2 = 1; d2 <= actualDays; d2++) total += getVal(dayData[d2 - 1], key);
+    }
+    var dispTotal = opts.isHr ? (total / 60).toFixed(1) : (opts.isRate ? total + '%' : total.toLocaleString());
+
+    html += '<tr' + (opts.isRate ? ' class="row-rate"' : '') + '>';
+    var labelStyle = opts.isRate ? ' style="color:#185fa5;"' : '';
+    html += '<td colspan="2" class="col-label"' + labelStyle + '>' + label + '</td>';
+    html += '<td class="total-col">' + dispTotal + '</td>';
+
+    for (var d3 = 1; d3 <= MAX_DAYS; d3++) {
+      if (d3 > actualDays) { html += '<td class="td-none">—</td>'; continue; }
+      var dd3 = dayData[d3 - 1];
+      var holiday = isHoliday(YEAR, month, d3);
+      var cls = [];
+      if (holiday) cls.push('td-holiday');
+      if (!dd3.hasData) {
+        html += '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + '>—</td>';
+        continue;
+      }
+      var v = getVal(dd3, key);
+      if (opts.isRate && v < TARGET_RATE) cls.push('td-low');
+      var disp = opts.isHr ? (v / 60).toFixed(1) : (opts.isRate ? v + '%' : v.toLocaleString());
+      html += '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + '>' + disp + '</td>';
+    }
+    html += '</tr>';
+  }
+
+  function subRow(label, key, isFirstInGroup, groupLabel, groupSize) {
+    var total = 0;
+    for (var d2 = 1; d2 <= actualDays; d2++) total += getVal(dayData[d2 - 1], key);
+
+    html += '<tr>';
+    if (isFirstInGroup) {
+      html += '<td class="col-group" rowspan="' + groupSize + '">' + groupLabel + '</td>';
+    }
+    html += '<td class="col-sub">' + label + '</td>';
+    html += '<td class="total-col">' + total.toLocaleString() + '</td>';
+
+    for (var d3 = 1; d3 <= MAX_DAYS; d3++) {
+      if (d3 > actualDays) { html += '<td class="td-none">—</td>'; continue; }
+      var dd3 = dayData[d3 - 1];
+      var holiday = isHoliday(YEAR, month, d3);
+      var cls = holiday ? ' class="td-holiday"' : '';
+      html += '<td' + cls + '>' + (dd3.hasData ? getVal(dd3, key).toLocaleString() : '—') + '</td>';
+    }
+    html += '</tr>';
+  }
+
+  mainRow('조업시간',     'opMin');
+  mainRow('계획정지',     'planStop');
+  mainRow('부하시간',     'loadMin');
+  mainRow('가동시간(분)', 'opTimeMin');
+  mainRow('비가동시간',   'nonOpMin');
+  mainRow('가동률(%)',    'rate', { isRate: true });
+
+  SUB_GROUPS.forEach(function (g) {
+    g.rows.forEach(function (f, fi) {
+      subRow(f.label, f.key, fi === 0, g.groupLabel, g.rows.length);
+    });
+  });
+
+  mainRow('근무시간(hr)', 'opMin',     { isHr: true });
+  mainRow('가동시간(hr)', 'opTimeMin', { isHr: true });
+
+  html += '</tbody></table>';
+  document.getElementById('tableArea').innerHTML = html;
+}
+</script>
+</body>
+</html>
