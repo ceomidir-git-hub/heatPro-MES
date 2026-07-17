@@ -268,14 +268,14 @@
           </div>
         </section>
         <div class="chart-grid-2">
-          <div class="panel"><h3>월 생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
-          <!-- ── 2026-07-17 변경: 월 가동률 → 이번달 일별 가동률(전체 설비 합산) SVG 꺾은선, 라벨 없음, 목표% 헤더 표기 ── -->
-          <div class="panel"><h3>월 가동률 <span class="tag" id="rate-target-tag">목표 -</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
+          <div class="panel"><h3>월별생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
+          <!-- ── 2026-07-17 변경: 월 가동률 → 이번달 일별 가동률(전체 설비 합산) SVG 꺾은선, 목표% 헤더 표기 ── -->
+          <div class="panel"><h3><span id="rate-panel-month">-</span>월 가동률 <span class="tag" id="rate-target-tag">목표 -</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
         </div>
         <div class="chart-grid-3">
           <div class="panel"><h3>누적 생산실적</h3><div class="bars" id="bar-cumprod"></div><div class="chart-axis" id="axis-cumprod"></div><div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div></div>
           <div class="panel"><h3>누적 가동률</h3><div class="bars acc" id="bar-cumrate"></div><div class="chart-axis" id="axis-cumrate"></div><div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div></div>
-          <div class="panel"><h3>누적 불량율 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-defect"></g></svg><div class="chart-axis" id="axis-cumdefect"></div><div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div></div>
+          <div class="panel"><h3>월누적 불량율 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-defect"></g></svg><div class="chart-axis" id="axis-cumdefect"></div><div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div></div>
         </div>
         <section>
           <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:14px;">주요 모듈 구성</h3>
@@ -366,9 +366,9 @@ function makeBars(containerId,values,max,formatter){var el=document.getElementBy
 function setAxisLabels(elId,months){var el=document.getElementById(elId);if(!el||!months||months.length===0)return;var fmt=function(m){return Number(m.substring(5,7))+'월';};var first=months[0];var last=months[months.length-1];var mid=months[Math.floor((months.length-1)/2)];el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';}
 /* ── 2026-07-17 추가: 이번달 일별 가동률(전체 설비 합산) 꺾은선
      좌표: padL=30(Y축 숫자 공간), padR=10, padT=14, padB=16(X축 라벨 공간)
-     선은 31일(또는 해당월 일수) 데이터 전부 연결, 강조점(주황)·정수 라벨은 최대 7개 균등분배
-     values[i]가 null이면 해당일 데이터 없음(휴일 등) → 그 점만 제외, 선은 있는 점끼리 연결
-     totalDays: 그 달의 실제 일수(28~31) — X좌표 간격 계산 기준 ── */
+     선은 31일(또는 해당월 일수) 데이터 전부 연결
+     X축은 1일/15일/말일 3개 고정 표기, 해당일에 데이터가 있으면 주황 강조점+정수 라벨도 함께 표시
+     폰트 9.9px(월생산실적 막대 숫자와 동일) + Bold, values[i]가 null이면 해당일 데이터 없음 ── */
 function renderRateLine(elId,values,target,totalDays){
   var el=document.getElementById(elId);if(!el)return;el.innerHTML='';
   if(!values||values.length===0)return;
@@ -385,30 +385,33 @@ function renderRateLine(elId,values,target,totalDays){
   yTicks.forEach(function(t){
     var y=yOf(t);
     html+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'" stroke="#323A46" stroke-width="0.6"/>';
-    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
+    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
   });
   var ty=yOf(target);
   html+='<line x1="'+padL+'" y1="'+ty.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+ty.toFixed(1)+'" stroke="#8A99AC" stroke-width="1" stroke-dasharray="4,3" opacity="0.8"/>';
   var validIdx=[];
   values.forEach(function(v,i){if(v!==null)validIdx.push(i);});
-  if(validIdx.length===0){el.innerHTML=html;return;}
-  var pts=validIdx.map(function(i){return{day:i,x:xOf(i),y:yOf(values[i])};});
-  var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
-  html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
-  var vn=validIdx.length;
-  var labelCount=Math.min(7,vn);
-  var labelPos=[];
-  for(var k=0;k<labelCount;k++){labelPos.push(labelCount>1?Math.round(k*(vn-1)/(labelCount-1)):0);}
-  labelPos.forEach(function(pIdx){
-    var p=pts[pIdx];
-    html+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
-    var ly=Math.max(9,p.y-6);
-    html+='<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="7.5" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF6B35" text-anchor="middle">'+Math.round(values[p.day])+'%</text>';
-    html+='<text x="'+p.x.toFixed(1)+'" y="'+(h-3)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+(p.day+1)+'일</text>';
+  if(validIdx.length>0){
+    var pts=validIdx.map(function(i){return{day:i,x:xOf(i),y:yOf(values[i])};});
+    var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+    html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  var axisDaysRaw=[1,15,n];
+  var axisDays=axisDaysRaw.filter(function(d,idx){return axisDaysRaw.indexOf(d)===idx;});
+  axisDays.forEach(function(day){
+    var dayIdx=day-1;
+    var x=xOf(dayIdx);
+    html+='<text x="'+x.toFixed(1)+'" y="'+(h-3)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+day+'일</text>';
+    if(values[dayIdx]!==null&&values[dayIdx]!==undefined){
+      var py=yOf(values[dayIdx]);
+      html+='<circle cx="'+x.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
+      var ly=Math.max(11,py-7);
+      html+='<text x="'+x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#FF6B35" text-anchor="middle">'+Math.round(values[dayIdx])+'%</text>';
+    }
   });
   el.innerHTML=html;
 }
-/* ── 2026-07-17 추가: 누적불량율 꺾은선 — 가동률과 동일 디자인(Y축/X축/주황 강조점/정수 라벨/선1.5px)
+/* ── 2026-07-17 추가: 월누적 불량율 꺾은선 — 가동률과 동일 디자인(Y축/X축/주황 강조점/정수 라벨/선1.5px/폰트9.9 Bold)
      패널 폭이 좁음(324px, 내부 288px)을 반영해 padL/padR/padT/padB는 동일 값 사용(비율은 자동 반영됨)
      data: [{month:'YYYY-MM', value:Number}, ...] — 월 개수가 늘어도(최대 12개월) 라벨은 최대 7개 균등분배 ── */
 function renderDefectLine(elId,data){
@@ -427,7 +430,7 @@ function renderDefectLine(elId,data){
   yTicks.forEach(function(t){
     var y=yOf(t);
     html+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'" stroke="#323A46" stroke-width="0.6"/>';
-    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
+    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
   });
   var pts=data.map(function(x,i){return{x:xOf(i),y:yOf(x.value),value:x.value,month:x.month};});
   var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
@@ -438,10 +441,10 @@ function renderDefectLine(elId,data){
   labelPos.forEach(function(pIdx){
     var p=pts[pIdx];
     html+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
-    var ly=Math.max(9,p.y-6);
-    html+='<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="7.5" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF6B35" text-anchor="middle">'+Math.round(p.value)+'%</text>';
+    var ly=Math.max(11,p.y-7);
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#FF6B35" text-anchor="middle">'+Math.round(p.value)+'%</text>';
     var mLabel=p.month?(Number(String(p.month).substring(5,7))+'월'):'';
-    html+='<text x="'+p.x.toFixed(1)+'" y="'+(h-3)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+mLabel+'</text>';
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+(h-3)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+mLabel+'</text>';
   });
   el.innerHTML=html;
 }
@@ -457,6 +460,8 @@ function loadOperatingRateLine(){
   var to=year+'-'+pad2(month)+'-'+pad2(actualDays);
   var tagEl=document.getElementById('rate-target-tag');
   if(tagEl)tagEl.textContent='목표 '+RATE_TARGET+'%';
+  var monthEl=document.getElementById('rate-panel-month');
+  if(monthEl)monthEl.textContent=month;
   window.cbOpRateLine=function(json){
     if(!json||json.error){console.error('가동률(일별) 로딩 오류:',json&&json.error);return;}
     var days=[];
