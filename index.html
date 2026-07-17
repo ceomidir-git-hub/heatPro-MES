@@ -269,8 +269,8 @@
         </section>
         <div class="chart-grid-2">
           <div class="panel"><h3>월 생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
-          <!-- ── 2026-07-17 변경: 월 가동률 막대그래프 → SVG 꺾은선 (목표선 80% 포함) ── -->
-          <div class="panel"><h3>월 가동률 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
+          <!-- ── 2026-07-17 변경: 월 가동률 → 이번달 일별 가동률(전체 설비 합산) SVG 꺾은선, 라벨 없음, 목표% 헤더 표기 ── -->
+          <div class="panel"><h3>월 가동률 <span class="tag" id="rate-target-tag">목표 -</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
         </div>
         <div class="chart-grid-3">
           <div class="panel"><h3>누적 생산실적</h3><div class="bars" id="bar-cumprod"></div><div class="chart-axis" id="axis-cumprod"></div><div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div></div>
@@ -365,16 +365,85 @@ function changeDate(offsetDays){var candidate=new Date(selectedDate);candidate.s
 function makeBars(containerId,values,max,formatter){var el=document.getElementById(containerId);if(!el)return;el.innerHTML='';var safeMax=(max&&max>0)?max:1;var fmt=formatter||function(v){return Number(v).toLocaleString();};if(!values||values.length===0)return;values.forEach(function(v){var bar=document.createElement('div');bar.className='bar';var pct=Math.max(2,Math.min(100,(v/safeMax)*100));bar.style.height=pct+'%';bar.title=fmt(v);var label=document.createElement('span');label.className='bar-label';label.textContent=fmt(v);bar.appendChild(label);el.appendChild(bar);});}
 function setAxisLabels(elId,months){var el=document.getElementById(elId);if(!el||!months||months.length===0)return;var fmt=function(m){return Number(m.substring(5,7))+'월';};var first=months[0];var last=months[months.length-1];var mid=months[Math.floor((months.length-1)/2)];el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';}
 function renderLineChart(elId,values){var el=document.getElementById(elId);if(!el)return;if(!values||values.length===0){el.innerHTML='';return;}var w=240,h=140,pad=12;var max=Math.max.apply(null,values.concat([0.0001]));var n=values.length;var xStep=n>1?(w-pad*2)/(n-1):0;var pts=values.map(function(v,i){return{x:pad+i*xStep,y:h-pad-(v/max)*(h-pad*2)};});var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var circlesStr=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('');var labelsStr=pts.map(function(p,i){var ty=Math.max(9,p.y-8);return '<text x="'+p.x.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">'+Number(values[i]).toFixed(2)+'%</text>';}).join('');el.innerHTML='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="#FF5C5C">'+circlesStr+'</g><g>'+labelsStr+'</g>';}
-/* ── 2026-07-17 추가: 월 가동률 꺾은선(목표선 포함) — 좌표 계산: padT=16, padB=10, 영역높이 114, Y최대 120% ── */
-function renderRateLine(elId,values,target){var el=document.getElementById(elId);if(!el)return;el.innerHTML='';if(!values||values.length===0)return;var w=240,h=140,padX=12,padT=16,padB=10;var areaH=h-padT-padB;var dataMax=Math.max.apply(null,values.concat([0]));var maxV=Math.max(120,Math.ceil(dataMax/10)*10);var n=values.length;var xStep=n>1?(w-padX*2)/(n-1):0;function yOf(v){return padT+(1-v/maxV)*areaH;}var pts=values.map(function(v,i){return{x:padX+i*xStep,y:yOf(v)};});var ty=yOf(target);var html='<line x1="'+padX+'" y1="'+ty.toFixed(1)+'" x2="'+(w-padX)+'" y2="'+ty.toFixed(1)+'" stroke="#8A99AC" stroke-width="1.2" stroke-dasharray="5,4" opacity="0.7"/>';html+='<text x="'+(w-padX)+'" y="'+(ty-3).toFixed(1)+'" font-size="8" font-family="IBM Plex Mono,monospace" fill="#8A99AC" text-anchor="end">목표 '+target+'%</text>';var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';html+='<g fill="#4FA8FF">'+pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('')+'</g>';html+=pts.map(function(p,i){var ly=Math.max(9,p.y-7);return '<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#4FA8FF" text-anchor="middle">'+Number(values[i]).toFixed(1)+'%</text>';}).join('');el.innerHTML=html;}
+/* ── 2026-07-17 추가: 이번달 일별 가동률(전체 설비 합산) 꺾은선 — 라벨 없음(점/선/목표선만)
+     좌표 계산: padT=16, padB=10, 영역높이 114, Y최대 120%(데이터 최대값이 크면 10단위 올림)
+     values[i]가 null이면 해당일 데이터 없음(휴일 등) → 점 생략, 선은 있는 점끼리만 연결
+     totalDays: 그 달의 실제 일수(28~31) — X좌표 간격 계산 기준 ── */
+function renderRateLine(elId,values,target,totalDays){
+  var el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  if(!values||values.length===0)return;
+  var w=240,h=140,padX=12,padT=16,padB=10;
+  var areaH=h-padT-padB;
+  var dataMax=0;
+  values.forEach(function(v){if(v!==null&&v>dataMax)dataMax=v;});
+  var maxV=Math.max(120,Math.ceil(dataMax/10)*10);
+  var n=totalDays||values.length;
+  var xStep=n>1?(w-padX*2)/(n-1):0;
+  function yOf(v){return padT+(1-v/maxV)*areaH;}
+  var ty=yOf(target);
+  var html='<line x1="'+padX+'" y1="'+ty.toFixed(1)+'" x2="'+(w-padX)+'" y2="'+ty.toFixed(1)+'" stroke="#8A99AC" stroke-width="1.2" stroke-dasharray="5,4" opacity="0.7"/>';
+  var pts=[];
+  values.forEach(function(v,i){if(v===null)return;pts.push({x:padX+i*xStep,y:yOf(v)});});
+  if(pts.length>0){
+    var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+    html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    html+='<g fill="#4FA8FF">'+pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.2"/>';}).join('')+'</g>';
+  }
+  el.innerHTML=html;
+}
+/* ── 2026-07-17 추가: 이번달 일별 가동률 로딩 — Operating_Rate_Graph.html과 동일 계산식(가중평균: 가동시간÷부하시간×100) ── */
+function pad2(n){return n<10?'0'+n:''+n;}
+function getDaysInMonthLocal(y,m){return new Date(y,m,0).getDate();}
+function loadOperatingRateLine(){
+  var now=new Date();
+  var year=now.getFullYear();
+  var month=now.getMonth()+1;
+  var actualDays=getDaysInMonthLocal(year,month);
+  var from=year+'-'+pad2(month)+'-01';
+  var to=year+'-'+pad2(month)+'-'+pad2(actualDays);
+  var tagEl=document.getElementById('rate-target-tag');
+  if(tagEl)tagEl.textContent='목표 '+RATE_TARGET+'%';
+  window.cbOpRateLine=function(json){
+    if(!json||json.error){console.error('가동률(일별) 로딩 오류:',json&&json.error);return;}
+    var days=[];
+    for(var i=0;i<actualDays;i++){days.push({opMin:0,opTimeHr:0,edu:0,const:0,dev:0,visit:0,etc1:0,hasData:false});}
+    (json.rows||[]).forEach(function(r){
+      var ds=String(r['작업일']||'');
+      var parts=ds.split('-');
+      if(parts.length<3)return;
+      var d=parseInt(parts[2]);
+      if(d<1||d>actualDays)return;
+      var dd=days[d-1];
+      dd.opMin+=(Number(r['조업시간DB'])||Number(r['조업시간'])||0);
+      dd.opTimeHr+=Number(r['가동시간']||0);
+      dd.edu+=Number(r['교육']||0);dd.const+=Number(r['공사']||0);
+      dd.dev+=Number(r['개발']||0);dd.visit+=Number(r['방문']||0);
+      dd.etc1+=Number(r['기타1']||0);
+      dd.hasData=true;
+    });
+    var values=days.map(function(dd){
+      if(!dd.hasData)return null;
+      var planStop=dd.edu+dd.const+dd.dev+dd.visit+dd.etc1;
+      var loadMin=dd.opMin-planStop;
+      var opTimeMin=Math.round(dd.opTimeHr*60);
+      return loadMin>0?Math.round(opTimeMin/loadMin*1000)/10:0;
+    });
+    renderRateLine('line-rate',values,RATE_TARGET,actualDays);
+    var axisEl=document.getElementById('axis-rate');
+    if(axisEl)axisEl.innerHTML='<span>1일</span><span>'+Math.ceil(actualDays/2)+'일</span><span>'+actualDays+'일</span>';
+  };
+  var s=document.createElement('script');
+  s.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback=cbOpRateLine';
+  document.body.appendChild(s);
+}
 var dashboardRequestId=0;
-async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam+'&key='+encodeURIComponent(API_KEY));var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);renderRateLine('line-rate',mr.map(function(x){return x.value;}),RATE_TARGET);setAxisLabels('axis-rate',months.length?months:mr.map(function(x){return x.month;}));var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderLineChart('line-defect',cd.map(function(x){return x.value;}));setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
+async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam+'&key='+encodeURIComponent(API_KEY));var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderLineChart('line-defect',cd.map(function(x){return x.value;}));setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
 function updateSystemDate(){var today=new Date();var a=document.getElementById('systemDate');if(a)a.textContent=formatDateYMD(today);}
 function load5SCapacity(){var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SCount&callback=cb5SCount';var s=document.createElement('script');s.src=url;document.body.appendChild(s);}
 window.cb5SCount=function(data){if(!data||data.status!=='ok')return;var pct=data.pct||0;var badge=document.getElementById('ss5-badge');var dot=document.getElementById('ss5-dot');var pctEl=document.getElementById('ss5-pct');if(!badge||!dot||!pctEl)return;var color='';if(pct>=90){color='#A32D2D';}else if(pct>=80){color='#BA7517';}else{color='#3B6D11';}dot.style.background=color;pctEl.style.color=color;pctEl.textContent=pct+'%';badge.style.display='flex';};
 function toggleTheme(){document.body.classList.toggle('light-theme');var btn=document.getElementById('themeBtn');var isLight=document.body.classList.contains('light-theme');btn.textContent=isLight?'🌙 다크모드':'☀️ 라이트모드';localStorage.setItem('theme',isLight?'light':'dark');}
 window.addEventListener('load',function(){var savedTheme=localStorage.getItem('theme');var btn=document.getElementById('themeBtn');if(savedTheme==='light'){document.body.classList.add('light-theme');if(btn)btn.textContent='🌙 다크모드';}else{if(btn)btn.textContent='☀️ 라이트모드';}});
-updateSystemDate();updateDateDisplay();loadDashboard();load5SCapacity();
+updateSystemDate();updateDateDisplay();loadDashboard();load5SCapacity();loadOperatingRateLine();
 var _openMenus={};
 function toggleMenu(key){var sub=document.getElementById('sub-'+key);var btn=document.getElementById('m-'+key);var isOpen=_openMenus[key];sub.classList.toggle('open',!isOpen);btn.classList.toggle('open',!isOpen);_openMenus[key]=!isOpen;}
 
