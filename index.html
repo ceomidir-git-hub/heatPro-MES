@@ -364,31 +364,85 @@ function updateDateDisplay(){var dateStr=formatDateYMD(selectedDate);var labelEl
 function changeDate(offsetDays){var candidate=new Date(selectedDate);candidate.setDate(candidate.getDate()+offsetDays);var today=getSystemTodayDateOnly();var candOnly=new Date(candidate.getFullYear(),candidate.getMonth(),candidate.getDate());if(candOnly.getTime()>today.getTime())return;selectedDate=candidate;updateDateDisplay();loadDashboard();}
 function makeBars(containerId,values,max,formatter){var el=document.getElementById(containerId);if(!el)return;el.innerHTML='';var safeMax=(max&&max>0)?max:1;var fmt=formatter||function(v){return Number(v).toLocaleString();};if(!values||values.length===0)return;values.forEach(function(v){var bar=document.createElement('div');bar.className='bar';var pct=Math.max(2,Math.min(100,(v/safeMax)*100));bar.style.height=pct+'%';bar.title=fmt(v);var label=document.createElement('span');label.className='bar-label';label.textContent=fmt(v);bar.appendChild(label);el.appendChild(bar);});}
 function setAxisLabels(elId,months){var el=document.getElementById(elId);if(!el||!months||months.length===0)return;var fmt=function(m){return Number(m.substring(5,7))+'월';};var first=months[0];var last=months[months.length-1];var mid=months[Math.floor((months.length-1)/2)];el.innerHTML='<span>'+fmt(first)+'</span><span>'+fmt(mid)+'</span><span>'+fmt(last)+'</span>';}
-function renderLineChart(elId,values){var el=document.getElementById(elId);if(!el)return;if(!values||values.length===0){el.innerHTML='';return;}var w=240,h=140,pad=12;var max=Math.max.apply(null,values.concat([0.0001]));var n=values.length;var xStep=n>1?(w-pad*2)/(n-1):0;var pts=values.map(function(v,i){return{x:pad+i*xStep,y:h-pad-(v/max)*(h-pad*2)};});var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var circlesStr=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5"/>';}).join('');var labelsStr=pts.map(function(p,i){var ty=Math.max(9,p.y-8);return '<text x="'+p.x.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="9" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF5C5C" text-anchor="middle">'+Number(values[i]).toFixed(2)+'%</text>';}).join('');el.innerHTML='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="#FF5C5C">'+circlesStr+'</g><g>'+labelsStr+'</g>';}
-/* ── 2026-07-17 추가: 이번달 일별 가동률(전체 설비 합산) 꺾은선 — 라벨 없음(점/선/목표선만)
-     좌표 계산: padT=16, padB=10, 영역높이 114, Y최대 120%(데이터 최대값이 크면 10단위 올림)
-     values[i]가 null이면 해당일 데이터 없음(휴일 등) → 점 생략, 선은 있는 점끼리만 연결
+/* ── 2026-07-17 추가: 이번달 일별 가동률(전체 설비 합산) 꺾은선
+     좌표: padL=30(Y축 숫자 공간), padR=10, padT=14, padB=16(X축 라벨 공간)
+     선은 31일(또는 해당월 일수) 데이터 전부 연결, 강조점(주황)·정수 라벨은 최대 7개 균등분배
+     values[i]가 null이면 해당일 데이터 없음(휴일 등) → 그 점만 제외, 선은 있는 점끼리 연결
      totalDays: 그 달의 실제 일수(28~31) — X좌표 간격 계산 기준 ── */
 function renderRateLine(elId,values,target,totalDays){
   var el=document.getElementById(elId);if(!el)return;el.innerHTML='';
   if(!values||values.length===0)return;
-  var w=240,h=140,padX=12,padT=16,padB=10;
-  var areaH=h-padT-padB;
+  var w=240,h=140,padL=30,padR=10,padT=14,padB=16;
+  var plotW=w-padL-padR,plotH=h-padT-padB;
   var dataMax=0;
   values.forEach(function(v){if(v!==null&&v>dataMax)dataMax=v;});
-  var maxV=Math.max(120,Math.ceil(dataMax/10)*10);
+  var maxV=Math.max(120,Math.ceil(dataMax/40)*40);
+  var yTicks=[0,Math.round(maxV/3),Math.round(maxV*2/3),maxV];
   var n=totalDays||values.length;
-  var xStep=n>1?(w-padX*2)/(n-1):0;
-  function yOf(v){return padT+(1-v/maxV)*areaH;}
+  function xOf(i){return padL+i*(plotW/(n-1));}
+  function yOf(v){return padT+(1-v/maxV)*plotH;}
+  var html='';
+  yTicks.forEach(function(t){
+    var y=yOf(t);
+    html+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'" stroke="#323A46" stroke-width="0.6"/>';
+    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
+  });
   var ty=yOf(target);
-  var html='<line x1="'+padX+'" y1="'+ty.toFixed(1)+'" x2="'+(w-padX)+'" y2="'+ty.toFixed(1)+'" stroke="#8A99AC" stroke-width="1.2" stroke-dasharray="5,4" opacity="0.7"/>';
-  var pts=[];
-  values.forEach(function(v,i){if(v===null)return;pts.push({x:padX+i*xStep,y:yOf(v)});});
-  if(pts.length>0){
-    var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
-    html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
-    html+='<g fill="#4FA8FF">'+pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.2"/>';}).join('')+'</g>';
-  }
+  html+='<line x1="'+padL+'" y1="'+ty.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+ty.toFixed(1)+'" stroke="#8A99AC" stroke-width="1" stroke-dasharray="4,3" opacity="0.8"/>';
+  var validIdx=[];
+  values.forEach(function(v,i){if(v!==null)validIdx.push(i);});
+  if(validIdx.length===0){el.innerHTML=html;return;}
+  var pts=validIdx.map(function(i){return{day:i,x:xOf(i),y:yOf(values[i])};});
+  var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+  html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  var vn=validIdx.length;
+  var labelCount=Math.min(7,vn);
+  var labelPos=[];
+  for(var k=0;k<labelCount;k++){labelPos.push(labelCount>1?Math.round(k*(vn-1)/(labelCount-1)):0);}
+  labelPos.forEach(function(pIdx){
+    var p=pts[pIdx];
+    html+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
+    var ly=Math.max(9,p.y-6);
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="7.5" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF6B35" text-anchor="middle">'+Math.round(values[p.day])+'%</text>';
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+(h-3)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+(p.day+1)+'일</text>';
+  });
+  el.innerHTML=html;
+}
+/* ── 2026-07-17 추가: 누적불량율 꺾은선 — 가동률과 동일 디자인(Y축/X축/주황 강조점/정수 라벨/선1.5px)
+     패널 폭이 좁음(324px, 내부 288px)을 반영해 padL/padR/padT/padB는 동일 값 사용(비율은 자동 반영됨)
+     data: [{month:'YYYY-MM', value:Number}, ...] — 월 개수가 늘어도(최대 12개월) 라벨은 최대 7개 균등분배 ── */
+function renderDefectLine(elId,data){
+  var el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  if(!data||data.length===0)return;
+  var w=240,h=140,padL=30,padR=10,padT=14,padB=16;
+  var plotW=w-padL-padR,plotH=h-padT-padB;
+  var n=data.length;
+  var dataMax=0;
+  data.forEach(function(x){if(x.value>dataMax)dataMax=x.value;});
+  var maxV=Math.max(4,Math.ceil(dataMax));
+  var yTicks=[0,Math.round(maxV/3),Math.round(maxV*2/3),maxV];
+  function xOf(i){return padL+(n>1?i*(plotW/(n-1)):plotW/2);}
+  function yOf(v){return padT+(1-v/maxV)*plotH;}
+  var html='';
+  yTicks.forEach(function(t){
+    var y=yOf(t);
+    html+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'" stroke="#323A46" stroke-width="0.6"/>';
+    html+='<text x="'+(padL-4)+'" y="'+(y+2.5).toFixed(1)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="end">'+t+'%</text>';
+  });
+  var pts=data.map(function(x,i){return{x:xOf(i),y:yOf(x.value),value:x.value,month:x.month};});
+  var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+  html+='<polyline points="'+pointsStr+'" fill="none" stroke="#FF5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  var labelCount=Math.min(7,n);
+  var labelPos=[];
+  for(var k=0;k<labelCount;k++){labelPos.push(labelCount>1?Math.round(k*(n-1)/(labelCount-1)):0);}
+  labelPos.forEach(function(pIdx){
+    var p=pts[pIdx];
+    html+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
+    var ly=Math.max(9,p.y-6);
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="7.5" font-family="IBM Plex Mono,monospace" font-weight="600" fill="#FF6B35" text-anchor="middle">'+Math.round(p.value)+'%</text>';
+    var mLabel=p.month?(Number(String(p.month).substring(5,7))+'월'):'';
+    html+='<text x="'+p.x.toFixed(1)+'" y="'+(h-3)+'" font-size="7" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+mLabel+'</text>';
+  });
   el.innerHTML=html;
 }
 /* ── 2026-07-17 추가: 이번달 일별 가동률 로딩 — Operating_Rate_Graph.html과 동일 계산식(가중평균: 가동시간÷부하시간×100) ── */
@@ -429,15 +483,13 @@ function loadOperatingRateLine(){
       return loadMin>0?Math.round(opTimeMin/loadMin*1000)/10:0;
     });
     renderRateLine('line-rate',values,RATE_TARGET,actualDays);
-    var axisEl=document.getElementById('axis-rate');
-    if(axisEl)axisEl.innerHTML='<span>1일</span><span>'+Math.ceil(actualDays/2)+'일</span><span>'+actualDays+'일</span>';
   };
   var s=document.createElement('script');
   s.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback=cbOpRateLine';
   document.body.appendChild(s);
 }
 var dashboardRequestId=0;
-async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam+'&key='+encodeURIComponent(API_KEY));var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderLineChart('line-defect',cd.map(function(x){return x.value;}));setAxisLabels('axis-cumdefect',cd.map(function(x){return x.month;}));var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
+async function loadDashboard(){var requestId=++dashboardRequestId;try{var dateParam=formatDateYMD(selectedDate);var res=await fetch(API_URL+'?date='+dateParam+'&key='+encodeURIComponent(API_KEY));var data=await res.json();if(requestId!==dashboardRequestId)return;if(data.error){console.error('대시보드 오류:',data.error);return;}var d=data.dashboard;if(!d)return;var jobEl=document.getElementById('kpi-job-count');var prodEl=document.getElementById('kpi-production');var shipEl=document.getElementById('kpi-shipment');if(jobEl)jobEl.textContent=(d.todayJobCount||0).toLocaleString();if(prodEl)prodEl.textContent=(d.todayProduction||0).toLocaleString();if(shipEl)shipEl.textContent=(d.todayShipment||0).toLocaleString();var eqEl=document.getElementById('kpi-equipment');var statusEl=document.getElementById('kpi-equipment-status');if(eqEl&&statusEl){if(d.todayEquipment&&d.todayEquipment.length>0){eqEl.textContent=d.todayEquipment.map(function(e){return e.name||e.no;}).join(', ');statusEl.className='status-pill run';statusEl.innerHTML='<span class="dot"></span> RUNNING';}else{eqEl.textContent='가동 설비 없음';statusEl.className='status-pill';statusEl.innerHTML='<span class="dot"></span> IDLE';}}var mp=d.monthlyProduction||[];var mr=d.monthlyRate||[];var months=mp.map(function(x){return x.month;});makeBars('bar-prod',mp.map(function(x){return x.value;}),Math.max.apply(null,mp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-prod',months);var cp=d.cumulativeProduction||[];makeBars('bar-cumprod',cp.map(function(x){return x.value;}),Math.max.apply(null,cp.map(function(x){return x.value;}).concat([1])),function(v){return Number(v).toLocaleString();});setAxisLabels('axis-cumprod',cp.map(function(x){return x.month;}));var footProd=document.getElementById('foot-cumprod');if(footProd){var lp=cp.length?cp[cp.length-1].value:0;footProd.textContent=lp.toLocaleString();}var cr=d.cumulativeRate||[];makeBars('bar-cumrate',cr.map(function(x){return x.value;}),Math.max.apply(null,cr.map(function(x){return x.value;}).concat([100])),function(v){return Number(v).toFixed(1)+'%';});setAxisLabels('axis-cumrate',cr.map(function(x){return x.month;}));var footRate=document.getElementById('foot-cumrate');if(footRate){var lr=cr.length?cr[cr.length-1].value:0;footRate.textContent=lr.toFixed(1)+'%';}var cd=d.cumulativeDefectRate||[];renderDefectLine('line-defect',cd);var footDefect=document.getElementById('foot-cumdefect');if(footDefect){var ld=cd.length?cd[cd.length-1].value:0;footDefect.textContent=ld.toFixed(2)+'%';}}catch(err){console.error('대시보드 로딩 실패:',err);}}
 function updateSystemDate(){var today=new Date();var a=document.getElementById('systemDate');if(a)a.textContent=formatDateYMD(today);}
 function load5SCapacity(){var url=API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=get5SCount&callback=cb5SCount';var s=document.createElement('script');s.src=url;document.body.appendChild(s);}
 window.cb5SCount=function(data){if(!data||data.status!=='ok')return;var pct=data.pct||0;var badge=document.getElementById('ss5-badge');var dot=document.getElementById('ss5-dot');var pctEl=document.getElementById('ss5-pct');if(!badge||!dot||!pctEl)return;var color='';if(pct>=90){color='#A32D2D';}else if(pct>=80){color='#BA7517';}else{color='#3B6D11';}dot.style.background=color;pctEl.style.color=color;pctEl.textContent=pct+'%';badge.style.display='flex';};
