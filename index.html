@@ -270,11 +270,11 @@
         <div class="chart-grid-2">
           <div class="panel"><h3>월별생산실적 <span class="tag">개</span></h3><div class="bars" id="bar-prod"></div><div class="chart-axis" id="axis-prod"></div></div>
           <!-- ── 2026-07-17 변경: 월 가동률 → 이번달 일별 가동률(전체 설비 합산) SVG 꺾은선, 목표% 헤더 표기 ── -->
-          <div class="panel"><h3><span id="rate-panel-title">월 가동률</span> <span class="tag" id="rate-target-tag">목표 -</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
+          <div class="panel"><h3><span id="rate-panel-title">설비가동률</span> <span class="tag" id="rate-target-tag">목표 -</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-rate"></g></svg><div class="chart-axis" id="axis-rate"></div></div>
         </div>
         <div class="chart-grid-3">
           <div class="panel"><h3>누적 생산실적</h3><div class="bars" id="bar-cumprod"></div><div class="chart-axis" id="axis-cumprod"></div><div class="chart-foot"><span>합계</span><span class="big" id="foot-cumprod">-</span></div></div>
-          <div class="panel"><h3>월별 가동률</h3><div class="bars" id="bar-cumrate"></div><div class="chart-axis" id="axis-cumrate"></div><div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div></div>
+          <div class="panel"><h3>월별 설비가동률</h3><div class="bars" id="bar-cumrate"></div><div class="chart-axis" id="axis-cumrate"></div><div class="chart-foot"><span>평균</span><span class="big" id="foot-cumrate" style="color:var(--good)">-</span></div></div>
           <div class="panel"><h3>월누적 불량률 <span class="tag">%</span></h3><svg class="linechart" viewBox="0 0 240 140" preserveAspectRatio="none"><g id="line-defect"></g></svg><div class="chart-axis" id="axis-cumdefect"></div><div class="chart-foot"><span>현재</span><span class="big" id="foot-cumdefect" style="color:var(--bad)">-</span></div></div>
         </div>
         <section>
@@ -356,6 +356,30 @@ const API_URL='https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5G
 const API_KEY='@qgis2026';
 /* ── 월 가동률 목표선(%) — 가동률 현황(Operating_Rate_Graph)과 동일 값 유지 ── */
 const RATE_TARGET=80;
+/* ★ 2026-07-22 추가: 설비가동률 계산 공통 규칙 (Operating_Rate.html과 완전 동일)
+     조업시간 = 가동data 값 우선, 없으면 (평일 480분 / 토·일·공휴일 0분)
+     분모     = 조업시간 − 비가동시간 − 계획정지(교육+공사+개발+방문+기타1)
+     가동률   = 가동시간(분) ÷ 분모 × 100   (상한 없음, 분모≤0 이면 계산 제외)
+     당월은 오늘 이후 날짜를 분모에서 제외한다 (B안) */
+const OP_STD_MIN=480;
+const OP_HOLIDAYS=['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01','2026-05-05','2026-05-25','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'];
+function opIsHoliday(ds){return OP_HOLIDAYS.indexOf(ds)>=0;}
+function opTodayStr(){var t=new Date();return t.getFullYear()+'-'+pad2(t.getMonth()+1)+'-'+pad2(t.getDate());}
+function opDayCalc(ds,r){
+  var dow=new Date(ds).getDay();
+  var op=Number((r&&r['조업시간'])||0);
+  if(!op)op=((dow===0||dow===6||opIsHoliday(ds))?0:OP_STD_MIN);
+  var run=Number((r&&r['가동시간'])||0);
+  var non=Number((r&&r['비가동시간'])||0);
+  var plan=Number((r&&r['교육'])||0)+Number((r&&r['공사'])||0)+Number((r&&r['개발'])||0)
+          +Number((r&&r['방문'])||0)+Number((r&&r['기타1'])||0);
+  return {op:op,run:run,non:non,plan:plan,den:op-non-plan};
+}
+function opRowsToMap(json){
+  var map={};
+  if(json&&!json.error&&json.rows){json.rows.forEach(function(r){map[String(r['작업일']||'')]=r;});}
+  return map;
+}
 let selectedDate=new Date();
 function formatDateYMD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function formatDateLabel(d){var days=['일','월','화','수','목','금','토'];return formatDateYMD(d)+'('+days[d.getDay()]+')';}
@@ -451,14 +475,16 @@ function renderDefectLine(elId,data){
 /* ── 2026-07-17 추가: 이번달 일별 가동률 로딩 — Operating_Rate_Graph.html과 동일 계산식(가중평균: 가동시간÷부하시간×100) ── */
 function pad2(n){return n<10?'0'+n:''+n;}
 function getDaysInMonthLocal(y,m){return new Date(y,m,0).getDate();}
-/* ── 2026-07-17 추가: 월별 가동률(막대) — Code.gs의 monthlyRate가 오작동(전월 100%)하여
-     Code.gs를 거치지 않고 프론트엔드에서 action=operatingRate로 직접 재계산.
-     공식은 일별 가동률 차트와 동일: 그 달 총가동시간(분) ÷ 총부하시간(분) × 100 (분 단위 가중평균)
+/* ── 2026-07-22 수정: 월별 설비가동률(막대)
+     Code.gs의 monthlyRate가 오작동(전월 100%)하여 프론트엔드에서 직접 재계산한다.
+     action=operatingRateV2 (모든 시간값이 '분' 단위로 반환됨)
+     그 달 총가동시간(분) ÷ 총분모(분) × 100 — 분모는 조업일 전체를 포함(작업 없던 평일 포함)
      monthList: ['2026-01','2026-02',...] — d.monthlyProduction의 month 목록 재사용 ── */
 function loadMonthlyRateBars(monthList){
   if(!monthList||monthList.length===0)return;
   var results=new Array(monthList.length).fill(null);
   var remaining=monthList.length;
+  var todayStr=opTodayStr();
   monthList.forEach(function(monthStr,idx){
     var parts=monthStr.split('-');
     var y=parseInt(parts[0]),m=parseInt(parts[1]);
@@ -467,27 +493,24 @@ function loadMonthlyRateBars(monthList){
     var to=monthStr+'-'+pad2(lastDay);
     var cbName='cbMonthRate_'+idx+'_'+Date.now();
     window[cbName]=function(json){
-      var totalOpTimeMin=0,totalLoadMin=0;
-      if(json&&!json.error&&json.rows){
-        var agg={opMin:0,opTimeHr:0,edu:0,const:0,dev:0,visit:0,etc1:0};
-        json.rows.forEach(function(r){
-          agg.opMin+=(Number(r['조업시간DB'])||Number(r['조업시간'])||0);
-          agg.opTimeHr+=Number(r['가동시간']||0);
-          agg.edu+=Number(r['교육']||0);agg.const+=Number(r['공사']||0);
-          agg.dev+=Number(r['개발']||0);agg.visit+=Number(r['방문']||0);
-          agg.etc1+=Number(r['기타1']||0);
-        });
-        var planStop=agg.edu+agg.const+agg.dev+agg.visit+agg.etc1;
-        totalLoadMin=agg.opMin-planStop;
-        totalOpTimeMin=Math.round(agg.opTimeHr*60);
+      var map=opRowsToMap(json);
+      /* ★ 2026-07-22 수정: 데이터가 있는 날만이 아니라 '해당 월의 모든 조업일'을 분모에 포함 */
+      var totalRun=0,totalDen=0;
+      for(var dd=1;dd<=lastDay;dd++){
+        var ds=y+'-'+pad2(m)+'-'+pad2(dd);
+        if(ds>todayStr)continue;               /* B안: 오늘 이후 제외 */
+        var c=opDayCalc(ds,map[ds]);
+        if(c.op===0)continue;                  /* 토·일·공휴일 (데이터 없을 때) */
+        totalRun+=c.run;
+        totalDen+=(c.den>0?c.den:0);
       }
-      var rate=totalLoadMin>0?Math.round(totalOpTimeMin/totalLoadMin*1000)/10:0;
+      var rate=totalDen>0?Math.round(totalRun/totalDen*1000)/10:0;
       results[idx]={month:monthStr,value:rate};
       remaining--;
       if(remaining===0)renderMonthlyRateBars(results);
     };
     var s=document.createElement('script');
-    s.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback='+cbName;
+    s.src=API_URL+'?action=operatingRateV2&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback='+cbName;
     document.body.appendChild(s);
   });
 }
@@ -512,36 +535,25 @@ function loadOperatingRateLine(){
   var tagEl=document.getElementById('rate-target-tag');
   if(tagEl)tagEl.textContent='목표 '+RATE_TARGET+'%';
   var titleEl=document.getElementById('rate-panel-title');
-  if(titleEl)titleEl.textContent=month+'월 가동률';
+  if(titleEl)titleEl.textContent=month+'월 설비가동률';
   window.cbOpRateLine=function(json){
-    if(!json||json.error){console.error('가동률(일별) 로딩 오류:',json&&json.error);return;}
-    var days=[];
-    for(var i=0;i<actualDays;i++){days.push({opMin:0,opTimeHr:0,edu:0,const:0,dev:0,visit:0,etc1:0,hasData:false});}
-    (json.rows||[]).forEach(function(r){
-      var ds=String(r['작업일']||'');
-      var parts=ds.split('-');
-      if(parts.length<3)return;
-      var d=parseInt(parts[2]);
-      if(d<1||d>actualDays)return;
-      var dd=days[d-1];
-      dd.opMin+=(Number(r['조업시간DB'])||Number(r['조업시간'])||0);
-      dd.opTimeHr+=Number(r['가동시간']||0);
-      dd.edu+=Number(r['교육']||0);dd.const+=Number(r['공사']||0);
-      dd.dev+=Number(r['개발']||0);dd.visit+=Number(r['방문']||0);
-      dd.etc1+=Number(r['기타1']||0);
-      dd.hasData=true;
-    });
-    var values=days.map(function(dd){
-      if(!dd.hasData)return null;
-      var planStop=dd.edu+dd.const+dd.dev+dd.visit+dd.etc1;
-      var loadMin=dd.opMin-planStop;
-      var opTimeMin=Math.round(dd.opTimeHr*60);
-      return loadMin>0?Math.round(opTimeMin/loadMin*1000)/10:0;
-    });
+    if(!json||json.error){console.error('설비가동률(일별) 로딩 오류:',json&&json.error);return;}
+    /* ★ 2026-07-22 수정: 조업일이면 데이터가 없어도 0%로 집계 (분모 누락 방지)
+         null 은 '조업일이 아님(토·일·공휴일)' 또는 '아직 오지 않은 날' 일 때만 */
+    var map=opRowsToMap(json);
+    var todayStr=opTodayStr();
+    var values=[];
+    for(var dd=1;dd<=actualDays;dd++){
+      var ds=year+'-'+pad2(month)+'-'+pad2(dd);
+      if(ds>todayStr){values.push(null);continue;}
+      var c=opDayCalc(ds,map[ds]);
+      if(c.op===0){values.push(null);continue;}
+      values.push(c.den>0?Math.round(c.run/c.den*1000)/10:0);
+    }
     renderRateLine('line-rate',values,RATE_TARGET,actualDays);
   };
   var s=document.createElement('script');
-  s.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback=cbOpRateLine';
+  s.src=API_URL+'?action=operatingRateV2&from='+from+'&to='+to+'&key='+encodeURIComponent(API_KEY)+'&callback=cbOpRateLine';
   document.body.appendChild(s);
 }
 var dashboardRequestId=0;
