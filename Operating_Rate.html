@@ -63,7 +63,7 @@ nav a.active{background:var(--blue-lt);color:var(--blue-dk);border-color:#B5D4F4
 .t-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
 .cnt-badge{background:var(--blue-lt);color:var(--blue-dk);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;}
 .table-wrap{overflow-x:auto;overflow-y:auto;max-height:420px;-webkit-overflow-scrolling:touch;}
-table{width:100%;border-collapse:collapse;font-size:11px;min-width:1060px;}
+table{width:100%;border-collapse:collapse;font-size:11px;min-width:1100px;}
 thead{position:sticky;top:0;z-index:10;}
 thead th{padding:6px 4px;text-align:center;font-size:10px;font-weight:600;background:var(--gray-lt);color:var(--text-sub);border-bottom:1px solid var(--gray-bd);border-right:1px solid var(--gray-bd);white-space:nowrap;}
 thead th.th-db{background:#E6F1FB;color:var(--blue-dk);}
@@ -91,6 +91,10 @@ tbody tr:hover td{background:#FAFAF8;}
 .save-btn:hover{background:#B5D4F4;}
 .save-btn.saved{border-color:var(--green);background:var(--green-lt);color:var(--green-dk);}
 .save-btn.saving{opacity:.6;pointer-events:none;}
+/* ★ 2026-07-22 추가: 잠금 */
+.lock-cb{width:14px;height:14px;cursor:pointer;accent-color:#EF9F27;}
+.td-lockin{border-color:#EF9F27 !important;background:#FAEEDA !important;font-weight:600;color:var(--amber) !important;}
+tr.row-locked td.td-db{background:#FAEEDA;color:var(--amber);}
 .status-bar{display:flex;align-items:center;gap:6px;padding:8px 14px;border-top:1px solid var(--gray-bd);font-size:11px;color:var(--text-sub);}
 .sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .dot-ok{background:var(--green);}
@@ -184,18 +188,19 @@ tbody tr:hover td{background:#FAFAF8;}
             <th colspan="4" class="th-eq">설비정지 (분)</th>
             <th colspan="3" class="th-jet">제통 (분)</th>
             <th colspan="4" class="th-calc">자동 계산</th>
+            <th rowspan="2" style="width:40px;" title="잠금 시 작업일보 저장의 자동 갱신에서 제외">🔒</th>
             <th rowspan="2" style="width:44px;">저장</th>
           </tr>
           <tr>
-            <th class="th-db" style="width:52px;">가동시간</th><th class="th-db" style="width:52px;">비가동시간</th>
+            <th class="th-db" style="width:52px;">가동시간(분)</th><th class="th-db" style="width:52px;">비가동시간(분)</th>
             <th class="th-in" style="width:36px;">교육</th><th class="th-in" style="width:36px;">공사</th><th class="th-in" style="width:36px;">개발</th><th class="th-in" style="width:36px;">방문</th><th class="th-in" style="width:36px;">기타1</th>
             <th class="th-eq" style="width:36px;">전기</th><th class="th-eq" style="width:36px;">냉각</th><th class="th-eq" style="width:36px;">코일</th><th class="th-eq" style="width:36px;">기타2</th>
             <th class="th-jet" style="width:36px;">조건</th><th class="th-jet" style="width:36px;">사양</th><th class="th-jet" style="width:36px;">기타3</th>
-            <th class="th-calc" style="width:62px;">부하시간</th><th class="th-calc" style="width:62px;">계획정지합</th><th class="th-calc" style="width:62px;">가동시간</th><th class="th-calc" style="width:62px;">가동률</th>
+            <th class="th-calc" style="width:62px;">부하시간(분모)</th><th class="th-calc" style="width:62px;">계획정지합</th><th class="th-calc" style="width:62px;">가동시간(분)</th><th class="th-calc" style="width:62px;">가동률</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="22" style="padding:30px;text-align:center;color:var(--text-sub);font-size:12px;">기본 설비·기간이 채워져 있습니다. [조회] 버튼을 눌러주세요.</td></tr>
+          <tr><td colspan="24" style="padding:30px;text-align:center;color:var(--text-sub);font-size:12px;">기본 설비·기간이 채워져 있습니다. [조회] 버튼을 눌러주세요.</td></tr>
         </tbody>
       </table>
     </div>
@@ -260,7 +265,7 @@ function doQuery(){
   if(!from||!to||!eq){showToast('⚠️ 설비와 기간을 모두 선택하세요.');return;}
   setStatus('loading','데이터 불러오는 중...');
   var cb='cbOp_'+Date.now(),sc=document.createElement('script');
-  sc.src=API_URL+'?action=operatingRate&from='+from+'&to='+to+'&equipment='+encodeURIComponent(eq)+'&key='+encodeURIComponent(API_KEY)+'&callback='+cb;
+  sc.src=API_URL+'?action=operatingRateV2&from='+from+'&to='+to+'&equipment='+encodeURIComponent(eq)+'&key='+encodeURIComponent(API_KEY)+'&callback='+cb;
   window[cb]=function(data){
     document.head.removeChild(sc);delete window[cb];
     var rows=(data&&data.rows)?data.rows:[];
@@ -289,13 +294,15 @@ function renderTable(from,to,eq){
     var dateClass=(isHol||isSun)?'td-sun':isSat?'td-sat':'';
     var r=queryRowMap[ds]||{};
     var idx=rowIdx++;
-    var dbOp=toN(r.가동시간),dbNon=toN(r.비가동시간),dbCnt=toN(r._cnt)||0;
+    /* ★ 2026-07-22: operatingRateV2 는 모든 시간값을 '분'으로 반환 */
+    var dbOp=toN(r.가동시간),dbNon=toN(r.비가동시간),dbCnt=toN(r.건수)||0;
+    var locked=(r.잠금===true||r.입력구분==='수동잠금');
     var 조업=toN(r.조업시간)||((isHol||isSat||isSun)?0:480);
-    return '<tr data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'" data-dbcnt="'+dbCnt+'">'
+    return '<tr class="'+(locked?'row-locked':'')+'" data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'" data-dbcnt="'+dbCnt+'" data-lock="'+(locked?1:0)+'">'
       +'<td class="'+dateClass+'" style="font-size:11px;white-space:nowrap;">'+(isHol?'★ ':'')+ds+'</td>'
       +'<td class="'+dateClass+'">'+DAYS[dow]+'</td>'
       +'<td class="td-db">'+dbCnt+'</td>'
-      +'<td class="td-db">'+dbOp+'</td>'
+      +'<td class="td-db td-dbop">'+opCellHtml(idx,dbOp,locked)+'</td>'
       +'<td class="td-db">'+dbNon+'</td>'
       +'<td><input class="td-input" type="number" min="0" value="'+조업+'" data-field="조업시간" data-idx="'+idx+'" oninput="markMod(this);recalc('+idx+')"/></td>'
       +mkI(idx,'교육',r.교육)+mkI(idx,'공사',r.공사)+mkI(idx,'개발',r.개발)+mkI(idx,'방문',r.방문)+mkI(idx,'기타1',r.기타1)
@@ -305,6 +312,7 @@ function renderTable(from,to,eq){
       +'<td class="td-calc" id="c-plan-'+idx+'">0</td>'
       +'<td class="td-calc td-db" id="c-ga-'+idx+'">'+dbOp+'</td>'
       +'<td class="td-calc" id="c-rate-'+idx+'">—</td>'
+      +'<td><input type="checkbox" class="lock-cb" id="lock-'+idx+'" '+(locked?'checked':'')+' onchange="toggleLock('+idx+')" title="잠금 시 작업일보 저장의 자동 갱신에서 제외"/></td>'
       +'<td><button class="save-btn" id="sbtn-'+idx+'" onclick="saveRow('+idx+')">저장</button></td>'
       +'</tr>';
   }).join('');
@@ -312,25 +320,62 @@ function renderTable(from,to,eq){
   for(var i=0;i<rowIdx;i++){recalc(i);}
   updateDash();
 }
+/* ★ 2026-07-22 추가: DB 가동시간 셀 (잠금이면 입력창, 아니면 읽기전용 텍스트) */
+function opCellHtml(idx,val,locked){
+  if(!locked) return String(val);
+  return '<input class="td-input td-lockin" type="number" min="0" value="'+val+'" data-field="가동시간" data-idx="'+idx+'" oninput="markMod(this);recalc('+idx+')"/>';
+}
+/* ★ 2026-07-22 추가: 잠금 on/off — 서버(가동data 입력구분 열)에 즉시 반영 */
+function toggleLock(idx){
+  var tr=document.querySelector('tr[data-idx="'+idx+'"]');
+  var cb=document.getElementById('lock-'+idx);
+  if(!tr||!cb)return;
+  var locked=cb.checked;
+  var payload={action:'toggleOperatingLock',key:API_KEY,작업일:tr.dataset.date,설비명:tr.dataset.eq,lock:locked};
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(data.result==='ok'){
+      tr.dataset.lock=locked?'1':'0';
+      if(locked)tr.classList.add('row-locked');else tr.classList.remove('row-locked');
+      var td=tr.querySelector('td.td-dbop');
+      if(td){td.innerHTML=opCellHtml(idx,toN(tr.dataset.dbop),locked);}
+      recalc(idx);
+      showToast(locked?'🔒 '+tr.dataset.date+' 잠금 · 작업일보 자동갱신 제외':'🔓 '+tr.dataset.date+' 잠금 해제 · 자동갱신 재개');
+    }else{
+      cb.checked=!locked;
+      showToast('❌ 잠금 변경 실패: '+(data.message||data.error||''));
+    }
+  })
+  .catch(function(){cb.checked=!locked;showToast('❌ 네트워크 오류');});
+}
 function mkI(idx,field,val){
   var v=(val===undefined||val===null)?0:toN(val);
   return '<td><input class="td-input" type="number" min="0" placeholder="0" value="'+v+'" data-field="'+field+'" data-idx="'+idx+'" oninput="markMod(this);recalc('+idx+')"/></td>';
 }
 function markMod(el){el.classList.add('modified');}
+/* ★ 2026-07-22 확정 계산식
+     분모(부하시간) = 조업시간 − 비가동시간 − 계획정지
+     가동률 = 가동시간(분) ÷ 분모 × 100   (상한 없음)
+     분모 ≤ 0 → 가동률 "—" (계산 제외) */
 function recalc(idx){
   var tr=document.querySelector('tr[data-idx="'+idx+'"]');if(!tr)return;
   function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
   var 조업=gF('조업시간');
   var 계획=gF('교육')+gF('공사')+gF('개발')+gF('방문')+gF('기타1');
-  var 부하=Math.max(0,조업-계획);
-  var dbOp=toN(tr.dataset.dbop);
-  var rate=부하>0?(dbOp/부하*100).toFixed(1):null;
+  var 비가동=toN(tr.dataset.dbnon);
+  var opEl=tr.querySelector('[data-field="가동시간"]');
+  var 가동=opEl?toN(opEl.value):toN(tr.dataset.dbop);
+  var 분모=조업-비가동-계획;
+  var rate=(분모>0)?(가동/분모*100).toFixed(1):null;
   var isOk=rate!==null&&Number(rate)>=80;
   var bEl=document.getElementById('c-bha-'+idx);
   var pEl=document.getElementById('c-plan-'+idx);
+  var gEl=document.getElementById('c-ga-'+idx);
   var rEl=document.getElementById('c-rate-'+idx);
-  if(bEl)bEl.textContent=부하;
+  if(bEl)bEl.textContent=(분모>0?분모:'—');
   if(pEl)pEl.textContent=계획;
+  if(gEl)gEl.textContent=가동;
   if(rEl)rEl.innerHTML=rate!==null?'<span class="'+(isOk?'td-rate-ok':'td-rate-ng')+'">'+rate+'%</span>':'—';
   updateDash();
 }
@@ -342,8 +387,12 @@ function updateDash(){
     function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
     var 조업=gF('조업시간');
     var 계획=gF('교육')+gF('공사')+gF('개발')+gF('방문')+gF('기타1');
-    totOp+=조업;totPlan+=계획;totLoad+=Math.max(0,조업-계획);
-    totDbNon+=toN(tr.dataset.dbnon);totDbRun+=toN(tr.dataset.dbop);
+    var 비가동=toN(tr.dataset.dbnon);
+    var opEl=tr.querySelector('[data-field="가동시간"]');
+    var 가동=opEl?toN(opEl.value):toN(tr.dataset.dbop);
+    var 분모=조업-비가동-계획;
+    totOp+=조업;totPlan+=계획;totLoad+=(분모>0?분모:0);
+    totDbNon+=비가동;totDbRun+=가동;
   });
   var rate=totLoad>0?(totDbRun/totLoad*100).toFixed(1):0;
   var isOk=Number(rate)>=80;
@@ -362,15 +411,26 @@ function saveRow(idx){
   var btn=document.getElementById('sbtn-'+idx);
   if(!tr||!btn)return;
   function gF(f){var el=tr.querySelector('[data-field="'+f+'"]');return el?toN(el.value):0;}
+  /* ★ 2026-07-22: saveOperatingDetail 로 전환
+       - 항상 저장: 조업시간 + 비가동 12개 항목 + 입력구분
+       - 잠금(🔒) 상태일 때만: 건수 / 가동시간 / 비가동시간 도 함께 저장
+       - 잠금 해제 상태에서는 건수·가동시간을 보내지 않아 자동 계산값이 보존됨 */
+  var lockEl=document.getElementById('lock-'+idx);
+  var locked=!!(lockEl&&lockEl.checked);
+  var opEl=tr.querySelector('[data-field="가동시간"]');
   var payload={
-    action:'saveOperatingRate', key:API_KEY,
+    action:'saveOperatingDetail', key:API_KEY, lock:locked,
     작업일:tr.dataset.date,설비명:tr.dataset.eq,설비번호:tr.dataset.eqno,
-    건수:toN(tr.dataset.dbcnt),
-    조업시간:gF('조업시간'),가동시간:toN(tr.dataset.dbop),비가동시간:toN(tr.dataset.dbnon),
+    조업시간:gF('조업시간'),
     교육:gF('교육'),공사:gF('공사'),개발:gF('개발'),방문:gF('방문'),기타1:gF('기타1'),
     전기:gF('전기'),냉각:gF('냉각'),코일:gF('코일'),기타2:gF('기타2'),
     조건:gF('조건'),사양:gF('사양'),기타3:gF('기타3')
   };
+  if(locked){
+    payload.건수=toN(tr.dataset.dbcnt);
+    payload.가동시간=opEl?toN(opEl.value):toN(tr.dataset.dbop);
+    payload.비가동시간=toN(tr.dataset.dbnon);
+  }
   btn.classList.add('saving');btn.textContent='저장중';
   fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
   .then(function(r){return r.json();})
@@ -387,7 +447,7 @@ function saveRow(idx){
 function exportCSV(){
   var rows=document.querySelectorAll('#tbody tr[data-idx]');
   if(rows.length===0){showToast('내보낼 데이터가 없습니다.');return;}
-  var hdrs=['작업일','요일','가동시간(DB)','비가동시간(DB)','조업시간','교육','공사','개발','방문','기타1','전기','냉각','코일','기타2','조건','사양','기타3','부하시간','계획정지합','가동률'];
+  var hdrs=['작업일','요일','가동시간(분)','비가동시간(분)','조업시간(분)','교육','공사','개발','방문','기타1','전기','냉각','코일','기타2','조건','사양','기타3','부하시간(분모)','계획정지합','가동률(%)','잠금'];
   var lines=['\uFEFF'+hdrs.join(',')];
   var fields=['조업시간','교육','공사','개발','방문','기타1','전기','냉각','코일','기타2','조건','사양','기타3'];
   rows.forEach(function(tr){
@@ -401,6 +461,7 @@ function exportCSV(){
     cells.push(bEl?bEl.textContent:'');
     cells.push(pEl?pEl.textContent:'');
     cells.push(rEl?rEl.textContent.replace('%',''):'');
+    cells.push(tr.dataset.lock==='1'?'잠금':'');
     lines.push(cells.join(','));
   });
   var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
