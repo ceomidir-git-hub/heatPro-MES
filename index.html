@@ -174,7 +174,7 @@
       <a class="sub-item" href="Machine_operation_Log.html">설비운영관리대장</a>
       <a class="sub-item" href="Machine_Repair_Status.html">설비수리현황</a>
       <a class="sub-item" href="Inspection_Tool_Status.html">검사장비현황</a>
-      <a class="sub-item" href="Operating_Rate.html">가동률</a>
+      <a class="sub-item" href="Operating_Rate.html">설비가동률</a>
     </div>
 
     <!-- 3. 도면관리 -->
@@ -220,7 +220,7 @@
     <div class="sub-menu" id="sub-stat">
       <a class="sub-item" href="Monthly_Production_Record_FINAL.html">월생산실적(달성율)</a>
       <a class="sub-item" href="Defect_Rate_Graph.html">불량률(G)</a>
-      <a class="sub-item" href="Operating_Rate_Graph.html">가동률(G)</a>
+      <a class="sub-item" href="Operating_Rate_Graph.html">설비가동률(G)</a>
     </div>
 
     <div class="nav-divider"></div>
@@ -324,7 +324,7 @@
             <a class="doc-card" href="Yearly_Production_Record.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📅</div><div class="doc-preview"></div><div class="doc-title">년생산실적</div><div class="doc-meta">YEARLY OUTPUT</div></a>
             <a class="doc-card" href="Monthly_Production_Record_FINAL.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🗓️</div><div class="doc-preview"></div><div class="doc-title">월생산달성율</div><div class="doc-meta">MONTHLY ACHIEVEMENT</div></a>
             <a class="doc-card" href="Defect_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">📉</div><div class="doc-preview"></div><div class="doc-title">불량률(G)</div><div class="doc-meta">DEFECT RATE GRAPH</div></a>
-            <a class="doc-card" href="Operating_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">⏱️</div><div class="doc-preview"></div><div class="doc-title">가동률(G)</div><div class="doc-meta">OPERATING RATE GRAPH</div></a>
+            <a class="doc-card" href="Operating_Rate_Graph.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">⏱️</div><div class="doc-preview"></div><div class="doc-title">설비가동률(G)</div><div class="doc-meta">OPERATING RATE GRAPH</div></a>
             <a class="doc-card" href="Machine_Repair_Status.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🔧</div><div class="doc-preview"></div><div class="doc-title">설비수리현황</div><div class="doc-meta">REPAIR STATUS</div></a>
             <!-- ── 2026-07-04 순서 변경: 설비운영관리대장 → 검사장비현황 ── -->
             <a class="doc-card" href="Machine_operation_Log.html" target="_blank" style="text-decoration:none;color:inherit;"><div class="doc-icon">🏭</div><div class="doc-preview"></div><div class="doc-title">설비운영관리대장</div><div class="doc-meta">MACHINE OP. LOG</div></a>
@@ -400,8 +400,10 @@ function renderRateLine(elId,values,target,totalDays){
   var plotW=w-padL-padR,plotH=h-padT-padB;
   var dataMax=0;
   values.forEach(function(v){if(v!==null&&v>dataMax)dataMax=v;});
-  var maxV=Math.max(120,Math.ceil(dataMax/40)*40);
-  var yTicks=[0,Math.round(maxV/3),Math.round(maxV*2/3),maxV];
+  /* ★ 2026-07-22 수정: Y축 기준선을 20% 단위(0·20·40·60·80·100)로 고정.
+       데이터가 100%를 넘으면 120·140… 으로 20 단위 자동 연장 */
+  var maxV=Math.max(100,Math.ceil(dataMax/20)*20);
+  var yTicks=[];for(var t0=0;t0<=maxV;t0+=20)yTicks.push(t0);
   var n=totalDays||values.length;
   function xOf(i){return padL+i*(plotW/(n-1));}
   function yOf(v){return padT+(1-v/maxV)*plotH;}
@@ -420,18 +422,32 @@ function renderRateLine(elId,values,target,totalDays){
     var pointsStr=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
     html+='<polyline points="'+pointsStr+'" fill="none" stroke="#4FA8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
   }
+  /* ★ 2026-07-22 수정: X축 날짜(1일/15일/말일)는 날짜 텍스트만 고정 표기.
+       주황 강조점과 값 라벨은 아래 50% 규칙으로 일원화한다. */
   var axisDaysRaw=[1,15,n];
   var axisDays=axisDaysRaw.filter(function(d,idx){return axisDaysRaw.indexOf(d)===idx;});
   axisDays.forEach(function(day){
-    var dayIdx=day-1;
-    var x=xOf(dayIdx);
-    html+='<text x="'+x.toFixed(1)+'" y="'+(h-3)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+day+'일</text>';
-    if(values[dayIdx]!==null&&values[dayIdx]!==undefined){
-      var py=yOf(values[dayIdx]);
-      html+='<circle cx="'+x.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
-      var ly=Math.max(11,py-7);
-      html+='<text x="'+x.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#FF6B35" text-anchor="middle">'+Math.round(values[dayIdx])+'%</text>';
+    html+='<text x="'+xOf(day-1).toFixed(1)+'" y="'+(h-3)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#5C6878" text-anchor="middle">'+day+'일</text>';
+  });
+  /* ★ 2026-07-22 추가: 값 라벨은 LABEL_MIN(50%)을 '초과'하는 날만 표시한다.
+       폰트는 9.9px 그대로 유지(축소하면 가독성 저하)하고,
+       라벨 사각형이 실제로 겹치는 경우에만 자동 생략한다.
+       글자폭 = 9.9 × 0.6 × 글자수 , 글자높이 = 9.9 */
+  var LABEL_MIN=50;
+  var boxes=[];
+  values.forEach(function(v,i){
+    if(v===null||v===undefined||v<=LABEL_MIN)return;
+    var txt=Math.round(v)+'%';
+    var cx=xOf(i), py=yOf(v), ly=Math.max(11,py-7);
+    var hw=txt.length*9.9*0.6/2;
+    var bx0=cx-hw, bx1=cx+hw, by0=ly-9.9, by1=ly;
+    for(var b=0;b<boxes.length;b++){
+      var o=boxes[b];
+      if(!(bx1<o[0]||bx0>o[1]||by1<o[2]||by0>o[3]))return;   /* 겹치면 생략 */
     }
+    boxes.push([bx0,bx1,by0,by1]);
+    html+='<circle cx="'+cx.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="2.8" fill="#FF6B35"/>';
+    html+='<text x="'+cx.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.9" font-weight="700" font-family="IBM Plex Mono,monospace" fill="#FF6B35" text-anchor="middle">'+txt+'</text>';
   });
   el.innerHTML=html;
 }
