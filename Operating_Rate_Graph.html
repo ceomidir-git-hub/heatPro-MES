@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가동률 현황 | HeatPro MES</title>
+<title>설비가동률 현황 | HeatPro MES</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -65,7 +65,7 @@ td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 <body>
 
 <div class="top-bar">
-  <h1>📈 가동률 현황 (Operating Rate Graph)</h1>
+  <h1>📈 설비가동률 현황 (Operating Rate Graph)</h1>
   <span class="sub">HeatPro MES · AUTO-GENERATED DOCUMENTS · ISO 9001</span>
 </div>
 
@@ -88,7 +88,7 @@ td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 <div class="container">
   <div class="card">
     <div class="card-title">
-      <span id="chartTitle">가동률 현황</span>
+      <span id="chartTitle">설비가동률 현황</span>
       <span class="target" id="targetLabel">[목표 : 80%]</span>
     </div>
     <div class="card-body">
@@ -99,7 +99,7 @@ td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weig
   </div>
 
   <div class="card">
-    <div class="card-title">일별 가동률 현황 상세</div>
+    <div class="card-title">일별 설비가동률 현황 상세</div>
     <div class="card-body">
       <div class="legend">
         <div class="legend-item"><span class="legend-dot holiday"></span><span>토요일 · 일요일 · 공휴일</span></div>
@@ -120,6 +120,17 @@ var MAX_DAYS = 31;
 
 /* ── 목표 가동률(%) — 설비/기간에 따라 추후 조정 가능, 이 값만 바꾸면 차트·표에 모두 반영됨 ── */
 var TARGET_RATE = 80;
+
+/* ★ 2026-07-22 추가: 설비가동률 확정 계산 규칙 (index.html / Operating_Rate.html과 동일)
+     조업시간 = 가동data 값 우선, 없으면 (평일 480분 / 토·일·공휴일 0분)
+     분모     = 조업시간 − 비가동시간 − 계획정지(교육+공사+개발+방문+기타1)
+     가동률   = 가동시간(분) ÷ 분모 × 100  (상한 없음)
+     당월은 오늘 이후 날짜를 집계에서 제외한다 */
+var STD_OP_MIN = 480;
+function todayYMD() {
+  var t = new Date();
+  return t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+}
 
 var myChart  = null;
 var hasData  = false;
@@ -215,7 +226,7 @@ function exportCSV() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = '가동률현황_' + YEAR + '년_' + lastMonth + '월_' + lastEquipLabel + '.csv';
+  a.download = '설비가동률현황_' + YEAR + '년_' + lastMonth + '월_' + lastEquipLabel + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -252,7 +263,7 @@ function exportPDF() {
       var y = margin;
 
       pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
-      pdf.save('가동률현황_' + YEAR + '년_' + lastMonth + '월.pdf');
+      pdf.save('설비가동률현황_' + YEAR + '년_' + lastMonth + '월.pdf');
     })
     .catch(function (err) { alert('PDF 생성 중 오류가 발생했습니다: ' + err.message); })
     .finally(function () { btn.textContent = origText; btn.disabled = false; });
@@ -288,7 +299,7 @@ function loadData() {
   var eqLabel = equip || '전체';
 
   document.getElementById('chartTitle').textContent =
-    '가동률 현황 ( ' + month + '월 ) — ' + eqLabel;
+    '설비가동률 현황 ( ' + month + '월 ) — ' + eqLabel;
   document.getElementById('tableArea').innerHTML =
     '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
 
@@ -307,7 +318,7 @@ function loadData() {
 
   var sc = document.createElement('script');
   sc.id  = '_gs_op';
-  sc.src = API_URL + '?action=operatingRate'
+  sc.src = API_URL + '?action=operatingRateV2'
          + '&from='  + from
          + '&to='    + to
          + (equip ? '&equipment=' + encodeURIComponent(equip) : '')
@@ -329,52 +340,68 @@ function processData(rows, month, equip) {
   var actualDays = getDaysInMonth(YEAR, month);
   lastActualDays = actualDays;
 
+  /* ★ 2026-07-22 수정: 서버 응답을 날짜별 map으로 정리 (operatingRateV2 = 모든 시간값이 '분') */
+  var map = {};
+  rows.forEach(function (r) {
+    var ds = String(r['작업일'] || '');
+    if (ds) map[ds] = r;
+  });
+
+  /* ★ 2026-07-22 수정: 데이터가 있는 날만이 아니라 '조업일 전체'를 집계에 포함한다.
+       작업이 없던 평일도 조업시간 480분 / 가동시간 0분 으로 잡아야 분모가 정확해진다.
+       토·일·공휴일과 아직 오지 않은 날(오늘 이후)은 집계에서 제외한다. */
+  var todayStr = todayYMD();
   var dayData = [];
-  for (var i = 0; i < MAX_DAYS; i++) {
-    dayData.push({
-      opMin: 0, opTimeHr: 0, nonOpMin: 0,
+  for (var d = 1; d <= MAX_DAYS; d++) {
+    var dd = {
+      opMin: 0, opTimeMin: 0, nonOpMin: 0,
       edu: 0, const: 0, dev: 0, visit: 0, etc1: 0,
       elec: 0, cool: 0, coil: 0, etc2: 0,
       cond: 0, spec: 0, etc3: 0,
       hasData: false
-    });
+    };
+    if (d <= actualDays) {
+      var ds2 = YEAR + '-' + pad2(month) + '-' + pad2(d);
+      var r2  = map[ds2] || null;
+      if (ds2 <= todayStr) {
+        var op = Number((r2 && r2['조업시간']) || 0);
+        if (!op) op = isHoliday(YEAR, month, d) ? 0 : STD_OP_MIN;
+        if (op > 0) {
+          dd.opMin     = op;
+          dd.opTimeMin = Number((r2 && r2['가동시간'])   || 0);
+          dd.nonOpMin  = Number((r2 && r2['비가동시간']) || 0);
+          dd.edu   = Number((r2 && r2['교육'])  || 0); dd.const = Number((r2 && r2['공사'])  || 0);
+          dd.dev   = Number((r2 && r2['개발'])  || 0); dd.visit = Number((r2 && r2['방문'])  || 0);
+          dd.etc1  = Number((r2 && r2['기타1']) || 0);
+          dd.elec  = Number((r2 && r2['전기'])  || 0); dd.cool  = Number((r2 && r2['냉각'])  || 0);
+          dd.coil  = Number((r2 && r2['코일'])  || 0); dd.etc2  = Number((r2 && r2['기타2']) || 0);
+          dd.cond  = Number((r2 && r2['조건'])  || 0); dd.spec  = Number((r2 && r2['사양'])  || 0);
+          dd.etc3  = Number((r2 && r2['기타3']) || 0);
+          dd.hasData = true;
+        }
+      }
+    }
+    dayData.push(dd);
   }
-
-  rows.forEach(function (r) {
-    var ds = String(r['작업일'] || '');
-    var parts = ds.split('-');
-    if (parts.length < 3) return;
-    var d = parseInt(parts[2]);
-    if (d < 1 || d > MAX_DAYS) return;
-    var idx = d - 1;
-    var dd = dayData[idx];
-    dd.opMin     += (Number(r['조업시간DB']) || Number(r['조업시간']) || 0);
-    dd.opTimeHr  += Number(r['가동시간']   || 0);
-    dd.nonOpMin  += Number(r['비가동시간'] || 0);
-    dd.edu   += Number(r['교육']  || 0); dd.const += Number(r['공사']  || 0);
-    dd.dev   += Number(r['개발']  || 0); dd.visit += Number(r['방문']  || 0);
-    dd.etc1  += Number(r['기타1'] || 0);
-    dd.elec  += Number(r['전기']  || 0); dd.cool  += Number(r['냉각']  || 0);
-    dd.coil  += Number(r['코일']  || 0); dd.etc2  += Number(r['기타2'] || 0);
-    dd.cond  += Number(r['조건']  || 0); dd.spec  += Number(r['사양']  || 0);
-    dd.etc3  += Number(r['기타3'] || 0);
-    dd.hasData = true;
-  });
 
   lastDayData = dayData;
   buildChart(dayData, month, actualDays);
   buildTable(dayData, month, actualDays);
 }
 
-/* 파생값 계산 — 부하시간 = 조업시간 - 계획정지, 가동률(%) = 가동시간(분) / 부하시간 * 100 */
+/* ★ 2026-07-22 확정 계산식
+     부하시간(분모) = 조업시간 − 비가동시간 − 계획정지
+     가동률(%)      = 가동시간(분) ÷ 분모 × 100   (상한 없음, 분모≤0 이면 0)
+     operatingRateV2 가 모든 값을 '분'으로 반환하므로 ×60 변환은 하지 않는다.
+     (구버전은 비가동시간만 시간→분 변환이 누락되어 있었음) */
 function getVal(dd, key) {
   var planStop  = dd.edu + dd.const + dd.dev + dd.visit + dd.etc1;
-  var loadMin   = dd.opMin - planStop;
-  var opTimeMin = Math.round(dd.opTimeHr * 60); // 가동시간(시간단위 원본) → 분 환산
+  var loadMin   = dd.opMin - dd.nonOpMin - planStop;
+  var opTimeMin = dd.opTimeMin;
   switch (key) {
     case 'opMin':     return dd.opMin;
     case 'planStop':  return planStop;
-    case 'loadMin':   return loadMin;
+    case 'loadMin':   return loadMin > 0 ? loadMin : 0;
     case 'opTimeMin': return opTimeMin;
     case 'nonOpMin':  return dd.nonOpMin;
     case 'rate':      return loadMin > 0 ? Math.round(opTimeMin / loadMin * 1000) / 10 : 0;
