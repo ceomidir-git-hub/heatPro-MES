@@ -81,6 +81,8 @@ tbody tr:hover td{background:#FAFAF8;}
 .td-hol{color:var(--red);font-style:italic;}
 .td-db{background:#EEF7FD;color:var(--blue-dk);font-weight:500;}
 .td-calc{background:var(--gray-lt);color:var(--text-sub);font-weight:500;}
+/* ★ 2026-07-24 추가: 아직 오지 않은 날(미래일) — 집계 제외 표시 */
+tr.row-future td{background:#F7F6F3;color:#B8B6B0;}
 .td-rate-ok{color:var(--green-dk);font-weight:600;}
 .td-rate-ng{color:var(--red);font-weight:600;}
 .td-input{border:1px solid transparent;border-radius:3px;padding:2px 3px;font-size:11px;width:100%;background:transparent;color:var(--text);text-align:center;outline:none;font-family:inherit;min-width:34px;}
@@ -289,16 +291,21 @@ function renderTable(from,to,eq){
   while(cur<=end){allDates.push(fmtDate(new Date(cur)));cur.setDate(cur.getDate()+1);}
   document.getElementById('tCount').textContent=allDates.length+'건';
   rowIdx=0;
+  /* ★ 2026-07-24 추가: 오늘 이후(미래) 날짜는 조업시간 0 처리하여 분모에서 제외한다.
+     구버전은 조회기간을 월말까지 늘리면 미래 평일이 480분씩 분모에 잡혀
+     가동률이 실제보다 낮게 표시되는 결함이 있었음 (7월 기준 45.7% → 35.7%, 10.0p 왜곡) */
+  var TODAY_STR=fmtDate(new Date());
   var html=allDates.map(function(ds){
     var dow=getDow(ds),isSat=dow===6,isSun=dow===0,isHol=isHoliday(ds);
+    var isFuture=(ds>TODAY_STR);
     var dateClass=(isHol||isSun)?'td-sun':isSat?'td-sat':'';
     var r=queryRowMap[ds]||{};
     var idx=rowIdx++;
     /* ★ 2026-07-22: operatingRateV2 는 모든 시간값을 '분'으로 반환 */
     var dbOp=toN(r.가동시간),dbNon=toN(r.비가동시간),dbCnt=toN(r.건수)||0;
     var locked=(r.잠금===true||r.입력구분==='수동잠금');
-    var 조업=toN(r.조업시간)||((isHol||isSat||isSun)?0:480);
-    return '<tr class="'+(locked?'row-locked':'')+'" data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'" data-dbcnt="'+dbCnt+'" data-lock="'+(locked?1:0)+'">'
+    var 조업=isFuture?0:(toN(r.조업시간)||((isHol||isSat||isSun)?0:480));
+    return '<tr class="'+(locked?'row-locked ':'')+(isFuture?'row-future':'')+'" data-idx="'+idx+'" data-date="'+ds+'" data-eq="'+esc(eq)+'" data-eqno="'+esc(r.설비번호||'')+'" data-dbop="'+dbOp+'" data-dbnon="'+dbNon+'" data-dbcnt="'+dbCnt+'" data-lock="'+(locked?1:0)+'">'
       +'<td class="'+dateClass+'" style="font-size:11px;white-space:nowrap;">'+(isHol?'★ ':'')+ds+'</td>'
       +'<td class="'+dateClass+'">'+DAYS[dow]+'</td>'
       +'<td class="td-db">'+dbCnt+'</td>'
