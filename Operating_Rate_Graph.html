@@ -70,6 +70,9 @@ td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 </div>
 
 <div class="search-panel">
+  <label>조회 연도 :</label>
+  <select id="selYear"></select>
+  <span class="sep">|</span>
   <label>조회 월 :</label>
   <select id="selMonth">
     <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
@@ -115,7 +118,10 @@ td.td-low { background: #fff5f5 !important; color: #cc0000 !important; font-weig
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbw3H6QfMJYTlR24IlZ-IOfk5GKml1RDm_f_CU4iSbhua-bREeVI14NIeaY3oU1sfdWVLA/exec';
 var API_KEY = '@qgis2026';
-var YEAR     = 2026;
+/* ★ 2026-07-24 수정: 연도 고정값(2026) 제거. 조회 시 선택된 연도로 갱신됨
+     — 구버전은 2027년이 되어도 2026년 데이터를 조용히 불러오는 결함이 있었음 */
+var YEAR     = new Date().getFullYear();
+var YEAR_MIN = 2026;   /* 데이터 시작 연도 */
 var MAX_DAYS = 31;
 
 /* ── 목표 가동률(%) — 설비/기간에 따라 추후 조정 가능, 이 값만 바꾸면 차트·표에 모두 반영됨 ── */
@@ -271,6 +277,12 @@ function exportPDF() {
 
 window.onload = function () {
   document.getElementById('targetLabel').textContent = '[목표 : ' + TARGET_RATE + '%]';
+  /* ★ 2026-07-24 추가: 연도 목록 자동 생성 (YEAR_MIN ~ 올해, 최소 1개 보장) */
+  var ySel = document.getElementById('selYear');
+  var nowY = new Date().getFullYear();
+  var endY = Math.max(nowY, YEAR_MIN);
+  for (var yy = YEAR_MIN; yy <= endY; yy++) ySel.add(new Option(yy + '년', yy));
+  ySel.value = endY;
   var sel = document.getElementById('selMonth');
   sel.value = new Date().getMonth() + 1;
   loadMeta();
@@ -294,12 +306,15 @@ function loadMeta() {
 }
 
 function loadData() {
+  /* ★ 2026-07-24 추가: 조회 시점에 선택 연도를 전역 YEAR 에 반영 */
+  var ySel = document.getElementById('selYear');
+  if (ySel && ySel.value) YEAR = parseInt(ySel.value);
   var month = parseInt(document.getElementById('selMonth').value);
   var equip = document.getElementById('selEquip').value;
   var eqLabel = equip || '전체';
 
   document.getElementById('chartTitle').textContent =
-    '설비가동률 현황 ( ' + month + '월 ) — ' + eqLabel;
+    '설비가동률 현황 ( ' + YEAR + '년 ' + month + '월 ) — ' + eqLabel;
   document.getElementById('tableArea').innerHTML =
     '<div class="status-box"><div class="spinner"></div><br>데이터를 불러오는 중입니다...</div>';
 
@@ -480,7 +495,9 @@ function buildChart(dayData, month, actualDays) {
         x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
         y: {
           min: 0,
-          max: 120,
+          /* ★ 2026-07-24 수정: max → suggestedMax
+             구버전은 120% 고정이라 431%(2026-03-05) 같은 초과일이 화면 밖으로 잘렸음 */
+          suggestedMax: 120,
           grid: { color: '#f0f0f0' },
           ticks: { font: { size: 10 }, callback: function (v) { return v + '%'; } }
         }
